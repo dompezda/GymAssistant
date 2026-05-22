@@ -1,4 +1,22 @@
-# Logs
+# Node / React
+dist/
+build/
+.env
+.env.local
+*.log
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.rsuser
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db# Logs
 logs
 *.log
 npm-debug.log*
