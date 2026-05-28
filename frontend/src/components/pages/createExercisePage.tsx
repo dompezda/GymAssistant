@@ -23,30 +23,35 @@ export default function CreateExercisePage() {
     loadMuscleGroups();
   }, []);
 
-  async function handleSubmit(event: React.FormEvent) {
+ async function handleSubmit(event: React.FormEvent) {
   event.preventDefault();
 
-  await fetch("http://localhost:5235/api/exercises", {
+  const response = await fetch("http://localhost:5235/api/exercises", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      name,
-      muscleGroup: muscleGroup ? Number(muscleGroup) : null,
-    }),
+      name: name.trim(),
+      muscleGroup: muscleGroup === "" ? null : Number(muscleGroup),
+   }),
   });
+
+  if (!response.ok) {
+    console.error("Błąd dodawania ćwiczenia");
+    return;
+  }
 
   navigate("/exercises");
 }
-
     return (
         <section className="page stack">
             <button className="btn btn-secondary" onClick={() => navigate("/exercises")}>
                 ← Wróć1
             </button>
             <form className="stack" onSubmit={handleSubmit}>
-  <label>
+  <div>
+ <label>
     Nazwa ćwiczenia
     <input
       type="text"
@@ -55,8 +60,9 @@ export default function CreateExercisePage() {
       required
     />
   </label>
-
-  <label>
+  </div>
+  <div>
+ <label>
     Grupa mięśniowa
     <select
       value={muscleGroup}
@@ -71,9 +77,9 @@ export default function CreateExercisePage() {
       ))}
     </select>
   </label>
-
+  </div>
   <button className="btn btn-primary" type="submit">
-    Zapisz1
+    Zapisz
   </button>
 </form>
             

@@ -1,25 +1,43 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 type Exercise = {
   id: string;
   name: string;
-  muscleGroup?: string | null;
+  muscleGroup: number | null;
+  muscleGroupLabel: string | null;
+  isSystem: boolean;
 };
-
 
 export default function ExercisesPage() {
     const navigate = useNavigate();
 
-    const exercises: Exercise[] = [];
+    const [exercises, setExercises] = useState<Exercise[]>([]);
+    useEffect(() => {
+      async function loadExercises() {
+        const response = await fetch("http://localhost:5235/api/exercises");
 
+        if (!response.ok) {
+          const error = await response.text();
+          console.error(error);
+          return;
+        }
+
+        const data = await response.json();
+        setExercises(data);
+      }
+
+    loadExercises();
+  }, []);
+  
 
   return (
     <section className="page stack">
       <button className="btn btn-secondary" onClick={() => navigate("/")}>
-        ← Wróć
+        ← Wróć1
       </button>
 
       <header className="page-header">
-        <h1>Ćwiczenia</h1>
+        <h1>Ćwiczenia1</h1>
         <p>Lista ćwiczeń dostępnych do budowania treningów.</p>
       </header>
 
@@ -28,8 +46,8 @@ export default function ExercisesPage() {
           <article key={exercise.id} className="card">
             <h2>{exercise.name}</h2>
 
-            {exercise.muscleGroup && (
-              <p>{exercise.muscleGroup}</p>
+            {exercise.muscleGroupLabel && (
+              <p>{exercise.muscleGroupLabel}</p>
             )}
           </article>
         ))}

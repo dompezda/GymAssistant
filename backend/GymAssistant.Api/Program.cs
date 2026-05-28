@@ -33,16 +33,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-
 app.UseHttpsRedirection();
 
-
-
-app.MapGet("/api/exercises", async (AppDbContext db) =>
-{
-    return await db.Exercises.ToListAsync();
-})
-.WithName("GetExercises");
 
 
 app.MapExercisesEndpoints();

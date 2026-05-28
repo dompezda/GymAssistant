@@ -28,8 +28,11 @@ namespace GymAssistant.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("MuscleGroup")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("MuscleGroup")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
