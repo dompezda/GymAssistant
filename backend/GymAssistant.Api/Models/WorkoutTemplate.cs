@@ -1,12 +1,10 @@
 namespace GymAssistant.Api.Models;
-
-public class Workout
+public class WorkoutTemplate
 {
     public Guid Id { get; set; }
     public string UserId { get; set; } = "Caran";
-    public DateTime Date { get; set; }
+    public string Title { get; set; } = string.Empty;
     public string? Notes { get; set; }
 
-    public List<WorkoutExercise> WorkoutExercises { get; set; } = [];
-
+    public List<WorkoutTemplateExercise> Exercises { get; set; } = [];
 }

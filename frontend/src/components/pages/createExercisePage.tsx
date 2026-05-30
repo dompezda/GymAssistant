@@ -12,7 +12,7 @@ export default function CreateExercisePage() {
   const [name, setName] = useState("");
   const [muscleGroup, setMuscleGroup] = useState("");
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupOption[]>([]);
-
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     async function loadMuscleGroups() {
       const response = await fetch("http://localhost:5235/api/muscle-groups");
@@ -25,6 +25,12 @@ export default function CreateExercisePage() {
 
  async function handleSubmit(event: React.FormEvent) {
   event.preventDefault();
+  setError(null);
+
+  if (muscleGroup === "" || isNaN(Number(muscleGroup))) {
+    setError("Nie udało się dodać ćwiczenia. Nieprawidłowa grupa mięśniowa.");
+    return;
+  }
 
   const response = await fetch("http://localhost:5235/api/exercises", {
     method: "POST",
@@ -33,12 +39,12 @@ export default function CreateExercisePage() {
     },
     body: JSON.stringify({
       name: name.trim(),
-      muscleGroup: muscleGroup === "" ? null : Number(muscleGroup),
-   }),
+      muscleGroup: Number(muscleGroup),
+    }),
   });
 
   if (!response.ok) {
-    console.error("Błąd dodawania ćwiczenia");
+    setError("Błąd dodawania ćwiczenia.");
     return;
   }
 
@@ -47,10 +53,13 @@ export default function CreateExercisePage() {
     return (
         <section className="page stack">
             <button className="btn btn-secondary" onClick={() => navigate("/exercises")}>
-                ← Wróć1
+                ← Wróć
             </button>
             <form className="stack" onSubmit={handleSubmit}>
   <div>
+    <div>
+      {error && <p className="error">{error}</p>}
+    </div>
  <label>
     Nazwa ćwiczenia
     <input

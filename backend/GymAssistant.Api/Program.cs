@@ -39,6 +39,7 @@ app.UseHttpsRedirection();
 
 app.MapExercisesEndpoints();
 app.MapMuscleGroupsEndpoints();
+app.MapWorkoutTemplatesEndpoints();
 
 app.Run();
 

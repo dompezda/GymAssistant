@@ -43,7 +43,7 @@ namespace GymAssistant.Api.Migrations
                     b.ToTable("Exercises");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.Workout", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -59,12 +59,17 @@ namespace GymAssistant.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("WorkoutTemplateId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Workouts");
+                    b.HasIndex("WorkoutTemplateId");
+
+                    b.ToTable("WorkoutSessions");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutExercise", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSessionExercise", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -76,19 +81,19 @@ namespace GymAssistant.Api.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("WorkoutId")
+                    b.Property<Guid>("WorkoutSessionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ExerciseId");
 
-                    b.HasIndex("WorkoutId");
+                    b.HasIndex("WorkoutSessionId");
 
-                    b.ToTable("WorkoutExercises");
+                    b.ToTable("WorkoutSessionExercises");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSet", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSessionSet", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -103,17 +108,77 @@ namespace GymAssistant.Api.Migrations
                     b.Property<decimal?>("Weight")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("WorkoutExerciseId")
+                    b.Property<Guid>("WorkoutSessionExerciseId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkoutExerciseId");
+                    b.HasIndex("WorkoutSessionExerciseId");
 
-                    b.ToTable("WorkoutSets");
+                    b.ToTable("WorkoutSessionSets");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutExercise", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WorkoutTemplates");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutTemplateExercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlannedSets")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkoutTemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("WorkoutTemplateId");
+
+                    b.ToTable("WorkoutTemplateExercises");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
+                {
+                    b.HasOne("GymAssistant.Api.Models.WorkoutTemplate", "WorkoutTemplate")
+                        .WithMany()
+                        .HasForeignKey("WorkoutTemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkoutTemplate");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSessionExercise", b =>
                 {
                     b.HasOne("GymAssistant.Api.Models.Exercise", "Exercise")
                         .WithMany()
@@ -121,36 +186,60 @@ namespace GymAssistant.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("GymAssistant.Api.Models.Workout", "Workout")
-                        .WithMany("WorkoutExercises")
-                        .HasForeignKey("WorkoutId")
+                    b.HasOne("GymAssistant.Api.Models.WorkoutSession", "WorkoutSession")
+                        .WithMany("Exercises")
+                        .HasForeignKey("WorkoutSessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Exercise");
 
-                    b.Navigation("Workout");
+                    b.Navigation("WorkoutSession");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSet", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSessionSet", b =>
                 {
-                    b.HasOne("GymAssistant.Api.Models.WorkoutExercise", "WorkoutExercise")
+                    b.HasOne("GymAssistant.Api.Models.WorkoutSessionExercise", "WorkoutSessionExercise")
                         .WithMany("Sets")
-                        .HasForeignKey("WorkoutExerciseId")
+                        .HasForeignKey("WorkoutSessionExerciseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("WorkoutExercise");
+                    b.Navigation("WorkoutSessionExercise");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.Workout", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutTemplateExercise", b =>
                 {
-                    b.Navigation("WorkoutExercises");
+                    b.HasOne("GymAssistant.Api.Models.Exercise", "Exercise")
+                        .WithMany()
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymAssistant.Api.Models.WorkoutTemplate", "WorkoutTemplate")
+                        .WithMany("Exercises")
+                        .HasForeignKey("WorkoutTemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+
+                    b.Navigation("WorkoutTemplate");
                 });
 
-            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutExercise", b =>
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
+                {
+                    b.Navigation("Exercises");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSessionExercise", b =>
                 {
                     b.Navigation("Sets");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.WorkoutTemplate", b =>
+                {
+                    b.Navigation("Exercises");
                 });
 #pragma warning restore 612, 618
         }

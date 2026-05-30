@@ -1,0 +1,52 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+type Template={
+  id: string;
+  title: string;
+  notes: string | null;
+}
+
+export default function WorkoutsTemplatesPage() {
+  const navigate = useNavigate();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  useEffect(() => {
+    async function loadTemplates() {
+      const response = await fetch("http://localhost:5235/api/workout-templates");
+
+        if (!response.ok) {
+          const error = await response.text();
+          console.error(error);
+          return;
+        }
+      const data = await response.json();
+      setTemplates(data);
+    }
+
+    loadTemplates();
+  }, []);
+
+  return (
+    <section>
+      <button className="btn btn-secondary" onClick={() => navigate("/")}>
+        ← Wróć
+      </button>
+
+      <h1>Plany treningowe</h1>
+      <p>Tutaj będzie lista planów treningowych.</p>
+
+            <div className="stack">
+        {templates.map((template) => (
+          <article key={template.id} className="card">
+            <h2>{template.title}</h2>
+
+            {template.notes && (
+              <p>{template.notes}</p>
+            )}
+            
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}

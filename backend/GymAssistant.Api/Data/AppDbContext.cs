@@ -7,12 +7,14 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        
-
     }
 
-    public DbSet<Workout> Workouts => Set<Workout>();
-    public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
-    public DbSet<WorkoutSet> WorkoutSets => Set<WorkoutSet>();
     public DbSet<Exercise> Exercises => Set<Exercise>();
+
+    public DbSet<WorkoutTemplate> WorkoutTemplates => Set<WorkoutTemplate>();
+    public DbSet<WorkoutTemplateExercise> WorkoutTemplateExercises => Set<WorkoutTemplateExercise>();
+
+    public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
+    public DbSet<WorkoutSessionExercise> WorkoutSessionExercises => Set<WorkoutSessionExercise>();
+    public DbSet<WorkoutSessionSet> WorkoutSessionSets => Set<WorkoutSessionSet>();
 }

@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainMenu from "./components/mainMenu/mainMenu";
-import ExercisesPage from "../src/components/pages/exercisesPage";
-import WorkoutsPage from "../src/components/pages/workoutsPage";
-import SettingsPage from "../src/components/pages/settingsPage";
-import CreateExercisePage from "./components/pages/CreateExercisePage";
+import ExercisesPage from "./components/pages/exercisesPage";
+import SettingsPage from "./components/pages/settingsPage";
+import CreateExercisePage from "./components/pages/createExercisePage";
+import WorkoutsTemplatesPage from "./components/pages/workoutsTemplatesPage";
+
 
 function App() {
   return (
@@ -12,7 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<MainMenu />} />
           <Route path="/exercises" element={<ExercisesPage />} />
-          <Route path="/workouts" element={<WorkoutsPage />} />
+          <Route path="/workout-templates" element={<WorkoutsTemplatesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/exercises/create" element={<CreateExercisePage />} />
         </Routes>
