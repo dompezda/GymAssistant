@@ -50,12 +50,12 @@ export default function CreateExercisePage() {
 
   navigate("/exercises");
 }
-    return (
-        <section className="page stack">
-            <button className="btn btn-secondary" onClick={() => navigate("/exercises")}>
-                ← Wróć
-            </button>
-            <form className="stack" onSubmit={handleSubmit}>
+  return (
+  <section className="page stack">
+      <button className="btn btn-secondary" onClick={() => navigate("/exercises")}>
+          ← Wróć
+      </button>
+      <form className="stack" onSubmit={handleSubmit}>
   <div>
     <div>
       {error && <p className="error">{error}</p>}
@@ -92,6 +92,6 @@ export default function CreateExercisePage() {
   </button>
 </form>
             
-        </section>
+  </section>
   );
 }

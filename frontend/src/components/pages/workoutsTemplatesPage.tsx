@@ -47,6 +47,10 @@ export default function WorkoutsTemplatesPage() {
           </article>
         ))}
       </div>
+
+      <button className="btn btn-primary" onClick={() => navigate("/workout-templates/create")}>
+        + Dodaj plan treningowy
+      </button>
     </section>
   );
 }

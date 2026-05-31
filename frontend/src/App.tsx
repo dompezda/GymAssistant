@@ -4,6 +4,8 @@ import ExercisesPage from "./components/pages/exercisesPage";
 import SettingsPage from "./components/pages/settingsPage";
 import CreateExercisePage from "./components/pages/createExercisePage";
 import WorkoutsTemplatesPage from "./components/pages/workoutsTemplatesPage";
+import WorkoutTemplateBasicsPage from "./components/pages/workoutTemplateBasicsPage";
+import WorkoutTemplateExercisesPage from "./components/pages/workoutTemplateExercisesPage";
 
 
 function App() {
@@ -16,6 +18,8 @@ function App() {
           <Route path="/workout-templates" element={<WorkoutsTemplatesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/exercises/create" element={<CreateExercisePage />} />
+          <Route path="/workout-templates/create" element={<WorkoutTemplateBasicsPage />} />
+          <Route path="/workout-templates/exercises" element={<WorkoutTemplateExercisesPage />} />
         </Routes>
       </main>
     </BrowserRouter>

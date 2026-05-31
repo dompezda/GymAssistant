@@ -69,3 +69,16 @@ body {
   margin: 0;
   color: #6b7280;
 }
+
+.card-selected {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.sets-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}

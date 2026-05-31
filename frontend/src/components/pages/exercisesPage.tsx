@@ -37,8 +37,7 @@ export default function ExercisesPage() {
       </button>
 
       <header className="page-header">
-        <h1>Ćwiczenia1</h1>
-        <p>Lista ćwiczeń dostępnych do budowania treningów.</p>
+        <h1>Ćwiczenia</h1>
       </header>
 
       <div className="stack">
