@@ -35,9 +35,10 @@ export default function WorkoutsTemplatesPage() {
       <h1>Plany treningowe</h1>
       <p>Tutaj będzie lista planów treningowych.</p>
 
-            <div className="stack">
+        <div className="stack">
         {templates.map((template) => (
-          <article key={template.id} className="card">
+          <article key={template.id} className="card"
+            onClick={() => navigate(`/workout-templates/${template.id}`)}>
             <h2>{template.title}</h2>
 
             {template.notes && (

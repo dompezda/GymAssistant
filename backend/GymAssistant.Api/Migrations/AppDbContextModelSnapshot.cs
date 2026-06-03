@@ -59,7 +59,7 @@ namespace GymAssistant.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("WorkoutTemplateId")
+                    b.Property<Guid?>("WorkoutTemplateId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -171,9 +171,7 @@ namespace GymAssistant.Api.Migrations
                 {
                     b.HasOne("GymAssistant.Api.Models.WorkoutTemplate", "WorkoutTemplate")
                         .WithMany()
-                        .HasForeignKey("WorkoutTemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("WorkoutTemplateId");
 
                     b.Navigation("WorkoutTemplate");
                 });

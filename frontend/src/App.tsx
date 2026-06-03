@@ -6,6 +6,7 @@ import CreateExercisePage from "./components/pages/createExercisePage";
 import WorkoutsTemplatesPage from "./components/pages/workoutsTemplatesPage";
 import WorkoutTemplateBasicsPage from "./components/pages/workoutTemplateBasicsPage";
 import WorkoutTemplateExercisesPage from "./components/pages/workoutTemplateExercisesPage";
+import WorkoutTemplatePage from "./components/pages/workoutTemplatePage";
 
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Route path="/exercises/create" element={<CreateExercisePage />} />
           <Route path="/workout-templates/create" element={<WorkoutTemplateBasicsPage />} />
           <Route path="/workout-templates/exercises" element={<WorkoutTemplateExercisesPage />} />
+          <Route path="/workout-templates/:id" element={<WorkoutTemplatePage />} />
         </Routes>
       </main>
     </BrowserRouter>

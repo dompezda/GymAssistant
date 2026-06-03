@@ -75,9 +75,53 @@ public static class WorkoutTemplatesEndpoints
                 new CreateWorkoutTemplateResponse(workoutTemplate.Id)
             );
         });
+    
+        app.MapGet("/api/workout-templates/{id:guid}", async (Guid id, AppDbContext db) =>
+        {
+            Console.WriteLine($"Fetching workout template with ID: {id}");
+            var workoutTemplate = await db.WorkoutTemplates
+                .AsNoTracking()
+                .Include(x => x.Exercises)
+                .ThenInclude(x => x.Exercise)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (workoutTemplate == null)
+            {
+                return Results.NotFound();
+            }
+
+            var response = new WorkoutTemplateResponseDto(
+                workoutTemplate.Id,
+                workoutTemplate.Title,
+                workoutTemplate.Notes,
+                workoutTemplate.Exercises
+                    .OrderBy(x => x.Order)
+                    .Select(x => new WorkoutTemplateExerciseResponseDto(
+                        x.ExerciseId,
+                        x.Exercise?.Name ?? "Unknown exercise",
+                        x.PlannedSets,
+                        x.Order
+                    ))
+                    .ToList()
+            );
+
+            return Results.Ok(response);
+        });
     }
 }
+public record WorkoutTemplateResponseDto(
+    Guid Id,
+    string Title,
+    string? Notes,
+    List<WorkoutTemplateExerciseResponseDto> Exercises
+);
 
+public record WorkoutTemplateExerciseResponseDto(
+    Guid ExerciseId,
+    string ExerciseName,
+    int PlannedSets,
+    int Order
+);
 public record WorkoutTemplateListItemResponse(
     Guid Id,
     string Title,
