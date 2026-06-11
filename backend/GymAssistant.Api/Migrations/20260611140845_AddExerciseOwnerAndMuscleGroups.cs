@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GymAssistant.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddExerciseOwnerAndMuscleGroups : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,7 +17,7 @@ namespace GymAssistant.Api.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MuscleGroup = table.Column<int>(type: "int", nullable: true),
+                    OwnerUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsSystem = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -40,11 +40,30 @@ namespace GymAssistant.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ExerciseMuscleGroups",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExerciseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MuscleGroup = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ExerciseMuscleGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ExerciseMuscleGroups_Exercises_ExerciseId",
+                        column: x => x.ExerciseId,
+                        principalTable: "Exercises",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "WorkoutSessions",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    WorkoutTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    WorkoutTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
@@ -56,8 +75,7 @@ namespace GymAssistant.Api.Migrations
                         name: "FK_WorkoutSessions_WorkoutTemplates_WorkoutTemplateId",
                         column: x => x.WorkoutTemplateId,
                         principalTable: "WorkoutTemplates",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -135,6 +153,12 @@ namespace GymAssistant.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ExerciseMuscleGroups_ExerciseId_MuscleGroup",
+                table: "ExerciseMuscleGroups",
+                columns: new[] { "ExerciseId", "MuscleGroup" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_WorkoutSessionExercises_ExerciseId",
                 table: "WorkoutSessionExercises",
                 column: "ExerciseId");
@@ -168,6 +192,9 @@ namespace GymAssistant.Api.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ExerciseMuscleGroups");
+
             migrationBuilder.DropTable(
                 name: "WorkoutSessionSets");
 

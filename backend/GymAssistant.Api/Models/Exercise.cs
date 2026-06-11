@@ -10,7 +10,8 @@ public class Exercise
 
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public MuscleGroup? MuscleGroup { get; set; }
+    public List<ExerciseMuscleGroup> ExerciseMuscleGroups { get; set; } = [];
+    public Guid? OwnerUserId { get; set; }
     public bool IsSystem { get; private set; }
 }
 

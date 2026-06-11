@@ -10,7 +10,7 @@ export default function CreateExercisePage() {
     
   const navigate = useNavigate();    
   const [name, setName] = useState("");
-  const [muscleGroup, setMuscleGroup] = useState("");
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<number[]>([]);
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -23,12 +23,20 @@ export default function CreateExercisePage() {
     loadMuscleGroups();
   }, []);
 
+  function toggleMuscleGroup(value: number) {
+    setSelectedMuscleGroups((prev) =>
+      prev.includes(value)
+        ? prev.filter((x) => x !== value)
+        : [...prev, value]
+    );
+  }
+
  async function handleSubmit(event: React.FormEvent) {
   event.preventDefault();
   setError(null);
 
-  if (muscleGroup === "" || isNaN(Number(muscleGroup))) {
-    setError("Nie udało się dodać ćwiczenia. Nieprawidłowa grupa mięśniowa.");
+  if (selectedMuscleGroups.length === 0) {
+    setError("Nie udało się dodać ćwiczenia. Wybierz przynajmniej jedną grupę mięśniową.");
     return;
   }
 
@@ -39,7 +47,7 @@ export default function CreateExercisePage() {
     },
     body: JSON.stringify({
       name: name.trim(),
-      muscleGroup: Number(muscleGroup),
+      muscleGroups: selectedMuscleGroups,
     }),
   });
 
@@ -63,6 +71,7 @@ export default function CreateExercisePage() {
  <label>
     Nazwa ćwiczenia
     <input
+    className="form-field"
       type="text"
       value={name}
       onChange={(e) => setName(e.target.value)}
@@ -71,22 +80,21 @@ export default function CreateExercisePage() {
   </label>
   </div>
   <div>
- <label>
-    Grupa mięśniowa
-    <select
-      value={muscleGroup}
-      onChange={(e) => setMuscleGroup(e.target.value)}
-    >
-      <option value="">Brak</option>
+  <p>Grupy mięśniowe</p>
 
-      {muscleGroups.map((group) => (
-        <option key={group.value} value={group.value}>
-          {group.label}
-        </option>
-      ))}
-    </select>
-  </label>
+  <div className="checkbox-grid">
+    {muscleGroups.map((group) => (
+      <label key={group.value} className="checkbox-item">
+        <input
+          type="checkbox"
+          checked={selectedMuscleGroups.includes(group.value)}
+          onChange={() => toggleMuscleGroup(group.value)}
+        />
+        {group.label}
+      </label>
+    ))}
   </div>
+</div>
   <button className="btn btn-primary" type="submit">
     Zapisz
   </button>

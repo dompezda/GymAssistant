@@ -12,6 +12,7 @@ export default function ExercisesPage() {
     const navigate = useNavigate();
 
     const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [searchText, setSearchText] = useState("");
     useEffect(() => {
       async function loadExercises() {
         const response = await fetch("http://localhost:5235/api/exercises");
@@ -28,7 +29,9 @@ export default function ExercisesPage() {
 
     loadExercises();
   }, []);
-  
+    const visibleExercises = exercises.filter((exercise) =>
+    exercise.name.toLowerCase().includes(searchText.trim().toLowerCase())
+  );
 
   return (
     <section className="page stack">
@@ -39,9 +42,15 @@ export default function ExercisesPage() {
       <header className="page-header">
         <h1>Ćwiczenia</h1>
       </header>
+        <input
+          type="text"
+          placeholder="Szukaj ćwiczenia..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
 
       <div className="stack">
-        {exercises.map((exercise) => (
+        {visibleExercises.map((exercise) => (
           <article key={exercise.id} className="card">
             <h2>{exercise.name}</h2>
 

@@ -31,16 +31,36 @@ namespace GymAssistant.Api.Migrations
                     b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("MuscleGroup")
-                        .HasColumnType("int");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.ToTable("Exercises");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.ExerciseMuscleGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MuscleGroup")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId", "MuscleGroup")
+                        .IsUnique();
+
+                    b.ToTable("ExerciseMuscleGroups");
                 });
 
             modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
@@ -167,6 +187,17 @@ namespace GymAssistant.Api.Migrations
                     b.ToTable("WorkoutTemplateExercises");
                 });
 
+            modelBuilder.Entity("GymAssistant.Api.Models.ExerciseMuscleGroup", b =>
+                {
+                    b.HasOne("GymAssistant.Api.Models.Exercise", "Exercise")
+                        .WithMany("ExerciseMuscleGroups")
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+                });
+
             modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
                 {
                     b.HasOne("GymAssistant.Api.Models.WorkoutTemplate", "WorkoutTemplate")
@@ -223,6 +254,11 @@ namespace GymAssistant.Api.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("WorkoutTemplate");
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.Exercise", b =>
+                {
+                    b.Navigation("ExerciseMuscleGroups");
                 });
 
             modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>

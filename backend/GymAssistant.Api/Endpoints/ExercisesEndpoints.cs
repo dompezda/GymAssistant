@@ -4,55 +4,66 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GymAssistant.Api.Endpoints;
 
-public static class ExercisesEndpoints
-{
-    public static void MapExercisesEndpoints(this WebApplication app)
-    {
-        app.MapGet("/api/exercises", async (AppDbContext db) =>
-        {
-            var exercises = await db.Exercises.ToListAsync();
+public static class ExercisesEndpoints {
+  public static void MapExercisesEndpoints(this WebApplication app) {
+    app.MapGet("/api/exercises", async (AppDbContext db) => {
+      var result = await db.Exercises
+        .Include(x => x.ExerciseMuscleGroups)
+        .Select(x => new ExerciseListItemResponse(
+          x.Id,
+          x.Name,
+          x.ExerciseMuscleGroups
+          .Select(mg => (int) mg.MuscleGroup)
+          .ToArray(),
+          x.ExerciseMuscleGroups
+          .Select(mg => mg.MuscleGroup.ToString())
+          .ToArray(),
+          x.IsSystem
+        ))
+        .ToListAsync();
 
-            var result = exercises
-                .Select(x => new ExerciseListItemResponse(
-                    x.Id,
-                    x.Name,
-                    x.MuscleGroup.HasValue ? (int)x.MuscleGroup.Value : null,
-                    x.MuscleGroup?.ToString(),
-                    x.IsSystem
-                ))
-                .ToList();
+      return Results.Ok(result);
+    });
 
-            return Results.Ok(result);
-        });
+    app.MapPost("/api/exercises", async (CreateExerciseRequest request, AppDbContext db) => {
+      if (string.IsNullOrWhiteSpace(request.Name))
+        return Results.BadRequest("Nazwa ćwiczenia jest wymagana.");
 
-        app.MapPost("/api/exercises", async (CreateExerciseRequest request, AppDbContext db) =>
-        {
-            try
-            {
-                var exercise = new Exercise
-                {
-                    Name = request.Name,
-                    MuscleGroup = request.MuscleGroup
-                };
+      if (request.MuscleGroups is null || request.MuscleGroups.Length == 0)
+        return Results.BadRequest("Wybierz przynajmniej jedną grupę mięśniową.");
 
-                db.Exercises.Add(exercise);
-                await db.SaveChangesAsync();
+      var invalidGroups = request.MuscleGroups
+        .Where(x => !Enum.IsDefined(typeof (MuscleGroup), x))
+        .ToArray();
 
-                return Results.Created($"/api/exercises/{exercise.Id}", exercise);
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(ex.ToString());
-            }
-        });
-    }
+      if (invalidGroups.Length > 0)
+        return Results.BadRequest("Nieprawidłowa grupa mięśniowa.");
+
+      var exercise = new Exercise {
+        Name = request.Name.Trim(),
+          ExerciseMuscleGroups = request.MuscleGroups
+          .Distinct()
+          .Select(group => new ExerciseMuscleGroup {
+            MuscleGroup = (MuscleGroup) group
+          })
+          .ToList()
+      };
+
+      db.Exercises.Add(exercise);
+      await db.SaveChangesAsync();
+
+      return Results.Created($"/api/exercises/{exercise.Id}", new {
+        exercise.Id
+      });
+    });
+  }
 }
 
-public record CreateExerciseRequest(string Name, MuscleGroup? MuscleGroup);
+public record CreateExerciseRequest(string Name, int[] MuscleGroups);
 public record ExerciseListItemResponse(
-    Guid Id,
-    string Name,
-    int? MuscleGroup,
-    string? MuscleGroupLabel,
-    bool IsSystem
+  Guid Id,
+  string Name,
+  int[] MuscleGroups,
+  string[] MuscleGroupLabels,
+  bool IsSystem
 );

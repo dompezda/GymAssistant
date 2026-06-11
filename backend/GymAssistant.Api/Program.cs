@@ -1,7 +1,6 @@
 
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Endpoints;
-using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -34,8 +33,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
 
 app.MapExercisesEndpoints();
 app.MapMuscleGroupsEndpoints();
