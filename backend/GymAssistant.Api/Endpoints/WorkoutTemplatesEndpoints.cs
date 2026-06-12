@@ -78,7 +78,6 @@ public static class WorkoutTemplatesEndpoints
     
         app.MapGet("/api/workout-templates/{id:guid}", async (Guid id, AppDbContext db) =>
         {
-            Console.WriteLine($"Fetching workout template with ID: {id}");
             var workoutTemplate = await db.WorkoutTemplates
                 .AsNoTracking()
                 .Include(x => x.Exercises)
@@ -125,7 +124,7 @@ public record WorkoutTemplateExerciseResponseDto(
 public record WorkoutTemplateListItemResponse(
     Guid Id,
     string Title,
-    string? Description
+    string? Notes
 );
 
 public record CreateWorkoutTemplateRequest(
