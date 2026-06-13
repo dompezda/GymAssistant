@@ -1,34 +1,53 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 type Exercise = {
   id: string;
   name: string;
-  muscleGroup: number | null;
-  muscleGroupLabel: string | null;
+  muscleGroups: number[];
+  muscleGroupLabels: string[];
   isSystem: boolean;
 };
 
 export default function ExercisesPage() {
     const navigate = useNavigate();
-
     const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false);
     const [searchText, setSearchText] = useState("");
-    useEffect(() => {
-      async function loadExercises() {
-        const response = await fetch("http://localhost:5235/api/exercises");
+    
+async function fetchExercises(): Promise<Exercise[]> {
+  const response = await fetch("http://localhost:5235/api/exercises");
 
-        if (!response.ok) {
-          const error = await response.text();
-          console.error(error);
-          return;
-        }
+  if (!response.ok) {
+    const error = await response.text();
+    console.error(error);
+    return [];
+  }
 
-        const data = await response.json();
-        setExercises(data);
-      }
+  return await response.json();
+}
+async function loadExercises() {
+  const data = await fetchExercises();
+  setExercises(data);
+}
+    
+useEffect(() => {
+  let ignore = false;
 
-    loadExercises();
-  }, []);
+  async function loadInitialExercises() {
+    const data = await fetchExercises();
+
+    if (!ignore) {
+      setExercises(data);
+    }
+  }
+
+  loadInitialExercises();
+
+  return () => {
+    ignore = true;
+  };
+}, []);
     const visibleExercises = exercises.filter((exercise) =>
     exercise.name.toLowerCase().includes(searchText.trim().toLowerCase())
   );
@@ -54,16 +73,24 @@ export default function ExercisesPage() {
           <article key={exercise.id} className="card">
             <h2>{exercise.name}</h2>
 
-            {exercise.muscleGroupLabel && (
-              <p>{exercise.muscleGroupLabel}</p>
+            {exercise.muscleGroupLabels?.length > 0 && (
+              <p>{exercise.muscleGroupLabels.join(", ")}</p>
             )}
           </article>
         ))}
       </div>
 
-      <button className="btn btn-primary" onClick={() => navigate("/exercises/create")}>
+      <button className="btn btn-primary" onClick={() => setIsCreateExerciseModalOpen(true)}>
         + Dodaj ćwiczenie
       </button>
+<CreateExerciseModal
+  isOpen={isCreateExerciseModalOpen}
+  onClose={() => setIsCreateExerciseModalOpen(false)}
+  onCreated={() => {
+    loadExercises();
+  }}
+/>
     </section>
+    
   );
 }

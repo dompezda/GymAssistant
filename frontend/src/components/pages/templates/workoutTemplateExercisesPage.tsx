@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
+import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 type Exercise = {
   id: string;
   name: string;
-  muscleGroup: number | null;
-  muscleGroupLabel: string | null;
+  muscleGroups: number[];
+  muscleGroupLabels: string[];
   isSystem: boolean;
 };
 type SelectedExercise = {
@@ -18,32 +18,47 @@ export default function WorkoutTemplateExercisesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false);
   const state = location.state as { title?: string; notes?: string } | null;
   const [searchText, setSearchText] = useState("");
   const [selectedExercises, setSelectedExercises] = useState<
     SelectedExercise[]
   >([]);
+
+  async function fetchExercises(): Promise<Exercise[]> {
+    const response = await fetch("http://localhost:5235/api/exercises");
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error(error);
+        return [];
+      }
+
+      const data = await response.json();
+      return data;
+  }
+
   useEffect(() => {
     if (!state?.title) {
       navigate("/workout-templates/create");
       return;
     }
+  let ignore = false;
 
-    async function loadExercises() {
-      const response = await fetch("http://localhost:5235/api/exercises");
+  async function loadInitialExercises() {
+    const data = await fetchExercises();
 
-      if (!response.ok) {
-        const error = await response.text();
-        console.error(error);
-        return;
-      }
-
-      const data = await response.json();
+    if (!ignore) {
       setExercises(data);
     }
+  }
 
-    loadExercises();
-  }, [state?.title, navigate]);
+  loadInitialExercises();
+
+  return () => {
+    ignore = true;
+  };
+},[state?.title, navigate]);
 
   if (!state?.title) {
     return null;
@@ -133,6 +148,13 @@ export default function WorkoutTemplateExercisesPage() {
         <h1>{state.title}</h1>
         {state.notes && <p>{state.notes}</p>}
 
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setIsCreateExerciseModalOpen(true)}
+        >
+          Utwórz nowe ćwiczenie
+        </button>
         <input
           type="text"
           placeholder="Szukaj ćwiczenia..."
@@ -156,8 +178,8 @@ export default function WorkoutTemplateExercisesPage() {
               >
                 <h2>{exercise.name}</h2>
 
-                {exercise.muscleGroupLabel && (
-                  <p>{exercise.muscleGroupLabel}</p>
+                {exercise.muscleGroupLabels.length > 0 && (
+                  <p>{exercise.muscleGroupLabels.join(", ")}</p>
                 )}
 
                 {selected && (
@@ -194,6 +216,16 @@ export default function WorkoutTemplateExercisesPage() {
           Zapisz plan
         </button>
       </form>
+
+      <CreateExerciseModal
+        isOpen={isCreateExerciseModalOpen}
+        onClose={() => setIsCreateExerciseModalOpen(false)}
+        onCreated={async (createdExerciseId) => {
+          const data = await fetchExercises();
+          setExercises(data);
+          addExercise(createdExerciseId);
+        }}
+      />
     </section>
   );
 }
