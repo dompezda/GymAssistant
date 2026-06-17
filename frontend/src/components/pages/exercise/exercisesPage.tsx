@@ -88,6 +88,7 @@ useEffect(() => {
   onClose={() => setIsCreateExerciseModalOpen(false)}
   onCreated={() => {
     loadExercises();
+    setIsCreateExerciseModalOpen(false);
   }}
 />
     </section>

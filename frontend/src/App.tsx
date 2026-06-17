@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainMenu from "./components/mainMenu/mainMenu";
 import ExercisesPage from "./components/pages/exercise/exercisesPage";
 import SettingsPage from "./components/pages/settingsPage";
-import CreateExercisePage from "./components/pages/exercise/createExercisePage";
+//import CreateExercisePage from "./components/pages/exercise/createExercisePage";
 
 import WorkoutsTemplatesPage from "./components/pages/templates/workoutsTemplatesPage";
 import WorkoutTemplateBasicsPage from "./components/pages/templates/workoutTemplateBasicsPage";
@@ -21,7 +21,7 @@ function App() {
           <Route path="/" element={<MainMenu />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/exercises" element={<ExercisesPage />} />
-          <Route path="/exercises/create" element={<CreateExercisePage />} />
+          {/* <Route path="/exercises/create" element={<CreateExercisePage />} /> */}
 
           <Route path="/workout-templates" element={<WorkoutsTemplatesPage />} />
           <Route path="/workout-templates/create" element={<WorkoutTemplateBasicsPage />} />

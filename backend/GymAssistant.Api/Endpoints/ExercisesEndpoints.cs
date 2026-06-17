@@ -52,8 +52,17 @@ public static class ExercisesEndpoints {
       db.Exercises.Add(exercise);
       await db.SaveChangesAsync();
 
-      return Results.Created($"/api/exercises/{exercise.Id}", new {
-        exercise.Id
+      return Results.Created($"/api/exercises/{exercise.Id}", new
+      {
+          id = exercise.Id,
+          name = exercise.Name,
+          muscleGroups = exercise.ExerciseMuscleGroups
+              .Select(x => (int)x.MuscleGroup)
+              .ToArray(),
+          muscleGroupLabels = exercise.ExerciseMuscleGroups
+              .Select(x => x.MuscleGroup.ToString())
+              .ToArray(),
+          isSystem = exercise.IsSystem
       });
     });
   }

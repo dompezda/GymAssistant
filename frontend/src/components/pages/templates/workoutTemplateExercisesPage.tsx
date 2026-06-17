@@ -220,10 +220,11 @@ export default function WorkoutTemplateExercisesPage() {
       <CreateExerciseModal
         isOpen={isCreateExerciseModalOpen}
         onClose={() => setIsCreateExerciseModalOpen(false)}
-        onCreated={async (createdExerciseId) => {
+        onCreated={async (createdExercise) => {
           const data = await fetchExercises();
           setExercises(data);
-          addExercise(createdExerciseId);
+          addExercise(createdExercise.id);
+          setIsCreateExerciseModalOpen(false);
         }}
       />
     </section>

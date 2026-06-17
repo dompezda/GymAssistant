@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import  ExercisePickerModal  from "../../exercises/ExercisePickerModal";
+import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 
 type DraftExercise = {
   exerciseId: string;
@@ -20,6 +22,14 @@ type WorkoutTemplateDetails = {
   }[];
 };
 
+type Exercise = {
+  id: string;
+  name: string;
+  muscleGroups: number[];
+  muscleGroupLabels: string[];
+  isSystem: boolean;
+};
+type ExerciseModalMode = "closed" | "picker" | "create";
 
 export default function WorkoutSessionSetupPage() {
 const navigate = useNavigate();
@@ -27,10 +37,22 @@ const { templateId } = useParams();
 const [templateTitle, setTemplateTitle] = useState<string | null>(null);
 const [exercises, setExercises] = useState<DraftExercise[]>([]);
 const [loading, setLoading] = useState(false);
+const [exerciseModalMode, setExerciseModalMode] = useState<ExerciseModalMode>("closed");
+
 const title = templateId
   ? templateTitle ?? "Trening z planu"
   : "Pusty trening";
 
+
+  function mapExercisesToDraft(exercises: Exercise): DraftExercise {
+      const draftExercise: DraftExercise = {
+          exerciseId: exercises.id,
+          exerciseName: exercises.name,
+          sets: 3,
+          order: 1,
+      };
+      return draftExercise;
+  }
 useEffect(() => {
   if (!templateId) {
     return;
@@ -134,13 +156,14 @@ function removeExercise(exerciseId: string) {
       </button>
 
       <h1>Przygotowanie treningu</h1>
-
       {loading ? (
         <p>Ładowanie planu...</p>
       ) : (
         <>
           <h2>{title}</h2>
-
+          <button className="btn btn-primary" onClick={() => setExerciseModalMode("picker")}>
+            + Dodaj ćwiczenie
+          </button>
           {exercises.length === 0 ? (
             <p>Brak ćwiczeń. Dodawanie ćwiczeń zrobisz później.</p>
           ) : (
@@ -190,6 +213,38 @@ function removeExercise(exerciseId: string) {
 </button>
         </>
       )}
+
+      <ExercisePickerModal
+        isOpen={exerciseModalMode === "picker"}
+        onClose={() => setExerciseModalMode("closed")}
+        onCreateNew={() => setExerciseModalMode("create")}
+        onSelect={(exercise : Exercise) => {
+          const draftExercise = mapExercisesToDraft(exercise);
+          setExercises((current) => [
+            ...current,
+            {
+              ...draftExercise,
+              order: current.length + 1,
+            },
+          ]);
+          setExerciseModalMode("closed");
+        }}
+      />
+      <CreateExerciseModal
+        isOpen={exerciseModalMode === "create"}
+        onClose={() => setExerciseModalMode("picker")}
+        onCreated={(exercise : Exercise) => {
+          const draftExercise = mapExercisesToDraft(exercise);
+          setExercises((current) => [
+            ...current,
+            {
+              ...draftExercise,
+              order: current.length + 1,
+            },
+          ]);
+          setExerciseModalMode("closed");
+        }}
+      />
     </section>
   );
 }

@@ -1,16 +1,24 @@
 import {useEffect, useState} from "react";
 
+type Exercise = {
+  id: string;
+  name: string;
+  muscleGroups: number[];
+  muscleGroupLabels: string[];
+  isSystem: boolean;
+};
 
 type CreateExerciseModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (exerciseId: string) => void;
+  onCreated: (exercise: Exercise) => void;
 };
 
 type MuscleGroupOption = {
   value: number;
   label: string;
 };
+
 export default function CreateExerciseModal({
   isOpen,
   onClose,
@@ -21,6 +29,7 @@ export default function CreateExerciseModal({
   const [name, setName] = useState("");
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     async function loadMuscleGroups() {
       const response = await fetch("http://localhost:5235/api/muscle-groups");
@@ -73,10 +82,9 @@ export default function CreateExerciseModal({
 
   setName("");
   setSelectedMuscleGroups([]);
-  const result = await response.json();
+  const result: Exercise = await response.json();
   console.log("Created exercise with ID:", result.id);
-  onCreated(result.id);
-  onClose();
+  onCreated(result);
 }
 
  
