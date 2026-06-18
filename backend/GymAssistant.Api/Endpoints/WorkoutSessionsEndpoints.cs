@@ -75,8 +75,55 @@ public static class WorkoutSessionsEndpoints
                 new CreateWorkoutSessionResponse(session.Id)
             );
         });
+
+        app.MapGet("/api/workout-sessions/{id:guid}", async (
+        Guid id,
+        AppDbContext db) =>
+        {
+            var session = await db.WorkoutSessions
+                .Include(x => x.Exercises)
+                    .ThenInclude(x => x.Exercise)
+                .Include(x => x.Exercises)
+                    .ThenInclude(x => x.Sets)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (session == null)
+            {
+                return Results.NotFound();
+            }
+            
+            var response = new WorkoutSessionResponseDto(
+                session.Id,
+                session.WorkoutTemplateId,
+                session.UserId,
+                session.Date,
+                session.Exercises
+                    .OrderBy(x => x.Order)
+                    .Select(x => new WorkoutSessionExerciseResponseDto(
+                        x.Id,
+                        x.ExerciseId,
+                        x.Exercise.Name,
+                        x.Order,
+                        x.Sets
+                            .OrderBy(s => s.SetNumber)
+                            .Select(s => new WorkoutSessionSetResponseDto(
+                                s.Id,
+                                s.SetNumber,
+                                s.Weight,
+                                s.Reps
+                            ))
+                            .ToList()
+                    ))
+                    .ToList()
+            );
+
+            return Results.Ok(response);
+        });
     }
+    
 }
+
+
 
 public record CreateWorkoutSessionRequest(
     Guid? WorkoutTemplateId,
@@ -85,8 +132,9 @@ public record CreateWorkoutSessionRequest(
 
 public record CreateWorkoutSessionExerciseRequest(
     Guid ExerciseId,
-    List<CreateWorkoutSessionSetRequest> Sets
-);
+    List<CreateWorkoutSessionSetRequest> Sets,
+    Guid SessionExerciseId
+);  
 
 public record CreateWorkoutSessionSetRequest(
     int SetNumber,
@@ -95,3 +143,27 @@ public record CreateWorkoutSessionSetRequest(
 );
 
 public record CreateWorkoutSessionResponse(Guid Id);
+
+public record WorkoutSessionResponseDto(
+    Guid? Id,
+    Guid? WorkoutTemplateId,
+    string UserId,
+    DateTime Date,
+    List<WorkoutSessionExerciseResponseDto> Exercises
+);
+
+public record WorkoutSessionExerciseResponseDto
+(
+    Guid Id,
+    Guid ExerciseId,
+    string ExerciseName,
+    int Order,
+    List<WorkoutSessionSetResponseDto> Sets
+);
+
+public record WorkoutSessionSetResponseDto(
+    Guid Id,
+    int SetNumber,
+    decimal? Weight,
+    int? Reps
+);
