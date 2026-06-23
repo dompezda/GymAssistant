@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 type WorkoutSession = {
   id: string;
   //title?: string;
   workoutTemplateId: string | null;
   userId: string;
-  date: string;
   exercises: WorkoutSessionExercise[];
 };
 
@@ -30,6 +29,7 @@ export default function WorkoutSessionPage() {
   const { id } = useParams();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [dirtyIds, setDirtyIds] = useState<string[]>([]); 
+  const navigate = useNavigate();
   const exercises = session?.exercises ?? [];
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const currentExercise = exercises[currentExerciseIndex];
@@ -106,6 +106,67 @@ if (exercises.length === 0 || !currentExercise) {
   });
 }
 
+  function goToExercise(index: number): void {
+    if (index < 0 || index >= exercises.length) return;
+
+    if(dirtyIds.includes(currentExercise.id))
+    {
+      patchExerciseData(currentExercise)
+        .then((x)=>
+          {
+            if(x.ok)
+            {
+              setCurrentExerciseIndex(index);
+              
+              setDirtyIds(dirtyIds.filter((prev) => currentExercise.id !==prev));    
+            };
+          })
+    }
+    else
+      setCurrentExerciseIndex(index);
+  }
+
+  
+  async function patchExerciseData (sessionExercise: WorkoutSessionExercise) : Promise<Response> {
+    return fetch(`http://localhost:5235/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sets: sessionExercise.sets
+      }),
+    })
+  }
+
+  async function finishSession() {
+    const dirtyExercises = exercises.filter(x => dirtyIds.includes(x.id));
+
+    const responses = await Promise.all(
+      dirtyExercises.map(exercise => patchExerciseData(exercise))
+    );
+
+    if (!responses.every(response => response.ok)) {
+      console.log("Nie udało się zapisać wszystkich ćwiczeń");
+      return;
+    }
+
+    const finishResponse = await fetch(`http://localhost:5235/api/workout-sessions/${id}/finish`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!finishResponse.ok) {
+      console.log("Nie udało się zakończyć sesji");
+      return;
+    }
+
+    console.log("Sesja zakończona");
+    navigate(`/workout-sessions/${id}/summary`)
+  }
+
   return (
     <section className="workout-session-page">
   <button>← Wróć</button>
@@ -152,15 +213,15 @@ if (exercises.length === 0 || !currentExercise) {
   </article>
 
   <nav className="exercise-navigation">
-    <button onClick={() => setCurrentExerciseIndex(prev => Math.max(0, prev - 1))}>
+    <button onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0}>
       ← Poprzednie
     </button>
-    <button onClick={() => setCurrentExerciseIndex(prev => Math.min(exercises.length - 1, prev + 1))}>
+    <button onClick={() => goToExercise(currentExerciseIndex + 1)} disabled={currentExerciseIndex === exercises.length - 1}>
       Następne →
     </button>
   </nav>
 
-  <button className="btn btn-primary finish-workout-button">
+  <button className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
     Zakończ trening
     </button>
 </section>

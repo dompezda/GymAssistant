@@ -13,6 +13,7 @@ import StartWorkoutPage from "./components/pages/session/startWorkoutPage";
 import SelectWorkoutTemplatePage from "./components/pages/session/selectWorkoutTemplatePage";
 import WorkoutSessionPage from "./components/pages/session/workoutSessionPage";
 import WorkoutSessionSetupPage from "./components/pages/session/workoutSessionSetupPage";
+import WorkoutSessionSummaryPage from "./components/pages/session/workoutSessionSummaryPage";
 function App() {
   return (
     <BrowserRouter>
@@ -33,6 +34,7 @@ function App() {
           <Route path="/workout-sessions/setup" element={<WorkoutSessionSetupPage />} />
           <Route path="/workout-sessions/setup/from-template/:templateId" element={<WorkoutSessionSetupPage />} />
           <Route path="/workout-sessions/:id" element={<WorkoutSessionPage />} />
+          <Route path="/workout-sessions/:id/summary" element={<WorkoutSessionSummaryPage/>} />
           <Route path="*" element={<div>Nie znaleziono strony</div>} />
         </Routes>
       </main>
