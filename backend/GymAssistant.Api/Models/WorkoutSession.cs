@@ -8,10 +8,8 @@ public class WorkoutSession
     public WorkoutTemplate? WorkoutTemplate { get; set; }
 
     public string UserId { get; set; } = "Caran";
-    public DateTime? StartedAt  { get; set; }
+    public DateTime StartedAt  { get; set; } = DateTime.UtcNow;
     public DateTime? FinishedAt { get; set; }
-
-    public DateTime Date {get;set;}
     public string? Notes { get; set; }
 
     public List<WorkoutSessionExercise> Exercises { get; set; } = [];

@@ -147,7 +147,7 @@ function removeExercise(exerciseId: string) {
   }
 
   return (
-    <section>
+    <section className="page">
       <button
         className="btn btn-secondary"
         onClick={() => navigate("/workout-sessions/start")}

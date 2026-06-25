@@ -135,7 +135,7 @@ export default function WorkoutTemplateExercisesPage() {
   }
 
   return (
-    <section>
+    <section className="page">
       <form onSubmit={handleSubmit} className="stack">
         <button
           type="button"

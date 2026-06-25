@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GymAssistant.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddExerciseOwnerAndMuscleGroups : Migration
+    public partial class AddWorkoutSessionDetails : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -65,7 +65,8 @@ namespace GymAssistant.Api.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     WorkoutTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FinishedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
@@ -112,7 +113,8 @@ namespace GymAssistant.Api.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     WorkoutSessionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ExerciseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Order = table.Column<int>(type: "int", nullable: false)
+                    Order = table.Column<int>(type: "int", nullable: false),
+                    ExerciseNameSnapshot = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -139,7 +141,7 @@ namespace GymAssistant.Api.Migrations
                     WorkoutSessionExerciseId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SetNumber = table.Column<int>(type: "int", nullable: false),
                     Weight = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    Reps = table.Column<int>(type: "int", nullable: false)
+                    Reps = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {

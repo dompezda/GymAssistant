@@ -27,7 +27,7 @@ export default function WorkoutsTemplatesPage() {
   }, []);
 
   return (
-    <section>
+    <section className="page">
       <button className="btn btn-secondary" onClick={() => navigate("/")}>
         ← Wróć
       </button>

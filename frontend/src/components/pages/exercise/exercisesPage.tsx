@@ -55,10 +55,10 @@ useEffect(() => {
   return (
     <section className="page stack">
       <button className="btn btn-secondary" onClick={() => navigate("/")}>
-        ← Wróć1
+        ← Wróć
       </button>
 
-      <header className="page-header">
+      <header>
         <h1>Ćwiczenia</h1>
       </header>
         <input

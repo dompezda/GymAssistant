@@ -17,7 +17,7 @@ export default function WorkoutTemplateBasicsPage() {
   }
 
   return (
-    <section>
+    <section className="page">
       <button
         className="btn btn-secondary"
         onClick={() => navigate("/workout-templates")}

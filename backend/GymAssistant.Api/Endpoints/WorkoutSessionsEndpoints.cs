@@ -1,6 +1,8 @@
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
+using Microsoft.VisualBasic;
 
 namespace GymAssistant.Api.Endpoints;
 
@@ -41,17 +43,20 @@ public static class WorkoutSessionsEndpoints
                 return Results.BadRequest("One or more exercises do not exist.");
             }
 
+            var exercisesDictionary = await db.Exercises
+                .Where(x => exerciseIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
             var session = new WorkoutSession
             {
                 Id = Guid.NewGuid(),
                 WorkoutTemplateId = request.WorkoutTemplateId,
                 UserId = "Caran",
-                Date = DateTime.Now,
                 Exercises = request.Exercises
                     .Select((exercise, exerciseIndex) => new WorkoutSessionExercise
                     {
                         Id = Guid.NewGuid(),
                         ExerciseId = exercise.ExerciseId,
+                        ExerciseNameSnapshot = exercisesDictionary[exercise.ExerciseId],
                         Order = exerciseIndex + 1,
                         Sets = exercise.Sets
                             .OrderBy(x => x.SetNumber)
@@ -96,7 +101,6 @@ public static class WorkoutSessionsEndpoints
                 session.Id,
                 session.WorkoutTemplateId,
                 session.UserId,
-                session.Date,
                 session.Exercises
                     .OrderBy(x => x.Order)
                     .Select(x => new WorkoutSessionExerciseResponseDto(
@@ -119,11 +123,157 @@ public static class WorkoutSessionsEndpoints
 
             return Results.Ok(response);
         });
+    
+        app.MapPatch("/api/workout-sessions/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async(
+            Guid sessionId,
+            Guid sessionExerciseId,
+            UpdateWorkoutSessionExerciseRequest request,
+            AppDbContext db) =>
+        {
+
+            if(request.Sets == null || request.Sets.Length == 0)
+                return Results.BadRequest("Sets cannot be null or empty");
+            
+            if(request.Sets.Any(x=>x.reps<0 || x.weight <0))
+                return Results.BadRequest("Reps and weight have to be 0 or greater for each set");
+            HashSet<Guid> guids = request.Sets.Select(x=>x.id).ToHashSet<Guid>();
+            if(guids.Contains(Guid.Empty))
+                return Results.BadRequest("Set id cannot be empty");
+            if(guids.Count != request.Sets.Length)
+                return Results.BadRequest("Found duplicated ids");
+            var session = await db.WorkoutSessions
+            .Include(x => x.Exercises)
+                .ThenInclude(x => x.Sets)
+            .FirstOrDefaultAsync(x => x.Id == sessionId);
+
+            if(session == null)
+                return Results.NotFound();
+            var exercise = session.Exercises.FirstOrDefault(x=>x.Id == sessionExerciseId);
+            if(exercise == null)
+                return Results.NotFound();
+            var dbSets = exercise.Sets;
+            List<WorkoutSessionSet> setsToRemove = new List<WorkoutSessionSet>();
+            dbSets.ForEach(x =>
+            {
+                if(!guids.Contains(x.Id))
+                    setsToRemove.Add(x);
+            });
+            foreach(var item in setsToRemove)
+            {
+                db.WorkoutSessionSets.Remove(item);
+            }
+
+            int index = 1;
+            foreach(var set in request.Sets)
+            {
+                var current = dbSets.FirstOrDefault(x=>x.Id == set.id);
+                if(current == null)
+                {
+                    current = new WorkoutSessionSet
+                    {
+                        Id=set.id,
+                        //Id = Guid.NewGuid();
+                        WorkoutSessionExerciseId = exercise.Id,
+                        WorkoutSessionExercise = exercise
+                    };
+                    exercise.Sets.Add(current);
+                } 
+                current.SetNumber = index;
+                current.Reps = set.reps;
+                current.Weight = set.weight;
+                index +=1;    
+            }
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        });
+        app.MapPatch("/api/workout-sessions/{sessionId:guid}/finish",async(
+            Guid sessionId,
+            AppDbContext db
+        )=>
+        {
+            if(sessionId == Guid.Empty)
+                return Results.BadRequest("SessionId cannot be empty");
+            var session = db.WorkoutSessions.FirstOrDefault(x=>x.Id == sessionId);
+            if(session== null)
+                return Results.BadRequest("Couldnt find Session with selected Id");
+            session.FinishedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            return Results.Ok();
+        });
+
+app.MapGet("/api/workout-sessions/{sessionId:guid}/summary", async (
+    Guid sessionId,
+    AppDbContext db
+) =>
+{
+    if (sessionId == Guid.Empty)
+        return Results.BadRequest("SessionId cannot be empty");
+
+    var session = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+            .ThenInclude(x => x.Sets)
+        .FirstOrDefaultAsync(x => x.Id == sessionId);
+    if (session == null)
+        return Results.NotFound("Session not found");
+
+    var result = new WorkoutSessionSummaryResponseDto(
+        StartedAt: session.StartedAt,
+        FinishedAt: session.FinishedAt,
+        SessionExercises: session.Exercises
+        .OrderBy(x=>x.Order)
+        .Select(x =>
+        {
+            return new WorkoutSessionExerciseSummaryDto(
+                ExerciseId: x.ExerciseId,
+                ExerciseName: x.ExerciseNameSnapshot,
+                Sets: x.Sets
+                .OrderBy(x=>x.SetNumber)
+                .Select(y =>
+                {
+                    return new WorkoutSessionSetSummaryDto
+                    (
+                        id: y.Id,
+                        reps:y.Reps,
+                        setNumber: y.SetNumber,
+                        weight: y.Weight
+                    );
+                }).ToArray(),
+                SessionExerciseId:x.Id
+            );
+        }).ToArray()
+    );
+
+    return Results.Ok(result);
+});
     }
+
+    
     
 }
 
+public record WorkoutSessionSummaryResponseDto(
+ DateTime StartedAt,
+ DateTime? FinishedAt,
+ WorkoutSessionExerciseSummaryDto[] SessionExercises
+);
 
+public record WorkoutSessionExerciseSummaryDto(
+    Guid ExerciseId,
+    WorkoutSessionSetSummaryDto[] Sets,
+    Guid SessionExerciseId,
+    string ExerciseName
+);
+
+public record UpdateWorkoutSessionExerciseRequest (
+    WorkoutSessionSetSummaryDto[] Sets
+);
+public record WorkoutSessionSetSummaryDto(
+    Guid id,
+    int setNumber,
+    int? reps,
+    decimal? weight
+);
 
 public record CreateWorkoutSessionRequest(
     Guid? WorkoutTemplateId,
@@ -148,7 +298,6 @@ public record WorkoutSessionResponseDto(
     Guid? Id,
     Guid? WorkoutTemplateId,
     string UserId,
-    DateTime Date,
     List<WorkoutSessionExerciseResponseDto> Exercises
 );
 

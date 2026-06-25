@@ -4,7 +4,7 @@ export default function SettingsPage() {
 
   const navigate = useNavigate();
   return (
-    <section>
+    <section className="page">
       <button className="btn btn-secondary" onClick={() => navigate("/")}>
         ← Wróć
       </button>

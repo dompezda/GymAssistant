@@ -4,7 +4,7 @@ export default function StartWorkoutPage() {
 
   const navigate = useNavigate();
   return (
-    <section>
+    <section className="page main-menu">
       <button className="btn btn-secondary" onClick={() => navigate("/")}>
         ← Wróć
       </button>

@@ -6,7 +6,7 @@ export default function MainMenu() {
   const navigate = useNavigate();
 
   return (
-    <section className="main-menu">
+    <section className="page main-menu">
       <h1>Gym Assistant</h1>
 
       <button className="btn btn-primary" onClick={() => navigate("/exercises")}>Ćwiczenia</button>

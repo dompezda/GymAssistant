@@ -168,8 +168,10 @@ if (exercises.length === 0 || !currentExercise) {
   }
 
   return (
-    <section className="workout-session-page">
-  <button>← Wróć</button>
+    <section className="page">
+  <button className="btn btn-secondary">
+    ← Wróć
+  </button>
 
   <header className="workout-session-header">
     <p>Ćwiczenie {currentExerciseIndex + 1} z {exercises.length}</p>

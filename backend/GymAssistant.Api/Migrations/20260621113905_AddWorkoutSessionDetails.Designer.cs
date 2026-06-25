@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GymAssistant.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260612202328_AddWorkoutSessionDetails")]
+    [Migration("20260621113905_AddWorkoutSessionDetails")]
     partial class AddWorkoutSessionDetails
     {
         /// <inheritdoc />
@@ -72,16 +72,13 @@ namespace GymAssistant.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("StartedAt")
+                    b.Property<DateTime>("StartedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
