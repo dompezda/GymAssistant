@@ -167,6 +167,66 @@ if (exercises.length === 0 || !currentExercise) {
     navigate(`/workout-sessions/${id}/summary`)
   }
 
+  function addSet(): void {
+
+
+    setSession((prev)=> 
+    {
+      if(!prev)
+        return prev;
+
+    return {
+    ...prev,
+    exercises: prev.exercises.map((exercise) =>
+    {
+      if(exercise.id !== currentExercise.id)
+        return exercise;
+
+        const newSet : WorkoutSessionSet ={
+          id: crypto.randomUUID(),
+          setNumber: exercise.sets.length+1,
+          weight: null,  
+          reps : null,           
+        }
+
+      return {
+        ...exercise,
+        sets:
+        [
+          ...exercise.sets,
+          newSet
+        ]
+      }
+    })}})
+  }
+
+  function deleteSet(setId: string): void {
+    setSession((prev)=>{
+      if(!prev)
+        return prev;
+      return{
+        ...prev,
+        exercises: prev.exercises.map((exercise)=>
+        {
+          if(exercise.id !== currentExercise.id)
+            return exercise
+
+          if(exercise.sets.length<=1)
+            return exercise
+          return {
+            ...exercise,
+            sets: exercise.sets.filter((set)=> set.id !==setId)
+            .map((newSet,index)=> (
+            {
+              ...newSet,
+              setNumber: index+1
+            }))
+          }
+        })
+      }
+    })
+  }
+
   return (
     <section className="page">
   <button className="btn btn-secondary">
@@ -209,9 +269,16 @@ if (exercises.length === 0 || !currentExercise) {
               }}
             />
           </div>
+          <div>
+            <button onClick={()=>deleteSet(set.id)} disabled={currentExercise.sets.length <= 1}> Usuń serie</button>
+            </div>
         </div>
       ))}
     </div>
+    <div>
+      <button className="btn btn-primary" onClick={() => addSet()}> + Dodaj serie</button>
+    </div>
+
   </article>
 
   <nav className="exercise-navigation">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
+import EditExerciseModal from "../../exercises/EditExerciseModal";
 type Exercise = {
   id: string;
   name: string;
@@ -14,6 +15,7 @@ export default function ExercisesPage() {
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false);
     const [searchText, setSearchText] = useState("");
+    const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     
 async function fetchExercises(): Promise<Exercise[]> {
   const response = await fetch("http://localhost:5235/api/exercises");
@@ -30,7 +32,7 @@ async function loadExercises() {
   const data = await fetchExercises();
   setExercises(data);
 }
-    
+
 useEffect(() => {
   let ignore = false;
 
@@ -70,7 +72,7 @@ useEffect(() => {
 
       <div className="stack">
         {visibleExercises.map((exercise) => (
-          <article key={exercise.id} className="card">
+          <article key={exercise.id} className="card" onClick={() =>setSelectedExercise(exercise)}>
             <h2>{exercise.name}</h2>
 
             {exercise.muscleGroupLabels?.length > 0 && (
@@ -83,14 +85,27 @@ useEffect(() => {
       <button className="btn btn-primary" onClick={() => setIsCreateExerciseModalOpen(true)}>
         + Dodaj ćwiczenie
       </button>
-<CreateExerciseModal
-  isOpen={isCreateExerciseModalOpen}
-  onClose={() => setIsCreateExerciseModalOpen(false)}
-  onCreated={() => {
-    loadExercises();
-    setIsCreateExerciseModalOpen(false);
-  }}
-/>
+      <CreateExerciseModal
+        isOpen={isCreateExerciseModalOpen}
+        onClose={() => setIsCreateExerciseModalOpen(false)}
+        onCreated={() => {
+          loadExercises();
+          setIsCreateExerciseModalOpen(false);
+        }}
+      />
+      {selectedExercise !== null ?
+      <EditExerciseModal
+        isOpen={selectedExercise !== null}
+        onClose={() => setSelectedExercise(null)}
+        exercise={selectedExercise}
+        onUpdated={()=>
+          {
+            loadExercises();
+            setSelectedExercise(null);
+          }    
+        }
+      />
+      : null}
     </section>
     
   );

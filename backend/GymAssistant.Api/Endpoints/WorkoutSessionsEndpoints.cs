@@ -148,13 +148,15 @@ public static class WorkoutSessionsEndpoints
 
             if(session == null)
                 return Results.NotFound();
-            var exercise = session.Exercises.FirstOrDefault(x=>x.Id == sessionExerciseId);
-            if(exercise == null)
+            var exerciseFromDb = session.Exercises.FirstOrDefault(x=>x.Id == sessionExerciseId);
+            if(exerciseFromDb == null)
                 return Results.NotFound();
-            var dbSets = exercise.Sets;
+            var dbSets = exerciseFromDb.Sets;
+        
             List<WorkoutSessionSet> setsToRemove = new List<WorkoutSessionSet>();
             dbSets.ForEach(x =>
             {
+                
                 if(!guids.Contains(x.Id))
                     setsToRemove.Add(x);
             });
@@ -173,10 +175,11 @@ public static class WorkoutSessionsEndpoints
                     {
                         Id=set.id,
                         //Id = Guid.NewGuid();
-                        WorkoutSessionExerciseId = exercise.Id,
-                        WorkoutSessionExercise = exercise
+                        WorkoutSessionExerciseId = exerciseFromDb.Id,
+                        WorkoutSessionExercise = exerciseFromDb
                     };
-                    exercise.Sets.Add(current);
+                    db.WorkoutSessionSets.Add(current);
+                    exerciseFromDb.Sets.Add(current);
                 } 
                 current.SetNumber = index;
                 current.Reps = set.reps;

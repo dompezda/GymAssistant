@@ -41,12 +41,13 @@ public static class ExercisesEndpoints {
 
       var exercise = new Exercise {
         Name = request.Name.Trim(),
-          ExerciseMuscleGroups = request.MuscleGroups
+          ExerciseMuscleGroups = request.MuscleGroups          
           .Distinct()
           .Select(group => new ExerciseMuscleGroup {
             MuscleGroup = (MuscleGroup) group
-          })
-          .ToList()
+          })        
+          .ToList(),
+          IsSystem = request.isSystem
       };
 
       db.Exercises.Add(exercise);
@@ -65,14 +66,68 @@ public static class ExercisesEndpoints {
           isSystem = exercise.IsSystem
       });
     });
+
+    app.MapPatch("/api/exercises/{exerciseId:guid}", async (
+       Guid exerciseId,
+       EditExerciseRequest request,
+       AppDbContext db
+       ) => {
+      if(exerciseId == Guid.Empty)
+        return Results.BadRequest("ExerciseId cannot be empty");
+
+      if(string.IsNullOrWhiteSpace(request.Name))
+        return Results.BadRequest("Name cannot be empty");
+
+      if(request.MuscleGroups == null || request.MuscleGroups.Length <= 0)
+        return Results.BadRequest("MuscleGroup cannot be empty array");
+      
+      if(!request.MuscleGroups.All(x=>Enum.IsDefined(typeof(MuscleGroup),x)))
+        return Results.BadRequest("Unknown muscle group");
+
+      var exercise = db.Exercises.FirstOrDefault(x=>x.Id == exerciseId);
+      if(exercise == null)
+        return Results.NotFound(string.Format("Could not find exercise with id {0}",exerciseId));
+
+      exercise.Name = request.Name.Trim();
+      exercise.IsSystem = request.IsSystem;
+      
+      var existingExerciseMuscleGroupsIds = await db.ExerciseMuscleGroups.Where(x=>x.ExerciseId == exerciseId).Select(x=>(int)x.MuscleGroup).ToListAsync();
+      var requestedIds = request.MuscleGroups.Distinct().ToList();
+
+      var toAdd = requestedIds.Except(existingExerciseMuscleGroupsIds).ToList();
+      var toRemove = existingExerciseMuscleGroupsIds.Except(requestedIds);
+      foreach(var item in toRemove)
+      {
+        var elem = await db.ExerciseMuscleGroups.FirstOrDefaultAsync(x=>x.ExerciseId == exerciseId && (int)x.MuscleGroup == item);
+        if(elem!=null)
+          db.Remove(elem);
+      }
+      foreach(var item in toAdd.Distinct())
+      {
+        db.ExerciseMuscleGroups.Add(new ExerciseMuscleGroup
+        {
+          ExerciseId = exerciseId,
+          MuscleGroup = (MuscleGroup)Enum.ToObject(typeof(MuscleGroup),item),
+        });
+      }
+
+      await db.SaveChangesAsync();
+      return Results.Ok(exercise.Id);
+    });
   }
 }
 
-public record CreateExerciseRequest(string Name, int[] MuscleGroups);
+public record CreateExerciseRequest(string Name, int[] MuscleGroups, bool isSystem);
 public record ExerciseListItemResponse(
   Guid Id,
   string Name,
   int[] MuscleGroups,
   string[] MuscleGroupLabels,
+  bool IsSystem
+);
+
+public record EditExerciseRequest(
+  string Name,
+  int[] MuscleGroups,
   bool IsSystem
 );
