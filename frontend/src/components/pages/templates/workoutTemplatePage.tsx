@@ -1,14 +1,13 @@
 import { useEffect, useState} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-export type WorkoutTemplateResponseDto = {
+type WorkoutTemplateResponseDto = {
   id: string;
   title: string;
   notes: string | null;
   exercises: WorkoutTemplateExerciseResponseDto[];
 };
-
-export type WorkoutTemplateExerciseResponseDto = {
+type WorkoutTemplateExerciseResponseDto = {
   exerciseId: string;
   exerciseName: string;
   plannedSets: number;
@@ -59,7 +58,9 @@ export default function WorkoutTemplatePage() {
       <h1>{template.title}</h1>
 
       {template.notes && <p>{template.notes}</p>}
-
+      <button className="btn btn-primary" onClick={() => navigate(`/workout-templates/${template.id}/edit`)}>
+        Edytuj
+      </button>
       <div className="stack">
         {template.exercises.map((exercise) => (
           <article key={exercise.exerciseId} className="card">

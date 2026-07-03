@@ -63,6 +63,9 @@ useEffect(() => {
       <header>
         <h1>Ćwiczenia</h1>
       </header>
+      <button className="btn btn-primary" onClick={() => setIsCreateExerciseModalOpen(true)}>
+        + Dodaj ćwiczenie
+      </button>
         <input
           type="text"
           placeholder="Szukaj ćwiczenia..."
@@ -82,9 +85,6 @@ useEffect(() => {
         ))}
       </div>
 
-      <button className="btn btn-primary" onClick={() => setIsCreateExerciseModalOpen(true)}>
-        + Dodaj ćwiczenie
-      </button>
       <CreateExerciseModal
         isOpen={isCreateExerciseModalOpen}
         onClose={() => setIsCreateExerciseModalOpen(false)}

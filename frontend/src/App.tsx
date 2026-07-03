@@ -4,7 +4,7 @@ import ExercisesPage from "./components/pages/exercise/exercisesPage";
 import SettingsPage from "./components/pages/settingsPage";
 //import CreateExercisePage from "./components/pages/exercise/createExercisePage";
 
-import WorkoutsTemplatesPage from "./components/pages/templates/workoutsTemplatesPage";
+import WorkoutsTemplatesPage from "./components/pages/templates/workoutTemplatesPage";
 import WorkoutTemplateBasicsPage from "./components/pages/templates/workoutTemplateBasicsPage";
 import WorkoutTemplateExercisesPage from "./components/pages/templates/workoutTemplateExercisesPage";
 import WorkoutTemplatePage from "./components/pages/templates/workoutTemplatePage";
@@ -14,6 +14,7 @@ import SelectWorkoutTemplatePage from "./components/pages/session/selectWorkoutT
 import WorkoutSessionPage from "./components/pages/session/workoutSessionPage";
 import WorkoutSessionSetupPage from "./components/pages/session/workoutSessionSetupPage";
 import WorkoutSessionSummaryPage from "./components/pages/session/workoutSessionSummaryPage";
+import WorkoutTemplateEdit from "./components/pages/templates/workoutTemplateEdit";
 function App() {
   return (
     <BrowserRouter>
@@ -28,7 +29,8 @@ function App() {
           <Route path="/workout-templates/create" element={<WorkoutTemplateBasicsPage />} />
           <Route path="/workout-templates/exercises" element={<WorkoutTemplateExercisesPage />} />
           <Route path="/workout-templates/:id" element={<WorkoutTemplatePage />} />
-          
+          <Route path="/workout-templates/:id/edit" element={<WorkoutTemplateEdit />} />
+
           <Route path="/workout-sessions/start" element={<StartWorkoutPage />} />
           <Route path="/workout-sessions/select-template" element={<SelectWorkoutTemplatePage />} />
           <Route path="/workout-sessions/setup" element={<WorkoutSessionSetupPage />} />
