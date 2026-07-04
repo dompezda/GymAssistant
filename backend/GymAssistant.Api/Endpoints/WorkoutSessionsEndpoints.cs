@@ -242,18 +242,80 @@ app.MapGet("/api/workout-sessions/{sessionId:guid}/summary", async (
                         weight: y.Weight
                     );
                 }).ToArray(),
-                SessionExerciseId:x.Id
+                SessionExerciseId:x.Id,
+                Order:x.Order
             );
         }).ToArray()
     );
 
     return Results.Ok(result);
 });
-    }
+    
+app.MapPost("/api/workout-sessions/{sessionId:guid}/exercises", async (
+    Guid sessionId,
+    AddExerciseToWorkoutSessionRequest request,
+    AppDbContext db) =>
+    {
+        if (sessionId == Guid.Empty)
+            return Results.BadRequest("SessionId cannot be empty");
+        if(request.ExerciseId == Guid.Empty)
+            return Results.BadRequest("ExerciseId cannot be empty");
+        var session = await db.WorkoutSessions
+            .Include(x => x.Exercises)
+            .FirstOrDefaultAsync(x => x.Id == sessionId);
 
-    
-    
+        if (session == null)
+            return Results.NotFound("Session not found");
+        if(session.Exercises.Any(x => x.ExerciseId == request.ExerciseId))
+            return Results.Conflict("Exercise already exists in the session");
+        var exercise = await db.Exercises.FirstOrDefaultAsync(x => x.Id == request.ExerciseId);
+        if(exercise == null)
+            return Results.NotFound("Exercise does not exist");
+
+        var newSessionExercise = new WorkoutSessionExercise
+        {
+            Id = Guid.NewGuid(),
+            ExerciseId = request.ExerciseId,
+            ExerciseNameSnapshot = exercise.Name,
+            Order = session.Exercises.Count + 1,
+            WorkoutSessionId = session.Id,
+            Sets = new List<WorkoutSessionSet>
+            {
+                new WorkoutSessionSet
+                {
+                    Id = Guid.NewGuid(),
+                    SetNumber = 1,
+                    Reps = null,
+                    Weight = null
+                }
+            }
+        };
+        db.WorkoutSessionExercises.Add(newSessionExercise);
+        await db.SaveChangesAsync();
+
+        var dto = new WorkoutSessionExerciseResponseDto(
+            Id: newSessionExercise.Id,
+            ExerciseId: newSessionExercise.ExerciseId,
+            ExerciseName: newSessionExercise.ExerciseNameSnapshot,
+            Order: newSessionExercise.Order,
+            Sets: newSessionExercise.Sets
+                .OrderBy(x => x.SetNumber)
+                .Select(y => new WorkoutSessionSetResponseDto(
+                    Id: y.Id,
+                    SetNumber: y.SetNumber,
+                    Reps: y.Reps,
+                    Weight: y.Weight
+                )).ToList()
+        );
+        return Results.Ok(dto);
+    });    
+    }    
 }
+
+
+public record AddExerciseToWorkoutSessionRequest(
+    Guid ExerciseId
+);
 
 public record WorkoutSessionSummaryResponseDto(
  DateTime StartedAt,
@@ -265,7 +327,8 @@ public record WorkoutSessionExerciseSummaryDto(
     Guid ExerciseId,
     WorkoutSessionSetSummaryDto[] Sets,
     Guid SessionExerciseId,
-    string ExerciseName
+    string ExerciseName,
+    int? Order
 );
 
 public record UpdateWorkoutSessionExerciseRequest (

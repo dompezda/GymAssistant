@@ -30,7 +30,7 @@ export default function ExercisePickerModal({
             setExercises(data);
         }
         loadExercises();
-    }, []);
+    }, [isOpen]);
       if (!isOpen) {
         return null;
        }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ExercisePickerModal from "../../exercises/ExercisePickerModal";
+import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 
 type WorkoutSession = {
   id: string;
@@ -24,6 +26,8 @@ type WorkoutSessionSet = {
   reps: number | null;
 };
 
+type ExerciseModalMode = "closed" | "picker" | "create";
+
 export default function WorkoutSessionPage() {
   //const navigate = useNavigate();
   const { id } = useParams();
@@ -33,6 +37,8 @@ export default function WorkoutSessionPage() {
   const exercises = session?.exercises ?? [];
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const currentExercise = exercises[currentExerciseIndex];
+  const [exerciseModalMode, setExerciseModalMode] = useState<ExerciseModalMode>("closed");
+
   useEffect(() => {
 
     if(!id) return;
@@ -80,21 +86,19 @@ if (exercises.length === 0 || !currentExercise) {
 
   setSession(prev => {
     if (!prev) return prev;
-
+    markExerciseDirty(currentExercise.id);
     return {
       ...prev,
       exercises: prev.exercises.map(exercise => {
         if (exercise.id !== currentExercise.id) {
           return exercise;
         }
-
         return {
           ...exercise,
           sets: exercise.sets.map(set => {
             if (set.id !== setId) {
               return set;
             }
-            console.log(dirtyIds);
             return {
               ...set,
               [field]: value
@@ -167,6 +171,14 @@ if (exercises.length === 0 || !currentExercise) {
     navigate(`/workout-sessions/${id}/summary`)
   }
 
+  function markExerciseDirty(sessionExerciseId: string) {
+  setDirtyIds(prev =>
+    prev.includes(sessionExerciseId)
+      ? prev
+      : [...prev, sessionExerciseId]
+  );
+}
+
   function addSet(): void {
 
 
@@ -188,6 +200,7 @@ if (exercises.length === 0 || !currentExercise) {
           weight: null,  
           reps : null,           
         }
+        markExerciseDirty(currentExercise.id);
 
       return {
         ...exercise,
@@ -213,6 +226,8 @@ if (exercises.length === 0 || !currentExercise) {
 
           if(exercise.sets.length<=1)
             return exercise
+
+          markExerciseDirty(currentExercise.id);
           return {
             ...exercise,
             sets: exercise.sets.filter((set)=> set.id !==setId)
@@ -227,9 +242,53 @@ if (exercises.length === 0 || !currentExercise) {
     })
   }
 
+  async function addExerciseToCurrentSession(exerciseId:string) {
+    if (!session) return;
+
+    const existingIndex = session.exercises.findIndex(
+      x => x.exerciseId === exerciseId
+    );
+    if (existingIndex !== -1) {
+      setCurrentExerciseIndex(existingIndex);
+      return;
+    }
+    const newExerciseIndex = session.exercises.length;
+    const response = await fetch(`http://localhost:5235/api/workout-sessions/${session.id}/exercises`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        exerciseId: exerciseId
+      })
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(error);
+      return;
+    }
+    const data = await response.json();
+    const newSessionExercise: WorkoutSessionExercise = {
+        id: data.id,
+        exerciseId: data.exerciseId,
+        exerciseName: data.exerciseName,
+        order: data.order,
+        sets: data.sets
+      };
+      setSession((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          exercises: [...prev.exercises, newSessionExercise],
+        };
+      });
+      setCurrentExerciseIndex(newExerciseIndex);
+  }
+
   return (
     <section className="page">
-  <button className="btn btn-secondary">
+  <button className="btn btn-secondary" onClick={() => navigate("/")}>
     ← Wróć
   </button>
 
@@ -239,9 +298,11 @@ if (exercises.length === 0 || !currentExercise) {
   </header>
 
 <article className="exercise-card">
-    <h2 className="exercise-name">{currentExercise.exerciseName}</h2>
 
     <div className="sets-list">
+    <button className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
+      + Dodaj ćwiczenie
+    </button>
       {currentExercise.sets.map(set => (
         <div className="set-row" key={set.id}>
           <div className="set-number">Seria {set.setNumber}</div>
@@ -293,6 +354,25 @@ if (exercises.length === 0 || !currentExercise) {
   <button className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
     Zakończ trening
     </button>
+    <ExercisePickerModal
+    isOpen={exerciseModalMode === "picker"}
+    onClose={() => setExerciseModalMode("closed")}
+    onCreateNew={() => setExerciseModalMode("create")}
+    onSelect={(exercise) => {
+      addExerciseToCurrentSession(exercise.id);
+
+     }}
+    />
+
+    <CreateExerciseModal
+    isOpen={exerciseModalMode === "create"}
+    onClose={() => setExerciseModalMode("closed")}
+    onCreated={(exercise) => {
+      addExerciseToCurrentSession(exercise.id);
+      setExerciseModalMode("closed");
+    }}
+    />
+
 </section>
   );
 }

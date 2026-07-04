@@ -209,7 +209,7 @@ return(
                         selected => selected.exerciseId === exercise.id
                     );
                     return (
-                        <div onClick={() => handleExerciseClick(exercise)} className="card" key={exercise.id}>{exercise.name} 
+                        <div onClick={() => handleExerciseClick(exercise)} className={`card ${selected ? "card-selected" : ""}`} key={exercise.id}>{exercise.name} 
                     {exercise.muscleGroupLabels.length > 0 && (
                     <p>{exercise.muscleGroupLabels.join(", ")}</p>
                     )}
