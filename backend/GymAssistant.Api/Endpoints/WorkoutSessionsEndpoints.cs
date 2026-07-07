@@ -10,6 +10,30 @@ public static class WorkoutSessionsEndpoints
 {
     public static void MapWorkoutSessionsEndpoints(this WebApplication app)
     {
+
+        app.MapGet("/api/workout-sessions",async(
+            AppDbContext db)=>
+        {
+            var sessions = await db.WorkoutSessions
+            .Where(x=>x.FinishedAt != null)
+            .OrderByDescending(x=>x.StartedAt)
+            .Select(session => new WorkoutSessionListItemResponse(
+                    session.Id,
+                    session.Notes,
+                    session.StartedAt,
+                    session.FinishedAt,
+                    session.Exercises.Count(),
+                    session.Exercises.Sum(x=>x.Sets.Count()),
+                    session.Exercises.SelectMany(x=>x.Sets).Sum(y=>(y.Reps ?? 0)*(y.Weight ?? 0)),
+                    session.FinishedAt != null 
+                        ? (int)(session.FinishedAt.Value - session.StartedAt).TotalMinutes 
+                        : 0
+                ))
+            .ToListAsync();
+            return Results.Ok(sessions);
+        });
+
+
         app.MapPost("/api/workout-sessions", async (
             CreateWorkoutSessionRequest request,
             AppDbContext db) =>
@@ -205,10 +229,10 @@ public static class WorkoutSessionsEndpoints
             return Results.Ok();
         });
 
-app.MapGet("/api/workout-sessions/{sessionId:guid}/summary", async (
+        app.MapGet("/api/workout-sessions/{sessionId:guid}/summary", async (
     Guid sessionId,
     AppDbContext db
-) =>
+        ) =>
 {
     if (sessionId == Guid.Empty)
         return Results.BadRequest("SessionId cannot be empty");
@@ -251,10 +275,10 @@ app.MapGet("/api/workout-sessions/{sessionId:guid}/summary", async (
     return Results.Ok(result);
 });
     
-app.MapPost("/api/workout-sessions/{sessionId:guid}/exercises", async (
+        app.MapPost("/api/workout-sessions/{sessionId:guid}/exercises", async (
     Guid sessionId,
     AddExerciseToWorkoutSessionRequest request,
-    AppDbContext db) =>
+        AppDbContext db) =>
     {
         if (sessionId == Guid.Empty)
             return Results.BadRequest("SessionId cannot be empty");
@@ -311,6 +335,18 @@ app.MapPost("/api/workout-sessions/{sessionId:guid}/exercises", async (
     });    
     }    
 }
+
+public record WorkoutSessionListItemResponse(
+    Guid Id,
+    string? Notes,
+    DateTime StartedAt,
+    DateTime? FinishedAt,
+    int ExerciseCount,
+    int SetCount,
+    decimal? TotalVolume,
+    int? DurationMinutes
+);
+
 
 
 public record AddExerciseToWorkoutSessionRequest(

@@ -105,7 +105,7 @@ export default function WorkoutSessionSummaryPage() {
   return (
     <section className="page">
       <button className="btn btn-secondary" onClick={() => navigate("/")}>
-        ← Wróć{" "}
+        ← Wróć
       </button>
 
       <div>

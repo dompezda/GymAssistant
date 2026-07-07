@@ -12,6 +12,7 @@ export default function MainMenu() {
       <button className="btn btn-primary" onClick={() => navigate("/exercises")}>Ćwiczenia</button>
       <button className="btn btn-secondary" onClick={() => navigate("/workout-templates")}>Plany Treningowe</button>
       <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/start")}>Rozpocznij trening</button>
+      <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions")}>Historia treningów</button>
       <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Ustawienia</button>
     </section>
   );
