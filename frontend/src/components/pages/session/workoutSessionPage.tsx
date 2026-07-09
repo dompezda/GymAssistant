@@ -283,7 +283,52 @@ if (exercises.length === 0 || !currentExercise) {
           exercises: [...prev.exercises, newSessionExercise],
         };
       });
-      setCurrentExerciseIndex(newExerciseIndex);
+      
+      if(session.exercises.length===1)
+        setCurrentExerciseIndex(0)
+      else  
+        setCurrentExerciseIndex(newExerciseIndex);
+  }
+
+  async function deleteExercise(id: string): Promise<void> {
+    if(!session) return;
+    if(!id) return;
+    if(!session.exercises.some((e)=>e.id==id)) return;
+
+    console.log(id);
+    const confirmed = window.confirm(
+    `Czy na pewno chcesz usunąć ćwiczenie "${currentExercise.exerciseName}" z tej sesji?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await fetch(`http://localhost:5235/api/workout-sessions/${session.id}/exercises/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    if(!response.ok)
+    {
+      console.log(`Błąd przy usuwaniu ${response.body}`);
+      return;
+    }
+    const newExercises = session.exercises.filter((e)=>e.id!==id);
+    const newIndex = Math.min(currentExerciseIndex, newExercises.length - 1)
+    setSession((prev)=>{
+      if(!prev) 
+        return prev;
+
+        return {
+          ...prev,
+          exercises: newExercises
+        };
+      });
+      setCurrentExerciseIndex(newIndex);
+
   }
 
   return (
@@ -299,10 +344,11 @@ if (exercises.length === 0 || !currentExercise) {
 
 <article className="exercise-card">
 
-    <div className="sets-list">
-    <button className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
-      + Dodaj ćwiczenie
+    <button className="btn btn-danger" disabled={exercises.length <= 1} onClick={() => deleteExercise(currentExercise.id)}>
+        - Usuń ćwiczenie
     </button>
+    <div className="sets-list">
+
       {currentExercise.sets.map(set => (
         <div className="set-row" key={set.id}>
           <div className="set-number">Seria {set.setNumber}</div>
@@ -350,7 +396,10 @@ if (exercises.length === 0 || !currentExercise) {
       Następne →
     </button>
   </nav>
-
+  <div>
+    <button className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
+        + Dodaj ćwiczenie
+    </button>
   <button className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
     Zakończ trening
     </button>
@@ -363,6 +412,8 @@ if (exercises.length === 0 || !currentExercise) {
 
      }}
     />
+  </div>
+   
 
     <CreateExerciseModal
     isOpen={exerciseModalMode === "create"}

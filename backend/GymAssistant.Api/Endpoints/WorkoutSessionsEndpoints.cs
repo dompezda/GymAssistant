@@ -1,6 +1,7 @@
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Net.Http.Headers;
 using Microsoft.VisualBasic;
 
@@ -274,6 +275,51 @@ public static class WorkoutSessionsEndpoints
 
     return Results.Ok(result);
 });
+
+app.MapDelete("/api/workout-sessions/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async (
+    Guid sessionId,
+    Guid sessionExerciseId,
+    AppDbContext db
+)=>
+{
+   if(sessionId==Guid.Empty)
+        return Results.BadRequest("SessionId cannot be empty");
+   if(sessionExerciseId == Guid.Empty)
+        return Results.BadRequest("SessionExerciseId cannot be empty");
+
+
+    var session =await db.WorkoutSessions
+        .Include(x=>x.Exercises)
+        .FirstOrDefaultAsync(x=>x.Id == sessionId);
+    if(session==null)
+        return Results.NotFound("Couldnt find session with id");
+
+    if(session.FinishedAt!=null)
+        return Results.Conflict("You cannot delete exercises from finished session");
+
+    var exercise = session.Exercises
+        .FirstOrDefault(x=>x.Id==sessionExerciseId);
+
+    if(exercise==null)
+        return Results.NotFound("Couldnt find exercise with id");
+
+    if(session.Exercises.Count<=1)
+        return Results.Conflict("Cannot delete last exercise");
+
+    db.Remove(exercise);
+    var remainingExercises = session.Exercises
+        .Where(x=>x.Id!=exercise.Id)
+        .OrderBy(x=>x.Order)
+        .ToList();
+    int index = 1;
+    foreach(var item in remainingExercises)
+    {
+        item.Order = index;
+        index+=1;
+    }
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
     
         app.MapPost("/api/workout-sessions/{sessionId:guid}/exercises", async (
     Guid sessionId,
@@ -333,7 +379,10 @@ public static class WorkoutSessionsEndpoints
         );
         return Results.Ok(dto);
     });    
+        
     }    
+
+
 }
 
 public record WorkoutSessionListItemResponse(
