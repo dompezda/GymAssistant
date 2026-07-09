@@ -1,30 +1,38 @@
-# GymAssistant API — Endpointy
+# GymAssistant API Documentation
 
-Dokumentacja aktualnych endpointów API aplikacji GymAssistant.
+This document describes the current HTTP API exposed by the GymAssistant backend.
 
-Base URL lokalnie:
+The API is implemented as a .NET Minimal API and all application endpoints use the `/api` prefix.
 
-```txt
-https://localhost:<port>
-```
-
-Wszystkie endpointy znajdują się pod prefiksem:
+Local frontend currently calls the API at:
 
 ```txt
-/api
+http://localhost:5235
 ```
 
-## Spis endpointów
+> Note: the project is currently in a single-user/demo stage. Some data is still assigned to the test user `Caran`. Authentication and user ownership are planned but are not implemented yet.
 
-| Metoda | Endpoint                      | Opis                                 |
-| ------ | ----------------------------- | ------------------------------------ |
-| GET    | `/api/exercises`              | Pobiera listę ćwiczeń                |
-| POST   | `/api/exercises`              | Tworzy nowe ćwiczenie                |
-| GET    | `/api/muscle-groups`          | Pobiera listę grup mięśniowych       |
-| GET    | `/api/workout-templates`      | Pobiera listę planów treningowych    |
-| GET    | `/api/workout-templates/{id}` | Pobiera szczegóły planu treningowego |
-| POST   | `/api/workout-templates`      | Tworzy nowy plan treningowy          |
-| POST   | `/api/workout-sessions`       | Zapisuje sesję treningową            |
+---
+
+## Endpoint overview
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| GET | `/api/exercises` | Returns all exercises |
+| POST | `/api/exercises` | Creates a new exercise |
+| PATCH | `/api/exercises/{exerciseId}` | Updates an existing exercise |
+| GET | `/api/muscle-groups` | Returns available muscle groups |
+| GET | `/api/workout-templates` | Returns workout templates |
+| POST | `/api/workout-templates` | Creates a workout template |
+| GET | `/api/workout-templates/{id}` | Returns workout template details |
+| PATCH | `/api/workout-templates/{id}` | Updates a workout template |
+| GET | `/api/workout-sessions` | Returns finished workout sessions |
+| POST | `/api/workout-sessions` | Starts a new workout session |
+| GET | `/api/workout-sessions/{id}` | Returns active/full workout session details |
+| PATCH | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Updates sets for one exercise inside a session |
+| PATCH | `/api/workout-sessions/{sessionId}/finish` | Finishes a workout session |
+| GET | `/api/workout-sessions/{sessionId}/summary` | Returns workout session summary |
+| POST | `/api/workout-sessions/{sessionId}/exercises` | Adds an exercise to an existing workout session |
 
 ---
 
@@ -32,7 +40,7 @@ Wszystkie endpointy znajdują się pod prefiksem:
 
 ## GET `/api/exercises`
 
-Pobiera listę ćwiczeń.
+Returns all exercises with their assigned muscle groups.
 
 ### Response `200 OK`
 
@@ -41,68 +49,121 @@ Pobiera listę ćwiczeń.
   {
     "id": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
     "name": "Bench Press",
-    "muscleGroups": [1, 5],
+    "muscleGroups": [1, 6],
     "muscleGroupLabels": ["Chest", "Triceps"],
     "isSystem": true
   }
 ]
 ```
 
-### Pola response
+### Response fields
 
-| Pole                | Typ        | Opis                                      |
-| ------------------- | ---------- | ----------------------------------------- |
-| `id`                | `Guid`     | Identyfikator ćwiczenia                   |
-| `name`              | `string`   | Nazwa ćwiczenia                           |
-| `muscleGroups`      | `int[]`    | Lista grup mięśniowych jako wartości enum |
-| `muscleGroupLabels` | `string[]` | Lista nazw grup mięśniowych               |
-| `isSystem`          | `bool`     | Informacja, czy ćwiczenie jest systemowe  |
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `Guid` | Exercise identifier |
+| `name` | `string` | Exercise name |
+| `muscleGroups` | `int[]` | Muscle group enum values |
+| `muscleGroupLabels` | `string[]` | Muscle group names |
+| `isSystem` | `bool` | Indicates whether the exercise is a system/default exercise |
 
 ---
 
 ## POST `/api/exercises`
 
-Tworzy nowe ćwiczenie.
+Creates a new exercise.
 
 ### Request body
 
 ```json
 {
   "name": "Incline Dumbbell Press",
-  "muscleGroups": [1, 5]
+  "muscleGroups": [1, 6],
+  "isSystem": false
 }
 ```
 
-### Pola request
+### Request fields
 
-| Pole           | Typ      | Wymagane | Opis                   |
-| -------------- | -------- | -------- | ---------------------- |
-| `name`         | `string` | Tak      | Nazwa ćwiczenia        |
-| `muscleGroups` | `int[]`  | Tak      | Lista grup mięśniowych |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `name` | `string` | Yes | Exercise name |
+| `muscleGroups` | `int[]` | Yes | Muscle group enum values |
+| `isSystem` | `bool` | Yes | Indicates whether the exercise is a system/default exercise |
 
-### Walidacja
+### Validation
 
-Endpoint zwraca `400 Bad Request`, gdy:
+Returns `400 Bad Request` when:
 
-* nazwa ćwiczenia jest pusta,
-* nie wybrano żadnej grupy mięśniowej,
-* podano nieprawidłową wartość grupy mięśniowej.
+- `name` is empty or whitespace,
+- `muscleGroups` is null or empty,
+- at least one muscle group value is not defined in the `MuscleGroup` enum.
 
 ### Response `201 Created`
 
 ```json
 {
-  "id": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a"
+  "id": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+  "name": "Incline Dumbbell Press",
+  "muscleGroups": [1, 6],
+  "muscleGroupLabels": ["Chest", "Triceps"],
+  "isSystem": false
 }
 ```
 
 ---
 
-# Muscle Groups
+## PATCH `/api/exercises/{exerciseId}`
+
+Updates an existing exercise and synchronizes its muscle groups.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `exerciseId` | `Guid` | Exercise identifier |
+
+### Request body
+
+```json
+{
+  "name": "Dumbbell Bench Press",
+  "muscleGroups": [1, 6],
+  "isSystem": false
+}
+```
+
+### Request fields
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `name` | `string` | Yes | New exercise name |
+| `muscleGroups` | `int[]` | Yes | Full target list of muscle group enum values |
+| `isSystem` | `bool` | Yes | Indicates whether the exercise is a system/default exercise |
+
+### Validation
+
+Returns `400 Bad Request` when:
+
+- `exerciseId` is empty,
+- `name` is empty or whitespace,
+- `muscleGroups` is null or empty,
+- at least one muscle group value is not defined in the `MuscleGroup` enum.
+
+Returns `404 Not Found` when the exercise does not exist.
+
+### Response `200 OK`
+
+```json
+"5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a"
+```
+
+---
+
+# Muscle groups
 
 ## GET `/api/muscle-groups`
 
-Pobiera listę dostępnych grup mięśniowych.
+Returns available muscle groups.
 
 ### Response `200 OK`
 
@@ -115,24 +176,50 @@ Pobiera listę dostępnych grup mięśniowych.
   {
     "value": 2,
     "label": "Back"
+  },
+  {
+    "value": 3,
+    "label": "Legs"
+  },
+  {
+    "value": 4,
+    "label": "Shoulders"
+  },
+  {
+    "value": 5,
+    "label": "Biceps"
+  },
+  {
+    "value": 6,
+    "label": "Triceps"
+  },
+  {
+    "value": 7,
+    "label": "Core"
+  },
+  {
+    "value": 8,
+    "label": "FullBody"
   }
 ]
 ```
 
-### Pola response
+### Response fields
 
-| Pole    | Typ      | Opis                          |
-| ------- | -------- | ----------------------------- |
-| `value` | `int`    | Wartość enum grupy mięśniowej |
-| `label` | `string` | Nazwa grupy mięśniowej        |
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `value` | `int` | Muscle group enum value |
+| `label` | `string` | Muscle group name |
 
 ---
 
-# Workout Templates
+# Workout templates
+
+A workout template defines a reusable workout plan. A template contains ordered exercises and planned set counts.
 
 ## GET `/api/workout-templates`
 
-Pobiera listę planów treningowych.
+Returns all workout templates.
 
 ### Response `200 OK`
 
@@ -141,65 +228,31 @@ Pobiera listę planów treningowych.
   {
     "id": "4eb84d11-8f8d-4e3e-9f4c-94849f7a4c71",
     "title": "FBW A",
-    "notes": "Plan treningowy na poniedziałek"
+    "notes": "Full body workout A"
   }
 ]
 ```
 
-### Pola response
+### Response fields
 
-| Pole    | Typ       | Opis                             |
-| ------- | --------- | -------------------------------- |
-| `id`    | `Guid`    | Identyfikator planu treningowego |
-| `title` | `string`  | Nazwa planu                      |
-| `notes` | `string?` | Notatki do planu                 |
-
----
-
-## GET `/api/workout-templates/{id}`
-
-Pobiera szczegóły konkretnego planu treningowego.
-
-### Parametry route
-
-| Parametr | Typ    | Opis                             |
-| -------- | ------ | -------------------------------- |
-| `id`     | `Guid` | Identyfikator planu treningowego |
-
-### Response `200 OK`
-
-```json
-{
-  "id": "4eb84d11-8f8d-4e3e-9f4c-94849f7a4c71",
-  "title": "FBW A",
-  "notes": "Plan treningowy na poniedziałek",
-  "exercises": [
-    {
-      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
-      "exerciseName": "Bench Press",
-      "plannedSets": 3,
-      "order": 1
-    }
-  ]
-}
-```
-
-### Response `404 Not Found`
-
-Zwracany, gdy plan treningowy o podanym `id` nie istnieje.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `Guid` | Workout template identifier |
+| `title` | `string` | Template title |
+| `notes` | `string?` | Optional template notes |
 
 ---
 
 ## POST `/api/workout-templates`
 
-Tworzy nowy plan treningowy.
+Creates a new workout template.
 
 ### Request body
 
 ```json
 {
   "title": "FBW A",
-  "notes": "Plan treningowy na poniedziałek",
+  "notes": "Full body workout A",
   "exercises": [
     {
       "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
@@ -215,29 +268,29 @@ Tworzy nowy plan treningowy.
 }
 ```
 
-### Pola request
+### Request fields
 
-| Pole        | Typ                         | Wymagane | Opis                     |
-| ----------- | --------------------------- | -------- | ------------------------ |
-| `title`     | `string`                    | Tak      | Nazwa planu treningowego |
-| `notes`     | `string?`                   | Nie      | Notatki do planu         |
-| `exercises` | `WorkoutTemplateExercise[]` | Tak      | Lista ćwiczeń w planie   |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `title` | `string` | Yes | Template title |
+| `notes` | `string?` | No | Optional template notes |
+| `exercises` | `CreateWorkoutTemplateExerciseRequest[]` | Yes | Exercises included in the template |
 
-### `WorkoutTemplateExercise`
+### `CreateWorkoutTemplateExerciseRequest`
 
-| Pole          | Typ    | Wymagane | Opis                         |
-| ------------- | ------ | -------- | ---------------------------- |
-| `exerciseId`  | `Guid` | Tak      | Identyfikator ćwiczenia      |
-| `plannedSets` | `int`  | Tak      | Planowana liczba serii       |
-| `order`       | `int`  | Tak      | Kolejność ćwiczenia w planie |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `exerciseId` | `Guid` | Yes | Exercise identifier |
+| `plannedSets` | `int` | Yes | Planned number of sets |
+| `order` | `int` | Yes | Exercise order in the template |
 
-### Walidacja
+### Validation
 
-Endpoint zwraca `400 Bad Request`, gdy:
+Returns `400 Bad Request` when:
 
-* `title` jest pusty,
-* lista `exercises` jest pusta,
-* jedno lub więcej ćwiczeń nie istnieje w bazie.
+- `title` is empty or whitespace,
+- `exercises` is empty,
+- at least one exercise does not exist.
 
 ### Response `201 Created`
 
@@ -249,15 +302,150 @@ Endpoint zwraca `400 Bad Request`, gdy:
 
 ---
 
-# Workout Sessions
+## GET `/api/workout-templates/{id}`
+
+Returns details of a single workout template.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | `Guid` | Workout template identifier |
+
+### Response `200 OK`
+
+```json
+{
+  "id": "4eb84d11-8f8d-4e3e-9f4c-94849f7a4c71",
+  "title": "FBW A",
+  "notes": "Full body workout A",
+  "exercises": [
+    {
+      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+      "exerciseName": "Bench Press",
+      "plannedSets": 3,
+      "order": 1
+    }
+  ]
+}
+```
+
+### Response `404 Not Found`
+
+Returned when the workout template does not exist.
+
+---
+
+## PATCH `/api/workout-templates/{id}`
+
+Updates a workout template. The request contains the full target state of the template exercises. Existing template exercises are updated, missing ones are removed, and new ones are added.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | `Guid` | Workout template identifier |
+
+### Request body
+
+```json
+{
+  "title": "FBW A - updated",
+  "notes": "Updated full body workout",
+  "exercises": [
+    {
+      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+      "plannedSets": 4,
+      "order": 1
+    }
+  ]
+}
+```
+
+### Validation
+
+Returns `400 Bad Request` when:
+
+- `title` is empty or whitespace,
+- `exercises` is empty,
+- duplicate exercises are provided,
+- any `plannedSets` value is less than or equal to `0`,
+- at least one exercise does not exist.
+
+Returns `404 Not Found` when the workout template does not exist.
+
+### Response `204 No Content`
+
+No response body.
+
+---
+
+# Workout sessions
+
+A workout session represents a started workout. It contains ordered session exercises and sets.
+
+The current model is:
+
+```txt
+WorkoutSession
+  -> WorkoutSessionExercise
+      -> WorkoutSessionSet
+```
+
+Each `WorkoutSessionExercise` stores `ExerciseNameSnapshot`. This preserves historical training data even if the original exercise name is changed later.
+
+---
+
+## GET `/api/workout-sessions`
+
+Returns finished workout sessions ordered by start date descending.
+
+Only sessions with `finishedAt != null` are returned.
+
+### Response `200 OK`
+
+```json
+[
+  {
+    "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
+    "notes": null,
+    "startedAt": "2026-06-21T11:41:06.0000000Z",
+    "finishedAt": "2026-06-21T11:59:48.0000000Z",
+    "exerciseCount": 4,
+    "setCount": 16,
+    "totalVolume": 8450,
+    "durationMinutes": 18
+  }
+]
+```
+
+### Response fields
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `Guid` | Workout session identifier |
+| `notes` | `string?` | Optional session notes |
+| `startedAt` | `DateTime` | Session start time in UTC |
+| `finishedAt` | `DateTime?` | Session finish time in UTC |
+| `exerciseCount` | `int` | Number of exercises in the session |
+| `setCount` | `int` | Number of sets in the session |
+| `totalVolume` | `decimal?` | Sum of `reps * weight` across all sets |
+| `durationMinutes` | `int?` | Duration between `startedAt` and `finishedAt` in minutes |
+
+---
 
 ## POST `/api/workout-sessions`
 
-Zapisuje sesję treningową.
+Starts a new workout session. The session may optionally be created from a workout template.
 
-Aktualnie endpoint zapisuje całą sesję na podstawie danych przesłanych z frontendu. Sesja może być powiązana z planem treningowym przez `workoutTemplateId`, ale nie musi.
+The backend sets:
 
-### Request body
+- `id`,
+- `startedAt`,
+- `userId`, currently hardcoded as `Caran`,
+- `exerciseNameSnapshot` for every session exercise.
+
+### Request body - from template
 
 ```json
 {
@@ -268,13 +456,13 @@ Aktualnie endpoint zapisuje całą sesję na podstawie danych przesłanych z fro
       "sets": [
         {
           "setNumber": 1,
-          "weight": 80.5,
-          "reps": 8
+          "weight": null,
+          "reps": null
         },
         {
           "setNumber": 2,
-          "weight": 80.5,
-          "reps": 7
+          "weight": null,
+          "reps": null
         }
       ]
     }
@@ -282,7 +470,7 @@ Aktualnie endpoint zapisuje całą sesję na podstawie danych przesłanych z fro
 }
 ```
 
-Dla pustego treningu `workoutTemplateId` może być `null`:
+### Request body - empty/custom workout
 
 ```json
 {
@@ -293,8 +481,8 @@ Dla pustego treningu `workoutTemplateId` może być `null`:
       "sets": [
         {
           "setNumber": 1,
-          "weight": 80,
-          "reps": 8
+          "weight": null,
+          "reps": null
         }
       ]
     }
@@ -302,35 +490,35 @@ Dla pustego treningu `workoutTemplateId` może być `null`:
 }
 ```
 
-### Pola request
+### Request fields
 
-| Pole                | Typ                        | Wymagane | Opis                                                       |
-| ------------------- | -------------------------- | -------- | ---------------------------------------------------------- |
-| `workoutTemplateId` | `Guid?`                    | Nie      | Identyfikator planu treningowego, z którego powstała sesja |
-| `exercises`         | `WorkoutSessionExercise[]` | Tak      | Lista ćwiczeń wykonanych w sesji                           |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `workoutTemplateId` | `Guid?` | No | Template used to start the session, if any |
+| `exercises` | `CreateWorkoutSessionExerciseRequest[]` | Yes | Exercises included in the session |
 
-### `WorkoutSessionExercise`
+### `CreateWorkoutSessionExerciseRequest`
 
-| Pole         | Typ                   | Wymagane | Opis                      |
-| ------------ | --------------------- | -------- | ------------------------- |
-| `exerciseId` | `Guid`                | Tak      | Identyfikator ćwiczenia   |
-| `sets`       | `WorkoutSessionSet[]` | Tak      | Lista serii dla ćwiczenia |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `exerciseId` | `Guid` | Yes | Exercise identifier |
+| `sets` | `CreateWorkoutSessionSetRequest[]` | Yes | Initial sets for the exercise |
 
-### `WorkoutSessionSet`
+### `CreateWorkoutSessionSetRequest`
 
-| Pole        | Typ        | Wymagane | Opis                 |
-| ----------- | ---------- | -------- | -------------------- |
-| `setNumber` | `int`      | Tak      | Numer serii          |
-| `weight`    | `decimal?` | Nie      | Ciężar użyty w serii |
-| `reps`      | `int?`     | Nie      | Liczba powtórzeń     |
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `setNumber` | `int` | Yes | Initial set number. The backend reorders sets sequentially while creating the session. |
+| `weight` | `decimal?` | No | Set weight |
+| `reps` | `int?` | No | Set repetitions |
 
-### Walidacja
+### Validation
 
-Endpoint zwraca `400 Bad Request`, gdy:
+Returns `400 Bad Request` when:
 
-* lista `exercises` jest pusta,
-* podany `workoutTemplateId` nie istnieje,
-* jedno lub więcej ćwiczeń nie istnieje w bazie.
+- `exercises` is empty,
+- `workoutTemplateId` is provided but does not exist,
+- at least one exercise does not exist.
 
 ### Response `201 Created`
 
@@ -342,33 +530,286 @@ Endpoint zwraca `400 Bad Request`, gdy:
 
 ---
 
-# Aktualne ograniczenia / TODO
+## GET `/api/workout-sessions/{id}`
 
-## Autoryzacja
+Returns full workout session details, including exercises and sets.
 
-Aktualnie endpointy nie są jeszcze opisane jako chronione autoryzacją. Docelowo większość endpointów powinna wymagać zalogowanego użytkownika.
+This endpoint is used by the active workout session page.
 
-Planowane podejście:
+### Route parameters
 
-* rejestracja użytkownika,
-* logowanie,
-* przypisywanie danych do `UserId`,
-* filtrowanie ćwiczeń, planów i sesji po aktualnie zalogowanym użytkowniku,
-* brak przesyłania `UserId` z frontendu.
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `id` | `Guid` | Workout session identifier |
 
-## UserId
+### Response `200 OK`
 
-Aktualnie w kodzie część danych jest przypisywana do testowego użytkownika:
+```json
+{
+  "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
+  "workoutTemplateId": "4eb84d11-8f8d-4e3e-9f4c-94849f7a4c71",
+  "userId": "Caran",
+  "exercises": [
+    {
+      "id": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
+      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+      "exerciseName": "Bench Press",
+      "order": 1,
+      "sets": [
+        {
+          "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
+          "setNumber": 1,
+          "weight": 80,
+          "reps": 8
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Response `404 Not Found`
+
+Returned when the workout session does not exist.
+
+---
+
+## PATCH `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}`
+
+Updates all sets for a single exercise inside a workout session.
+
+The request represents the full target state of the exercise sets:
+
+- sets missing from the request are removed,
+- existing sets are updated,
+- new sets are added,
+- `setNumber` is recalculated sequentially by the backend.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `sessionId` | `Guid` | Workout session identifier |
+| `sessionExerciseId` | `Guid` | Identifier of the exercise inside the workout session |
+
+### Request body
+
+```json
+{
+  "sets": [
+    {
+      "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
+      "setNumber": 1,
+      "reps": 8,
+      "weight": 80
+    },
+    {
+      "id": "7ae29166-f73c-43df-82ff-b7f8837cc3f2",
+      "setNumber": 2,
+      "reps": 7,
+      "weight": 80
+    }
+  ]
+}
+```
+
+### Request fields
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `sets` | `WorkoutSessionSetSummaryDto[]` | Yes | Full target list of sets for this session exercise |
+
+### `WorkoutSessionSetSummaryDto`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `id` | `Guid` | Yes | Set identifier. New frontend-created sets must provide a generated GUID. |
+| `setNumber` | `int` | Yes | Current set number. The backend recalculates it sequentially. |
+| `reps` | `int?` | No | Set repetitions. Must be `0` or greater when provided. |
+| `weight` | `decimal?` | No | Set weight. Must be `0` or greater when provided. |
+
+### Validation
+
+Returns `400 Bad Request` when:
+
+- `sets` is null or empty,
+- any `reps` value is less than `0`,
+- any `weight` value is less than `0`,
+- any set `id` is empty,
+- duplicate set ids are provided.
+
+Returns `404 Not Found` when:
+
+- the workout session does not exist,
+- the selected session exercise does not exist in that session.
+
+### Response `200 OK`
+
+No response body.
+
+---
+
+## PATCH `/api/workout-sessions/{sessionId}/finish`
+
+Finishes a workout session by setting `finishedAt` to the current UTC time.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `sessionId` | `Guid` | Workout session identifier |
+
+### Validation
+
+Returns `400 Bad Request` when:
+
+- `sessionId` is empty,
+- the session does not exist.
+
+### Response `200 OK`
+
+No response body.
+
+---
+
+## GET `/api/workout-sessions/{sessionId}/summary`
+
+Returns workout session summary data.
+
+This endpoint is used by the workout summary page after finishing a session and by the training history page when opening a past session.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `sessionId` | `Guid` | Workout session identifier |
+
+### Response `200 OK`
+
+```json
+{
+  "startedAt": "2026-06-21T11:41:06.0000000Z",
+  "finishedAt": "2026-06-21T11:59:48.0000000Z",
+  "sessionExercises": [
+    {
+      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+      "sets": [
+        {
+          "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
+          "setNumber": 1,
+          "reps": 8,
+          "weight": 80
+        }
+      ],
+      "sessionExerciseId": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
+      "exerciseName": "Bench Press",
+      "order": 1
+    }
+  ]
+}
+```
+
+### Validation
+
+Returns `400 Bad Request` when `sessionId` is empty.
+
+Returns `404 Not Found` when the workout session does not exist.
+
+---
+
+## POST `/api/workout-sessions/{sessionId}/exercises`
+
+Adds an exercise to an existing workout session.
+
+The backend creates a new `WorkoutSessionExercise` with:
+
+- a new session exercise id,
+- `exerciseNameSnapshot` based on the current exercise name,
+- `order` equal to the next position in the session,
+- one empty set with `setNumber = 1`.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `sessionId` | `Guid` | Workout session identifier |
+
+### Request body
+
+```json
+{
+  "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a"
+}
+```
+
+### Request fields
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `exerciseId` | `Guid` | Yes | Exercise identifier to add to the session |
+
+### Validation
+
+Returns `400 Bad Request` when:
+
+- `sessionId` is empty,
+- `exerciseId` is empty.
+
+Returns `404 Not Found` when:
+
+- the workout session does not exist,
+- the exercise does not exist.
+
+Returns `409 Conflict` when the selected exercise already exists in the session.
+
+### Response `200 OK`
+
+```json
+{
+  "id": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
+  "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+  "exerciseName": "Bench Press",
+  "order": 4,
+  "sets": [
+    {
+      "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
+      "setNumber": 1,
+      "weight": null,
+      "reps": null
+    }
+  ]
+}
+```
+
+---
+
+# Domain notes
+
+## Current user handling
+
+The app currently uses a temporary demo user value:
 
 ```txt
 Caran
 ```
 
-Docelowo `UserId` powinien być pobierany po stronie backendu z kontekstu zalogowanego użytkownika.
+Planned direction:
 
-## Sesje treningowe
+- add authentication,
+- assign data to the authenticated user,
+- filter exercises, templates and sessions by user,
+- keep system exercises globally available,
+- avoid accepting `userId` from the frontend.
 
-Aktualny model sesji obsługuje:
+## Exercise name snapshot
+
+Workout sessions store `ExerciseNameSnapshot` on each `WorkoutSessionExercise`.
+
+This is intentional. Historical training data should remain readable even if the original exercise name is edited later.
+
+## Current session model
+
+The current model supports regular exercises and sets:
 
 ```txt
 WorkoutSession
@@ -376,7 +817,7 @@ WorkoutSession
       -> WorkoutSessionSet
 ```
 
-Planowany kierunek rozwoju:
+Future features such as supersets, circuits or grouped blocks may require introducing an additional level, for example:
 
 ```txt
 WorkoutSession
@@ -385,48 +826,15 @@ WorkoutSession
           -> WorkoutSessionSet
 ```
 
-Dzięki temu będzie można w przyszłości obsłużyć:
+This is not implemented yet.
 
-* normalne ćwiczenia,
-* superserie,
-* obwody,
-* grupowanie ćwiczeń w bloki.
+---
 
-## Snapshot nazw ćwiczeń
+# Current limitations
 
-Docelowo sesja treningowa powinna zapisywać snapshot nazwy ćwiczenia, np.:
-
-```txt
-ExerciseNameSnapshot
-```
-
-Dzięki temu historia treningów pozostanie czytelna nawet wtedy, gdy nazwa ćwiczenia zostanie później zmieniona.
-
-## Czas sesji
-
-Aktualnie data sesji jest ustawiana po stronie backendu.
-
-Docelowo warto rozważyć pola:
-
-```txt
-StartedAt
-FinishedAt
-Duration
-```
-
-albo przynajmniej:
-
-```txt
-Date
-StartedAt
-FinishedAt
-```
-
-## Historia sesji
-
-Aktualnie dostępny jest endpoint do zapisu sesji. Do pełnej wersji alpha warto dodać:
-
-| Metoda | Endpoint                     | Opis                                  |
-| ------ | ---------------------------- | ------------------------------------- |
-| GET    | `/api/workout-sessions`      | Lista zapisanych sesji treningowych   |
-| GET    | `/api/workout-sessions/{id}` | Szczegóły zapisanej sesji treningowej |
+- Authentication is not implemented yet.
+- User management is not implemented yet.
+- Most validation is currently implemented directly inside endpoint handlers.
+- FluentValidation is planned but not implemented yet.
+- Trainer mode is planned but not implemented yet.
+- Statistics and charts are planned but not implemented yet.
