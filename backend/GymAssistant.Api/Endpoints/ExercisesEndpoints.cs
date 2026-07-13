@@ -1,6 +1,8 @@
+using System.Runtime.CompilerServices;
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 
 namespace GymAssistant.Api.Endpoints;
 
@@ -114,8 +116,62 @@ public static class ExercisesEndpoints {
       await db.SaveChangesAsync();
       return Results.Ok(exercise.Id);
     });
+
+    app.MapGet("/api/exercises/{exerciseId:guid}/history",async (
+      Guid exerciseId,
+      AppDbContext db
+    ) =>
+    {
+      if(exerciseId==Guid.Empty)
+        return Results.BadRequest("ExerciseId cannot be empty");
+      var exercise =await db.Exercises.FirstOrDefaultAsync(x=>x.Id==exerciseId);
+      if(exercise==null)
+        return Results.NotFound($"Couldnt find exercise with id {exerciseId}");
+
+      var workouts = await db.WorkoutSessions
+      .Include(x=>x.Exercises)
+      .ThenInclude(y=>y.Sets)
+      .Where(x=>x.Exercises.Any(x=>x.ExerciseId==exercise.Id)).ToListAsync();
+
+      var workoutExercises = workouts.Select(x=> new ExerciseHistoryWorkoutResponse
+      (x.Id, x.StartedAt, x.Exercises.Where(y=>y.ExerciseId==exerciseId).SelectMany(y =>
+      y.Sets.Select(z=>
+      new WorkoutSet(z.Id,z.Reps,z.Weight,z.SetNumber))
+      ).ToArray())).OrderByDescending(x=>x.WorkoutDate).ToList();
+
+
+
+      ExerciseHistoryResponse res = 
+      new ExerciseHistoryResponse(
+        exercise!.Name,
+        exercise.Id,
+        workoutExercises
+      );
+      
+      return Results.Ok(res);
+
+    });
   }
 }
+
+public record ExerciseHistoryResponse(
+  string Name,
+  Guid Id,
+  List<ExerciseHistoryWorkoutResponse> Workouts
+);
+
+public record ExerciseHistoryWorkoutResponse(
+  Guid Id,
+  DateTime WorkoutDate,
+  WorkoutSet[] Sets
+);
+
+public record WorkoutSet(
+  Guid Id,
+  int? Reps,
+  decimal? Weight,
+  int SetNumber
+);
 
 public record CreateExerciseRequest(string Name, int[] MuscleGroups, bool isSystem);
 public record ExerciseListItemResponse(

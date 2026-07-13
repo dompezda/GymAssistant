@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ExerciseForm from "./ExerciseForm";
+import { useNavigate } from "react-router-dom";
 
 type ExerciseFormValues = {
   name: string;
@@ -28,6 +29,7 @@ export default function EditExerciseModal({
     onUpdated,
     exercise
 }: EditExerciseModalProps) { 
+    const navigate = useNavigate();
     const [error, setError] = useState<string | null>(null);
     const initialValue : ExerciseFormValues = {
         name : exercise.name,
@@ -60,9 +62,13 @@ export default function EditExerciseModal({
 
     if(!isOpen)
         return null;
-
+    if (!exercise) {
+        return <div>Ładowanie...</div>;
+    }
     return(
     <section>
+<div className="modal-backdrop">
+    <div className="modal">
         <ExerciseForm
             title="Edytuj ćwiczenie"
             buttonValue="Edytuj"
@@ -72,7 +78,13 @@ export default function EditExerciseModal({
                 await editExercise(exerciseValues)
             }}
         />
+        <button className="btn btn-secondary" onClick={()=>navigate(`/exercises/${exercise.id}/history`)}>
+            Historia ćwiczenia
+        </button>
         <div>{error}</div>
+        </div>
+
+        </div>
     </section>
 )
 }

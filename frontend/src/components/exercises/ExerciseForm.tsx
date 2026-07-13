@@ -27,6 +27,7 @@ export default function ExerciseForm({
   initialValues
 }: ExerciseFormProps) {
 
+
   const values = initialValues ?? {
       name: "",
       muscleGroups: [],
@@ -82,8 +83,7 @@ export default function ExerciseForm({
 
 
 return(
-<div className="modal-backdrop">
-    <div className="modal">
+<div>
       <h2>{title}</h2>
 
       <form className="stack" onSubmit={handleSubmit}>
@@ -127,12 +127,9 @@ return(
         <button className="btn btn-primary" type="submit">
           {buttonValue}
         </button>
-
         <button className="btn btn-secondary" type="button" onClick={onClose}>
           Zamknij
         </button>
       </form>
     </div>
-  </div>
-
 )}

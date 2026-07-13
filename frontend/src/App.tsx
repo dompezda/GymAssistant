@@ -16,6 +16,7 @@ import WorkoutSessionSetupPage from "./components/pages/session/workoutSessionSe
 import WorkoutSessionSummaryPage from "./components/pages/session/workoutSessionSummaryPage";
 import WorkoutTemplateEdit from "./components/pages/templates/workoutTemplateEdit";
 import WorkoutSessionsPage from "./components/pages/session/workoutSessionsPage";
+import ExerciseHistory from "./components/pages/exercise/exerciseHistory";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/" element={<MainMenu />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/exercises" element={<ExercisesPage />} />
+          <Route path="/exercises/:id/history" element={<ExerciseHistory/>}/>
           {/* <Route path="/exercises/create" element={<CreateExercisePage />} /> */}
 
           <Route path="/workout-templates" element={<WorkoutsTemplatesPage />} />

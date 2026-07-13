@@ -57,6 +57,8 @@ if(!isOpen)
  
   return (
     <section>
+      <div className="modal-backdrop">
+    <div className="modal">
     <ExerciseForm
     title = "Utwórz nowe ćwiczenie"
     buttonValue = "Dodaj ćwiczenie"
@@ -67,6 +69,8 @@ if(!isOpen)
 
     />
     <div> {error}</div>
+    </div>
+    </div>
     </section>
 );
 }
