@@ -1,9 +1,10 @@
 using GymAssistant.Api.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GymAssistant.Api.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityUserContext<ApplicationUser, Guid>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

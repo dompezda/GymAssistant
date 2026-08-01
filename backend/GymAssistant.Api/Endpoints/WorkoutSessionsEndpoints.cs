@@ -75,7 +75,7 @@ public static class WorkoutSessionsEndpoints
             {
                 Id = Guid.NewGuid(),
                 WorkoutTemplateId = request.WorkoutTemplateId,
-                UserId = "Caran",
+                //UserId = "Caran",
                 Exercises = request.Exercises
                     .Select((exercise, exerciseIndex) => new WorkoutSessionExercise
                     {
@@ -125,7 +125,6 @@ public static class WorkoutSessionsEndpoints
             var response = new WorkoutSessionResponseDto(
                 session.Id,
                 session.WorkoutTemplateId,
-                session.UserId,
                 session.Exercises
                     .OrderBy(x => x.Order)
                     .Select(x => new WorkoutSessionExerciseResponseDto(
@@ -448,7 +447,6 @@ public record CreateWorkoutSessionResponse(Guid Id);
 public record WorkoutSessionResponseDto(
     Guid? Id,
     Guid? WorkoutTemplateId,
-    string UserId,
     List<WorkoutSessionExerciseResponseDto> Exercises
 );
 

@@ -43,13 +43,13 @@ public static class ExercisesEndpoints {
 
       var exercise = new Exercise {
         Name = request.Name.Trim(),
-          ExerciseMuscleGroups = request.MuscleGroups          
+        ExerciseMuscleGroups = request.MuscleGroups          
           .Distinct()
           .Select(group => new ExerciseMuscleGroup {
             MuscleGroup = (MuscleGroup) group
           })        
           .ToList(),
-          IsSystem = request.isSystem
+        IsSystem = request.isSystem
       };
 
       db.Exercises.Add(exercise);

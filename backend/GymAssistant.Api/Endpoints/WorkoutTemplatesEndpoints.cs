@@ -50,7 +50,7 @@ public static class WorkoutTemplatesEndpoints
             var workoutTemplate = new WorkoutTemplate
             {
                 Id = Guid.NewGuid(),
-                UserId = "Caran",
+                //UserId = "Caran",
                 Title = request.Title.Trim(),
                 Notes = string.IsNullOrWhiteSpace(request.Notes)
                     ? null

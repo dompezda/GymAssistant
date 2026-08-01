@@ -7,7 +7,8 @@ public class WorkoutSession
     public Guid? WorkoutTemplateId { get; set; }
     public WorkoutTemplate? WorkoutTemplate { get; set; }
 
-    public string UserId { get; set; } = "Caran";
+    public Guid UserId { get; set; }
+    public ApplicationUser User { get; set; } = null!;
     public DateTime StartedAt  { get; set; } = DateTime.UtcNow;
     public DateTime? FinishedAt { get; set; }
     public string? Notes { get; set; }
