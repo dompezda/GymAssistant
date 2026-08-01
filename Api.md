@@ -21,6 +21,7 @@ http://localhost:5235
 | GET | `/api/exercises` | Returns all exercises |
 | POST | `/api/exercises` | Creates a new exercise |
 | PATCH | `/api/exercises/{exerciseId}` | Updates an existing exercise |
+| GET | `/api/exercises/{exerciseId}/history` | Returns exercise history grouped by workout session |
 | GET | `/api/muscle-groups` | Returns available muscle groups |
 | GET | `/api/workout-templates` | Returns workout templates |
 | POST | `/api/workout-templates` | Creates a workout template |
@@ -156,6 +157,82 @@ Returns `404 Not Found` when the exercise does not exist.
 ```json
 "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a"
 ```
+
+---
+
+## GET `/api/exercises/{exerciseId}/history`
+
+Returns the selected exercise history grouped by workout session.
+
+Only sets belonging to the selected exercise are returned. Workout entries are ordered by workout date descending, so the most recent workout is returned first.
+
+### Route parameters
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `exerciseId` | `Guid` | Exercise identifier |
+
+### Response `200 OK`
+
+```json
+{
+  "name": "Bench Press",
+  "id": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
+  "workouts": [
+    {
+      "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
+      "workoutDate": "2026-07-06T18:00:00.0000000Z",
+      "sets": [
+        {
+          "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
+          "reps": 8,
+          "weight": 74,
+          "setNumber": 1
+        },
+        {
+          "id": "7ae29166-f73c-43df-82ff-b7f8837cc3f2",
+          "reps": 6,
+          "weight": 76,
+          "setNumber": 2
+        }
+      ]
+    }
+  ]
+}
+```
+
+When the exercise exists but has not been used in any workout session, `workouts` is returned as an empty array.
+
+### Response fields
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `name` | `string` | Current exercise name |
+| `id` | `Guid` | Exercise identifier |
+| `workouts` | `ExerciseHistoryWorkoutResponse[]` | Workout sessions containing the selected exercise |
+
+### `ExerciseHistoryWorkoutResponse`
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `Guid` | Workout session identifier |
+| `workoutDate` | `DateTime` | Workout session start date |
+| `sets` | `WorkoutSet[]` | Sets performed for the selected exercise during this workout |
+
+### `WorkoutSet`
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `Guid` | Set identifier |
+| `reps` | `int?` | Number of repetitions |
+| `weight` | `decimal?` | Set weight |
+| `setNumber` | `int` | Set order within the exercise |
+
+### Validation
+
+Returns `400 Bad Request` when `exerciseId` is empty.
+
+Returns `404 Not Found` when the exercise does not exist.
 
 ---
 
@@ -794,7 +871,6 @@ Caran
 ```
 
 Planned direction:
-
 - add authentication,
 - assign data to the authenticated user,
 - filter exercises, templates and sessions by user,
