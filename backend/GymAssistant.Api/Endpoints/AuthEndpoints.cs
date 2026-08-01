@@ -1,8 +1,7 @@
-using System.Runtime.CompilerServices;
-using GymAssistant.Api.Data;
+using System.IdentityModel.Tokens.Jwt;
+using GymAssistant.Api.Authentication;
 using GymAssistant.Api.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Net.Http.Headers;
+using Microsoft.AspNetCore.Identity;
 
 namespace GymAssistant.Api.Endpoints;
 
@@ -12,10 +11,57 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
 
-        // group.MapPost("/login", ...);
-        // group.MapGet("/me", ...);
+        group.MapPost("/login", async (
+            LoginRequest request,
+            UserManager<ApplicationUser> userManager,
+            IAccessTokenService tokenService) => {
+            if(string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return Results.BadRequest("Email and password are required.");
+            }
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if(user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var passwordValid = await userManager.CheckPasswordAsync(user, request.Password);
+            if(!passwordValid)
+            {
+                return Results.Unauthorized();
+            }
+            var accessToken = tokenService.CreateToken(user);
+            return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
+        });
+        group.MapGet("/me", async (UserManager<ApplicationUser> userManager,HttpContext httpContext) =>
+        {
+            var userIdClaim = httpContext.User
+                .FindFirst(JwtRegisteredClaimNames.Sub)?
+                .Value;
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await userManager.FindByIdAsync(userId.ToString());
+
+            if (user is null || string.IsNullOrWhiteSpace(user.Email))
+            {
+                return Results.Unauthorized();
+            }
+
+            return Results.Ok(
+                new AuthMeResponse(user.Id, user.Email));
+        })
+        .RequireAuthorization();
     }
 }
+
+public record AuthMeResponse(
+    Guid Id,
+    string Email
+);
 
 public record LoginRequest(
     string Email,
@@ -23,5 +69,5 @@ public record LoginRequest(
 );
 public record LoginResponse(
     string AccessToken,
-    DateTime ExpiresAt
+    DateTime ExpiresAtUtc
 );
