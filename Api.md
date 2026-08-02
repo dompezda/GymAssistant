@@ -10,7 +10,7 @@ Local frontend currently calls the API at:
 http://localhost:5235
 ```
 
-> Note: the project is currently in a single-user/demo stage. Some data is still assigned to the test user `Caran`. Authentication and user ownership are planned but are not implemented yet.
+> Authentication endpoints are implemented. User ownership and authorization are not yet consistently enforced across all domain endpoints.
 
 ---
 
@@ -18,6 +18,8 @@ http://localhost:5235
 
 | Method | Endpoint | Description |
 | ------ | -------- | ----------- |
+| POST | `/api/auth/login` | Authenticates a user and returns a JWT access token |
+| GET | `/api/auth/me` | Returns the currently authenticated user |
 | GET | `/api/exercises` | Returns all exercises |
 | POST | `/api/exercises` | Creates a new exercise |
 | PATCH | `/api/exercises/{exerciseId}` | Updates an existing exercise |
@@ -34,6 +36,91 @@ http://localhost:5235
 | PATCH | `/api/workout-sessions/{sessionId}/finish` | Finishes a workout session |
 | GET | `/api/workout-sessions/{sessionId}/summary` | Returns workout session summary |
 | POST | `/api/workout-sessions/{sessionId}/exercises` | Adds an exercise to an existing workout session |
+
+---
+
+# Authentication
+
+## POST `/api/auth/login`
+
+Authenticates a user with an email address and password. ASP.NET Core Identity is used to locate the user and verify the password.
+
+The endpoint returns the same generic `401 Unauthorized` response for an unknown email and an invalid password. This prevents the API from revealing which accounts exist.
+
+### Request body
+
+```json
+{
+  "email": "user@example.com",
+  "password": "example-password"
+}
+```
+
+### Request fields
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `email` | `string` | Yes | User email address |
+| `password` | `string` | Yes | User password |
+
+### Validation
+
+Returns `400 Bad Request` when `email` or `password` is empty or whitespace.
+
+Returns `401 Unauthorized` when the credentials are invalid.
+
+### Response `200 OK`
+
+```json
+{
+  "accessToken": "jwt-access-token",
+  "expiresAtUtc": "2026-08-02T14:30:00Z"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `accessToken` | `string` | JWT access token used to authorize protected API requests |
+| `expiresAtUtc` | `DateTime` | Access-token expiration time in UTC |
+
+---
+
+## GET `/api/auth/me`
+
+Returns the user associated with the current JWT access token.
+
+This endpoint requires authorization.
+
+### Request headers
+
+```http
+Authorization: Bearer <access-token>
+```
+
+### Response `200 OK`
+
+```json
+{
+  "id": "6e40dbd4-6f8f-43bc-9522-a041fbe9138d",
+  "email": "user@example.com"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `Guid` | Authenticated user identifier |
+| `email` | `string` | Authenticated user email address |
+
+Returns `401 Unauthorized` when:
+
+- the bearer token is missing,
+- the token is invalid or expired,
+- the token does not contain a valid `sub` claim,
+- the referenced user does not exist.
 
 ---
 
@@ -519,8 +606,9 @@ The backend sets:
 
 - `id`,
 - `startedAt`,
-- `userId`, currently hardcoded as `Caran`,
 - `exerciseNameSnapshot` for every session exercise.
+
+> User ownership is not yet assigned from the authenticated user in this endpoint.
 
 ### Request body - from template
 
@@ -625,7 +713,6 @@ This endpoint is used by the active workout session page.
 {
   "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
   "workoutTemplateId": "4eb84d11-8f8d-4e3e-9f4c-94849f7a4c71",
-  "userId": "Caran",
   "exercises": [
     {
       "id": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
@@ -864,18 +951,16 @@ Returns `409 Conflict` when the selected exercise already exists in the session.
 
 ## Current user handling
 
-The app currently uses a temporary demo user value:
+JWT authentication and the `/api/auth/login` and `/api/auth/me` endpoints are implemented.
 
-```txt
-Caran
-```
+Remaining ownership work:
 
-Planned direction:
-- add authentication,
-- assign data to the authenticated user,
-- filter exercises, templates and sessions by user,
+- require authorization on domain endpoints,
+- read the current user identifier from JWT claims,
+- assign new templates and sessions to the authenticated user,
+- filter exercises, templates, sessions and history by user,
 - keep system exercises globally available,
-- avoid accepting `userId` from the frontend.
+- never accept ownership fields from the frontend.
 
 ## Exercise name snapshot
 
@@ -908,8 +993,8 @@ This is not implemented yet.
 
 # Current limitations
 
-- Authentication is not implemented yet.
-- User management is not implemented yet.
+- Authentication endpoints are implemented, but domain endpoints are not yet consistently protected or filtered by the authenticated user.
+- Registration and account-management features are not implemented yet.
 - Most validation is currently implemented directly inside endpoint handlers.
 - FluentValidation is planned but not implemented yet.
 - Trainer mode is planned but not implemented yet.
