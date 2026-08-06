@@ -1,50 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useAuth from "../../auth/useAuth";
 
-
-type LoginResponse = {
-    accessToken: string;
-    expiresAtUtc: string;
-};
 export default function LoginPage() {
 
-    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const { login } = useAuth();
 
-    async function login(): Promise<void> {
-        setError(""); 
+    const navigate = useNavigate();
 
+
+    async function handleLogin(): Promise<void> {
+        setError("");
         try {
-        const response = await fetch("http://localhost:5235/api/auth/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                email: email,
-                password: password,
-            }),
-        });        
-        if (response.status === 401) {
-            setError("Nieprawidłowy email lub hasło.");
-            return;
+            await login(email, password)
+            navigate("/main-menu");
+        } catch (err) {
+            setError((err as Error).message);
         }
-
-        if (!response.ok) {
-            setError("Wystąpił błąd. Spróbuj ponownie.");
-            return;
-        }
-
-        const data : LoginResponse = await response.json();
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("expiresAtUtc", data.expiresAtUtc);
-        navigate("/main-menu");
     }
-    catch {
-        setError("Wystąpił błąd. Spróbuj ponownie.");
-    }}
 
     return (
 
@@ -64,7 +40,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                 />
                 {error && <p>{error}</p>}
-                <button className="btn btn-primary" onClick={() => login()}>
+                <button className="btn btn-primary" onClick={handleLogin}>
                     Login
                 </button>
             </div>
