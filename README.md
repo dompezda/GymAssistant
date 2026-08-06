@@ -1,21 +1,32 @@
 # GymAssistant
 
-## Basic Features
+GymAssistant is a portfolio project for planning workouts, running workout sessions and reviewing training history.
 
-### Auth
-1. User register - POST /api/auth/register
-1. User login - POST /api/auth/login
+## Tech stack
 
-### Workouts
-1. User workouts - GET /api/workouts
-1. User workout details - GET /api/workouts/{workoutId}
-1. Create new workout - POST /api/workouts
-1. Edit workout - PUT /api/workouts/{workoutId}
-1. Delete workout - DELETE /api/workouts/{workoutId}
+- Backend: .NET 9, Minimal API, Entity Framework Core, SQL Server
+- Frontend: React, TypeScript, Vite
+- Authentication: ASP.NET Core Identity and JWT bearer tokens
 
-### Exercises
-1. Exercises - GET /api/exercises
-1. Exercise information - GET /api/exercises/{exerciseId}
-1. Create new exercise - POST /api/exercises
-1. Edit exercise - PUT /api/exercises/{exerciseId}
-1. Delete exercise - DELETE /api/exercises/{exerciseId}
+## Current authentication status
+
+Implemented:
+
+- development user stored through ASP.NET Core Identity,
+- JWT access-token generation and validation,
+- `POST /api/auth/login`,
+- protected `GET /api/auth/me`,
+- frontend login page,
+- access-token persistence in `localStorage`,
+- `AuthProvider` session validation on application startup.
+
+Still in progress:
+
+- `useAuth()` hook,
+- protected frontend routes,
+- logout flow,
+- shared bearer-token HTTP client,
+- authorization and user-data isolation across domain endpoints,
+- authentication integration tests.
+
+See [Authentication.md](Authentication.md) for the current authentication flow and [todo.md](todo.md) for the implementation checklist.
