@@ -23,12 +23,20 @@ const authContextValue: AuthContextValue = {
     status,
     user,
     login: login,
-    //logout: Logout,
+    logout: logout,
 };
 useEffect(() => {
     console.log("Auth state changed:", status, user);
 }, [status, user]);
 
+
+    function logout() : void
+    {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("expiresAtUtc");
+        setUser(null);
+        setStatus("unauthenticated");
+    }
 
     async function login(email: string, password: string):Promise<void> {
     try {

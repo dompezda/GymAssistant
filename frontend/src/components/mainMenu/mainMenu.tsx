@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import '../../styles/global.css';
+import useAuth from '../../auth/useAuth';
 
 
 export default function MainMenu() {
   const navigate = useNavigate();
-
+  const {logout} = useAuth();
   async function checkMe(): Promise<void> {
     const accessToken = localStorage.getItem("accessToken");
 
@@ -37,6 +38,7 @@ export default function MainMenu() {
       <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions")}>Historia treningów</button>
       <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Ustawienia</button>
       <button className="btn btn-secondary" onClick={() => checkMe()}>Check Me</button>
+      <button className="btn btn-secondary" onClick={logout}>Wyloguj</button>
     </section>
   );
 }

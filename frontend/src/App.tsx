@@ -19,7 +19,7 @@ import WorkoutSessionsPage from "./components/pages/session/workoutSessionsPage"
 import ExerciseHistory from "./components/pages/exercise/exerciseHistory";
 import LoginPage from "./components/pages/loginPage";
 import AuthProvider from "./auth/AuthProvider";
-
+import { ProtectedRoute } from "./auth/protectedRoute";
 
 function App() {
   return (
@@ -27,8 +27,11 @@ function App() {
       <AuthProvider>
         <main className="app">
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/main-menu" replace />} />
             <Route path="/login" element={<LoginPage />} />
+
+          <Route element={<ProtectedRoute />}>
+          
             <Route path="/main-menu" element={<MainMenu />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/exercises" element={<ExercisesPage />} />
@@ -48,6 +51,7 @@ function App() {
             <Route path="/workout-sessions/:id" element={<WorkoutSessionPage />} />
             <Route path="/workout-sessions/:id/summary" element={<WorkoutSessionSummaryPage/>} />
             <Route path="/workout-sessions" element={<WorkoutSessionsPage/>}/>
+          </Route>  
             <Route path="*" element={<div>Nie znaleziono strony</div>} />
           </Routes>
         </main>
