@@ -84,6 +84,9 @@ builder.Services
         };
     });
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<

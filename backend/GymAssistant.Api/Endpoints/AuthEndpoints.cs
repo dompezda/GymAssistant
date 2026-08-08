@@ -33,28 +33,22 @@ public static class AuthEndpoints
             var accessToken = tokenService.CreateToken(user);
             return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
         });
-        group.MapGet("/me", async (UserManager<ApplicationUser> userManager,HttpContext httpContext) =>
+        group.MapGet("/me",async (
+        UserManager<ApplicationUser> userManager,
+        ICurrentUser currentUser) =>
+    {
+        var user = await userManager.FindByIdAsync(
+            currentUser.UserId.ToString());
+
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
         {
-            var userIdClaim = httpContext.User
-                .FindFirst(JwtRegisteredClaimNames.Sub)?
-                .Value;
+            return Results.Unauthorized();
+        }
 
-            if (!Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await userManager.FindByIdAsync(userId.ToString());
-
-            if (user is null || string.IsNullOrWhiteSpace(user.Email))
-            {
-                return Results.Unauthorized();
-            }
-
-            return Results.Ok(
-                new AuthMeResponse(user.Id, user.Email));
-        })
-        .RequireAuthorization();
+        return Results.Ok(
+            new AuthMeResponse(user.Id, user.Email));
+    })
+    .RequireAuthorization();
     }
 }
 

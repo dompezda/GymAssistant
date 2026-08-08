@@ -1,3 +1,4 @@
+using GymAssistant.Api.Authentication;
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -8,9 +9,13 @@ public static class WorkoutTemplatesEndpoints
 {
     public static void MapWorkoutTemplatesEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/workout-templates", async (AppDbContext db) =>
+
+        var group = app.MapGroup("/api/workout-templates")
+            .RequireAuthorization();
+        group.MapGet("", async (AppDbContext db, ICurrentUser currentUser) =>
         {
             var result = await db.WorkoutTemplates
+            .Where(x=>x.UserId == currentUser.UserId)
                 .Select(x => new WorkoutTemplateListItemResponse(
                     x.Id,
                     x.Title,
@@ -21,9 +26,10 @@ public static class WorkoutTemplatesEndpoints
             return Results.Ok(result);
         });
 
-        app.MapPost("/api/workout-templates", async (
+        group.MapPost("", async (
             CreateWorkoutTemplateRequest request,
-            AppDbContext db) =>
+            AppDbContext db,
+            ICurrentUser currentUser) =>
         {
             if (string.IsNullOrWhiteSpace(request.Title))
             {
@@ -40,17 +46,23 @@ public static class WorkoutTemplatesEndpoints
                 .ToList();
 
             var existingExercisesCount = await db.Exercises
+                .Where(x=>x.OwnerUserId==currentUser.UserId || x.IsSystem)
                 .CountAsync(x => exerciseIds.Contains(x.Id));
 
+            if(request.Exercises.Count != request.Exercises.Select(x=>x.ExerciseId).Distinct().Count())
+            {
+                return Results.BadRequest("Duplicate exercises are not allowed.");
+            }
             if (existingExercisesCount != exerciseIds.Count)
             {
                 return Results.BadRequest("One or more exercises do not exist.");
             }
 
+
             var workoutTemplate = new WorkoutTemplate
             {
                 Id = Guid.NewGuid(),
-                //UserId = "Caran",
+                UserId = currentUser.UserId,
                 Title = request.Title.Trim(),
                 Notes = string.IsNullOrWhiteSpace(request.Notes)
                     ? null
@@ -76,13 +88,13 @@ public static class WorkoutTemplatesEndpoints
             );
         });
     
-        app.MapGet("/api/workout-templates/{id:guid}", async (Guid id, AppDbContext db) =>
+        group.MapGet("/{id:guid}", async (Guid id, AppDbContext db, ICurrentUser currentUser) =>
         {
             var workoutTemplate = await db.WorkoutTemplates
                 .AsNoTracking()
                 .Include(x => x.Exercises)
                 .ThenInclude(x => x.Exercise)
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == currentUser.UserId);
 
             if (workoutTemplate == null)
             {
@@ -107,15 +119,16 @@ public static class WorkoutTemplatesEndpoints
             return Results.Ok(response);
         });
 
-        app.MapPatch("/api/workout-templates/{id:guid}", async (
+        group.MapPatch("/{id:guid}", async (
             Guid id,
             CreateWorkoutTemplateRequest request,
-            AppDbContext db) =>
+            AppDbContext db,
+            ICurrentUser currentUser) =>
         {
            var template = await db.WorkoutTemplates
                 .Include(x => x.Exercises)
                 .ThenInclude(x => x.Exercise)
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == currentUser.UserId);
            
            if(template == null)
             {
@@ -148,6 +161,7 @@ public static class WorkoutTemplatesEndpoints
                 return Results.BadRequest("Planned sets must be greater than 0.");
             }
             var existingExercisesCount = await db.Exercises
+             .Where(x=>x.OwnerUserId==currentUser.UserId || x.IsSystem)
              .CountAsync(x => request.Exercises.Select(e => e.ExerciseId).Contains(x.Id));
 
             if (existingExercisesCount != request.Exercises.Count)

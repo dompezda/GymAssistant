@@ -24,7 +24,7 @@ import { ProtectedRoute } from "./auth/protectedRoute";
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
+      <AuthProvider>  
         <main className="app">
           <Routes>
             <Route path="/" element={<Navigate to="/main-menu" replace />} />
