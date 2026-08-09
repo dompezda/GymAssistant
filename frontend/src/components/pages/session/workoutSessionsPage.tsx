@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchApi } from "../../../api/fetchApi";
 
 type WorkoutSession = {
 id:string;
@@ -20,7 +21,7 @@ useEffect(()=>
 {
 
     async function fetchSessions(): Promise<WorkoutSession[]> {
-        const response = await fetch("http://localhost:5235/api/workout-sessions");
+        const response = await fetchApi("http://localhost:5235/api/workout-sessions");
         if (!response.ok) {
             const error = await response.text();
             console.error(error);
