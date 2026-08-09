@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
+import { fetchApi } from "../../../api/fetchApi";
 type Exercise = {
   id: string;
   name: string;
@@ -26,7 +27,7 @@ export default function WorkoutTemplateExercisesPage() {
   >([]);
 
   async function fetchExercises(): Promise<Exercise[]> {
-    const response = await fetch("http://localhost:5235/api/exercises");
+    const response = await fetchApi("http://localhost:5235/api/exercises");
 
       if (!response.ok) {
         const error = await response.text();
@@ -106,7 +107,7 @@ export default function WorkoutTemplateExercisesPage() {
       return;
     }
 
-    const response = await fetch(
+    const response = await fetchApi(
       "http://localhost:5235/api/workout-templates",
       {
         method: "POST",

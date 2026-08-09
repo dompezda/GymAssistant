@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using GymAssistant.Api.Authentication;
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -8,8 +9,13 @@ namespace GymAssistant.Api.Endpoints;
 
 public static class ExercisesEndpoints {
   public static void MapExercisesEndpoints(this WebApplication app) {
-    app.MapGet("/api/exercises", async (AppDbContext db) => {
+
+
+    var group = app.MapGroup("/api/exercises")
+    .RequireAuthorization();
+    group.MapGet("", async (AppDbContext db, ICurrentUser currentUser) => {
       var result = await db.Exercises
+        .Where(x=>x.OwnerUserId==currentUser.UserId || x.IsSystem)
         .Include(x => x.ExerciseMuscleGroups)
         .Select(x => new ExerciseListItemResponse(
           x.Id,
@@ -27,7 +33,7 @@ public static class ExercisesEndpoints {
       return Results.Ok(result);
     });
 
-    app.MapPost("/api/exercises", async (CreateExerciseRequest request, AppDbContext db) => {
+    group.MapPost("", async (CreateExerciseRequest request, AppDbContext db, ICurrentUser currentUser) => {
       if (string.IsNullOrWhiteSpace(request.Name))
         return Results.BadRequest("Nazwa ćwiczenia jest wymagana.");
 
@@ -49,6 +55,7 @@ public static class ExercisesEndpoints {
             MuscleGroup = (MuscleGroup) group
           })        
           .ToList(),
+        OwnerUserId = request.isSystem ? null : currentUser.UserId,
         IsSystem = request.isSystem
       };
 
@@ -69,10 +76,11 @@ public static class ExercisesEndpoints {
       });
     });
 
-    app.MapPatch("/api/exercises/{exerciseId:guid}", async (
+    group.MapPatch("/{exerciseId:guid}", async (
        Guid exerciseId,
        EditExerciseRequest request,
-       AppDbContext db
+       AppDbContext db,
+       ICurrentUser currentUser
        ) => {
       if(exerciseId == Guid.Empty)
         return Results.BadRequest("ExerciseId cannot be empty");
@@ -86,12 +94,13 @@ public static class ExercisesEndpoints {
       if(!request.MuscleGroups.All(x=>Enum.IsDefined(typeof(MuscleGroup),x)))
         return Results.BadRequest("Unknown muscle group");
 
-      var exercise = db.Exercises.FirstOrDefault(x=>x.Id == exerciseId);
+      var exercise = await db.Exercises.FirstOrDefaultAsync(x=>x.Id == exerciseId && (x.OwnerUserId == currentUser.UserId || x.IsSystem));
       if(exercise == null)
         return Results.NotFound(string.Format("Could not find exercise with id {0}",exerciseId));
 
       exercise.Name = request.Name.Trim();
       exercise.IsSystem = request.IsSystem;
+      exercise.OwnerUserId = request.IsSystem ? null : currentUser.UserId;
       
       var existingExerciseMuscleGroupsIds = await db.ExerciseMuscleGroups.Where(x=>x.ExerciseId == exerciseId).Select(x=>(int)x.MuscleGroup).ToListAsync();
       var requestedIds = request.MuscleGroups.Distinct().ToList();
@@ -117,18 +126,20 @@ public static class ExercisesEndpoints {
       return Results.Ok(exercise.Id);
     });
 
-    app.MapGet("/api/exercises/{exerciseId:guid}/history",async (
+    group.MapGet("/{exerciseId:guid}/history",async (
       Guid exerciseId,
-      AppDbContext db
+      AppDbContext db,
+      ICurrentUser currentUser
     ) =>
     {
       if(exerciseId==Guid.Empty)
         return Results.BadRequest("ExerciseId cannot be empty");
-      var exercise =await db.Exercises.FirstOrDefaultAsync(x=>x.Id==exerciseId);
+      var exercise =await db.Exercises.FirstOrDefaultAsync(x=>x.Id==exerciseId && (x.IsSystem || x.OwnerUserId==currentUser.UserId));
       if(exercise==null)
         return Results.NotFound($"Couldnt find exercise with id {exerciseId}");
 
       var workouts = await db.WorkoutSessions
+      .Where(x=>x.UserId==currentUser.UserId)
       .Include(x=>x.Exercises)
       .ThenInclude(y=>y.Sets)
       .Where(x=>x.Exercises.Any(x=>x.ExerciseId==exercise.Id)).ToListAsync();

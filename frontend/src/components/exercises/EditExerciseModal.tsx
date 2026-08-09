@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ExerciseForm from "./ExerciseForm";
 import { useNavigate } from "react-router-dom";
+import { fetchApi } from "../../api/fetchApi";
 
 type ExerciseFormValues = {
   name: string;
@@ -39,7 +40,7 @@ export default function EditExerciseModal({
     }
 
     async function editExercise(exerciseValues:ExerciseFormValues) {
-        const response = await fetch(`http://localhost:5235/api/exercises/${exercise.id}`, {
+        const response = await fetchApi(`http://localhost:5235/api/exercises/${exercise.id}`, {
             method: "PATCH",
             headers: {
             "Content-Type": "application/json",

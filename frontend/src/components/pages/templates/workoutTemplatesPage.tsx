@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchApi } from "../../../api/fetchApi";
 
 type Template={
   id: string;
@@ -12,7 +13,7 @@ export default function WorkoutsTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   useEffect(() => {
     async function loadTemplates() {
-      const response = await fetch("http://localhost:5235/api/workout-templates");
+      const response = await fetchApi("http://localhost:5235/api/workout-templates");
 
         if (!response.ok) {
           const error = await response.text();

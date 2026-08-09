@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { fetchApi } from "../../../api/fetchApi";
 
 type WorkoutSession = {
   id: string;
@@ -35,7 +36,7 @@ type ExerciseSummary = {
 };
 
 async function fetchSession(id: string): Promise<WorkoutSession> {
-  const response = await fetch(
+  const response = await fetchApi(
     `http://localhost:5235/api/workout-sessions/${id}/summary`,
   );
 

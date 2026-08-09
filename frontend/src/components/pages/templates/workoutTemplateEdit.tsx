@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
+import { fetchApi } from "../../../api/fetchApi";
 type Template={
   id: string;
   title: string;
@@ -34,7 +35,7 @@ const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false
 const [searchText, setSearchText] = useState("");
 const [error, setError] = useState<string | null>(null);
 async function fetchExercises(): Promise<Exercise[]> {
-    const response = await fetch("http://localhost:5235/api/exercises");
+    const response = await fetchApi("http://localhost:5235/api/exercises");
 
       if (!response.ok) {
         const error = await response.text();
@@ -46,7 +47,7 @@ async function fetchExercises(): Promise<Exercise[]> {
       return data;
   }
 async function fetchTemplate(templateId: string): Promise<Template | null> {
-    const response = await fetch(`http://localhost:5235/api/workout-templates/${templateId}`);
+    const response = await fetchApi(`http://localhost:5235/api/workout-templates/${templateId}`);
     if(!response.ok) {
       const error = await response.text();
       console.error(error);
@@ -136,7 +137,7 @@ const visibleExercises = exercises.filter((exercise) =>
       return;
     }
 
-    const response = await fetch(`http://localhost:5235/api/workout-templates/${id}`, {
+    const response = await fetchApi(`http://localhost:5235/api/workout-templates/${id}`, {
       method: "PATCH",
       headers: {
           "Content-Type": "application/json",

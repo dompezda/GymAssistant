@@ -1,5 +1,6 @@
 import { useEffect, useState} from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { fetchApi } from "../../../api/fetchApi";
 
 type WorkoutTemplateResponseDto = {
   id: string;
@@ -26,7 +27,7 @@ export default function WorkoutTemplatePage() {
     if (!id) return;
 
     async function loadTemplate() {
-      const response = await fetch(`http://localhost:5235/api/workout-templates/${id}`);
+      const response = await fetchApi(`http://localhost:5235/api/workout-templates/${id}`);
 
       if (!response.ok) {
         throw new Error("Failed to load workout template");

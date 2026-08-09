@@ -1,5 +1,6 @@
 import {useState} from "react";
 import ExerciseForm from "./ExerciseForm"
+import { fetchApi } from "../../api/fetchApi";
 
 type Exercise = {
   id: string;
@@ -31,7 +32,7 @@ export default function CreateExerciseModal({
 
   
 async function createExercise(exercise : ExerciseFormValues){
-  const response = await fetch("http://localhost:5235/api/exercises", {
+  const response = await fetchApi("http://localhost:5235/api/exercises", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -15,6 +15,6 @@ public static class MuscleGroupEndpoints
                     value = (int)x,
                     label = x.ToString()
                 });
-        });
+        }).RequireAuthorization();
     }
 }

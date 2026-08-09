@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom";
+import { fetchApi } from "../../../api/fetchApi";
 
 type Exercise =
 {
@@ -35,7 +36,7 @@ const [error, setError] = useState<string | null>(null);
 
 useEffect(() => {
   async function fetchExerciseById(): Promise<Exercise> {
-    const response = await fetch(
+    const response = await fetchApi(
       `http://localhost:5235/api/exercises/${id}/history`
     );
 

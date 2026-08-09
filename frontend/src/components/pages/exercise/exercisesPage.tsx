@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import EditExerciseModal from "../../exercises/EditExerciseModal";
+import { fetchApi } from "../../../api/fetchApi";
 type Exercise = {
   id: string;
   name: string;
@@ -18,7 +19,7 @@ export default function ExercisesPage() {
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     
 async function fetchExercises(): Promise<Exercise[]> {
-  const response = await fetch("http://localhost:5235/api/exercises");
+  const response = await fetchApi("http://localhost:5235/api/exercises");
 
   if (!response.ok) {
     const error = await response.text();

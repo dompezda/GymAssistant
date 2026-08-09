@@ -1,9 +1,7 @@
+using GymAssistant.Api.Authentication;
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Net.Http.Headers;
-using Microsoft.VisualBasic;
 
 namespace GymAssistant.Api.Endpoints;
 
@@ -12,11 +10,15 @@ public static class WorkoutSessionsEndpoints
     public static void MapWorkoutSessionsEndpoints(this WebApplication app)
     {
 
-        app.MapGet("/api/workout-sessions",async(
-            AppDbContext db)=>
+        var group = app.MapGroup("/api/workout-sessions")
+            .RequireAuthorization();
+
+        group.MapGet("",async(
+            AppDbContext db,
+            ICurrentUser currentUser)=>
         {
             var sessions = await db.WorkoutSessions
-            .Where(x=>x.FinishedAt != null)
+            .Where(x=>x.FinishedAt != null && x.UserId == currentUser.UserId)
             .OrderByDescending(x=>x.StartedAt)
             .Select(session => new WorkoutSessionListItemResponse(
                     session.Id,
@@ -35,9 +37,10 @@ public static class WorkoutSessionsEndpoints
         });
 
 
-        app.MapPost("/api/workout-sessions", async (
+        group.MapPost("", async (
             CreateWorkoutSessionRequest request,
-            AppDbContext db) =>
+            AppDbContext db,
+            ICurrentUser currentUser) =>
         {
             if (request.Exercises.Count == 0)
             {
@@ -47,6 +50,7 @@ public static class WorkoutSessionsEndpoints
             if (request.WorkoutTemplateId != null)
             {
                 var templateExists = await db.WorkoutTemplates
+                    .Where(x => x.UserId == currentUser.UserId)
                     .AnyAsync(x => x.Id == request.WorkoutTemplateId.Value);
 
                 if (!templateExists)
@@ -61,6 +65,7 @@ public static class WorkoutSessionsEndpoints
                 .ToList();
 
             var existingExercisesCount = await db.Exercises
+                .Where(x=>x.OwnerUserId == currentUser.UserId || x.IsSystem)
                 .CountAsync(x => exerciseIds.Contains(x.Id));
 
             if (existingExercisesCount != exerciseIds.Count)
@@ -75,7 +80,7 @@ public static class WorkoutSessionsEndpoints
             {
                 Id = Guid.NewGuid(),
                 WorkoutTemplateId = request.WorkoutTemplateId,
-                //UserId = "Caran",
+                UserId = currentUser.UserId,
                 Exercises = request.Exercises
                     .Select((exercise, exerciseIndex) => new WorkoutSessionExercise
                     {
@@ -106,20 +111,20 @@ public static class WorkoutSessionsEndpoints
             );
         });
 
-        app.MapGet("/api/workout-sessions/{id:guid}", async (
+        group.MapGet("/{id:guid}", async (
         Guid id,
-        AppDbContext db) =>
+        AppDbContext db,
+        ICurrentUser currentUser) =>
         {
             var session = await db.WorkoutSessions
-                .Include(x => x.Exercises)
-                    .ThenInclude(x => x.Exercise)
+                .Where(x => x.UserId == currentUser.UserId)
                 .Include(x => x.Exercises)
                     .ThenInclude(x => x.Sets)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (session == null)
             {
-                return Results.NotFound();
+                return Results.NotFound("Workout session not found.");
             }
             
             var response = new WorkoutSessionResponseDto(
@@ -130,7 +135,7 @@ public static class WorkoutSessionsEndpoints
                     .Select(x => new WorkoutSessionExerciseResponseDto(
                         x.Id,
                         x.ExerciseId,
-                        x.Exercise.Name,
+                        x.ExerciseNameSnapshot,
                         x.Order,
                         x.Sets
                             .OrderBy(s => s.SetNumber)
@@ -148,11 +153,12 @@ public static class WorkoutSessionsEndpoints
             return Results.Ok(response);
         });
     
-        app.MapPatch("/api/workout-sessions/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async(
+        group.MapPatch("/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async(
             Guid sessionId,
             Guid sessionExerciseId,
             UpdateWorkoutSessionExerciseRequest request,
-            AppDbContext db) =>
+            AppDbContext db,
+            ICurrentUser currentUser) =>
         {
 
             if(request.Sets == null || request.Sets.Length == 0)
@@ -166,15 +172,17 @@ public static class WorkoutSessionsEndpoints
             if(guids.Count != request.Sets.Length)
                 return Results.BadRequest("Found duplicated ids");
             var session = await db.WorkoutSessions
+            .Where(x => x.UserId == currentUser.UserId)
             .Include(x => x.Exercises)
                 .ThenInclude(x => x.Sets)
             .FirstOrDefaultAsync(x => x.Id == sessionId);
 
             if(session == null)
-                return Results.NotFound();
-            var exerciseFromDb = session.Exercises.FirstOrDefault(x=>x.Id == sessionExerciseId);
+                return Results.NotFound("Workout session not found.");
+            var exerciseFromDb = session.Exercises
+                .FirstOrDefault(x=>x.Id == sessionExerciseId);
             if(exerciseFromDb == null)
-                return Results.NotFound();
+                return Results.NotFound("Exercise not found in the specified workout session.");
             var dbSets = exerciseFromDb.Sets;
         
             List<WorkoutSessionSet> setsToRemove = new List<WorkoutSessionSet>();
@@ -213,14 +221,17 @@ public static class WorkoutSessionsEndpoints
             await db.SaveChangesAsync();
             return Results.Ok();
         });
-        app.MapPatch("/api/workout-sessions/{sessionId:guid}/finish",async(
+        group.MapPatch("/{sessionId:guid}/finish",async(
             Guid sessionId,
-            AppDbContext db
+            AppDbContext db,
+            ICurrentUser currentUser
         )=>
         {
             if(sessionId == Guid.Empty)
                 return Results.BadRequest("SessionId cannot be empty");
-            var session = db.WorkoutSessions.FirstOrDefault(x=>x.Id == sessionId);
+            var session =await db.WorkoutSessions
+                .Where(x => x.UserId == currentUser.UserId)
+                .FirstOrDefaultAsync(x=>x.Id == sessionId);
             if(session== null)
                 return Results.BadRequest("Couldnt find Session with selected Id");
             session.FinishedAt = DateTime.UtcNow;
@@ -229,15 +240,16 @@ public static class WorkoutSessionsEndpoints
             return Results.Ok();
         });
 
-        app.MapGet("/api/workout-sessions/{sessionId:guid}/summary", async (
-    Guid sessionId,
-    AppDbContext db
-        ) =>
-{
+        group.MapGet("/{sessionId:guid}/summary", async (
+            Guid sessionId,
+            AppDbContext db,
+            ICurrentUser currentUser) =>
+        {
     if (sessionId == Guid.Empty)
         return Results.BadRequest("SessionId cannot be empty");
 
     var session = await db.WorkoutSessions
+        .Where(x => x.UserId == currentUser.UserId)
         .Include(x => x.Exercises)
             .ThenInclude(x => x.Sets)
         .FirstOrDefaultAsync(x => x.Id == sessionId);
@@ -275,19 +287,21 @@ public static class WorkoutSessionsEndpoints
     return Results.Ok(result);
 });
 
-app.MapDelete("/api/workout-sessions/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async (
-    Guid sessionId,
-    Guid sessionExerciseId,
-    AppDbContext db
-)=>
-{
-   if(sessionId==Guid.Empty)
-        return Results.BadRequest("SessionId cannot be empty");
-   if(sessionExerciseId == Guid.Empty)
-        return Results.BadRequest("SessionExerciseId cannot be empty");
+        group.MapDelete("/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async (
+            Guid sessionId,
+            Guid sessionExerciseId,
+            AppDbContext db,
+            ICurrentUser currentUser
+        )=>
+        {
+            if(sessionId==Guid.Empty)
+                return Results.BadRequest("SessionId cannot be empty");
+            if(sessionExerciseId == Guid.Empty)
+                return Results.BadRequest("SessionExerciseId cannot be empty");
 
 
     var session =await db.WorkoutSessions
+        .Where(x=>x.UserId == currentUser.UserId)
         .Include(x=>x.Exercises)
         .FirstOrDefaultAsync(x=>x.Id == sessionId);
     if(session==null)
@@ -320,16 +334,18 @@ app.MapDelete("/api/workout-sessions/{sessionId:guid}/exercises/{sessionExercise
     return Results.NoContent();
 });
     
-        app.MapPost("/api/workout-sessions/{sessionId:guid}/exercises", async (
-    Guid sessionId,
-    AddExerciseToWorkoutSessionRequest request,
-        AppDbContext db) =>
+    group.MapPost("/{sessionId:guid}/exercises", async (
+        Guid sessionId,
+        AddExerciseToWorkoutSessionRequest request,
+        AppDbContext db,
+        ICurrentUser currentUser) =>
     {
         if (sessionId == Guid.Empty)
             return Results.BadRequest("SessionId cannot be empty");
         if(request.ExerciseId == Guid.Empty)
             return Results.BadRequest("ExerciseId cannot be empty");
         var session = await db.WorkoutSessions
+            .Where(x => x.UserId == currentUser.UserId)
             .Include(x => x.Exercises)
             .FirstOrDefaultAsync(x => x.Id == sessionId);
 
@@ -337,7 +353,9 @@ app.MapDelete("/api/workout-sessions/{sessionId:guid}/exercises/{sessionExercise
             return Results.NotFound("Session not found");
         if(session.Exercises.Any(x => x.ExerciseId == request.ExerciseId))
             return Results.Conflict("Exercise already exists in the session");
-        var exercise = await db.Exercises.FirstOrDefaultAsync(x => x.Id == request.ExerciseId);
+        var exercise = await db.Exercises
+        .Where(x=>x.OwnerUserId == currentUser.UserId || x.IsSystem)
+        .FirstOrDefaultAsync(x => x.Id == request.ExerciseId);
         if(exercise == null)
             return Results.NotFound("Exercise does not exist");
 

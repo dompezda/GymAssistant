@@ -15,7 +15,7 @@ public static class WorkoutTemplatesEndpoints
         group.MapGet("", async (AppDbContext db, ICurrentUser currentUser) =>
         {
             var result = await db.WorkoutTemplates
-            .Where(x=>x.UserId == currentUser.UserId)
+                .Where(x=>x.UserId == currentUser.UserId)
                 .Select(x => new WorkoutTemplateListItemResponse(
                     x.Id,
                     x.Title,

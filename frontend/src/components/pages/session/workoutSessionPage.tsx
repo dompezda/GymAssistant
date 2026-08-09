@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
+import { fetchApi } from "../../../api/fetchApi";
 
 type WorkoutSession = {
   id: string;
@@ -43,7 +44,7 @@ export default function WorkoutSessionPage() {
 
     if(!id) return;
     console.log("Fetching workout session with ID:", id);
-    fetch(`http://localhost:5235/api/workout-sessions/${id}`, {
+    fetchApi(`http://localhost:5235/api/workout-sessions/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json"
@@ -132,7 +133,7 @@ if (exercises.length === 0 || !currentExercise) {
 
   
   async function patchExerciseData (sessionExercise: WorkoutSessionExercise) : Promise<Response> {
-    return fetch(`http://localhost:5235/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
+    return  fetchApi(`http://localhost:5235/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json"
@@ -155,7 +156,7 @@ if (exercises.length === 0 || !currentExercise) {
       return;
     }
 
-    const finishResponse = await fetch(`http://localhost:5235/api/workout-sessions/${id}/finish`, {
+    const finishResponse = await fetchApi(`http://localhost:5235/api/workout-sessions/${id}/finish`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json"
@@ -253,7 +254,7 @@ if (exercises.length === 0 || !currentExercise) {
       return;
     }
     const newExerciseIndex = session.exercises.length;
-    const response = await fetch(`http://localhost:5235/api/workout-sessions/${session.id}/exercises`, {
+    const response = await fetchApi(`http://localhost:5235/api/workout-sessions/${session.id}/exercises`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -304,7 +305,7 @@ if (exercises.length === 0 || !currentExercise) {
       return;
     }
 
-    const response = await fetch(`http://localhost:5235/api/workout-sessions/${session.id}/exercises/${id}`, {
+    const response = await fetchApi(`http://localhost:5235/api/workout-sessions/${session.id}/exercises/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json"

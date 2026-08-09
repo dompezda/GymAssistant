@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import  ExercisePickerModal  from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
+import { fetchApi } from "../../../api/fetchApi";
 
 type DraftExercise = {
   exerciseId: string;
@@ -61,7 +62,7 @@ useEffect(() => {
   async function loadTemplate() {
     setLoading(true);
 
-    const response = await fetch(
+    const response = await fetchApi(
       `http://localhost:5235/api/workout-templates/${templateId}`
     );
 
@@ -128,7 +129,7 @@ function removeExercise(exerciseId: string) {
       })),
     };
 
-    const response = await fetch("http://localhost:5235/api/workout-sessions", {
+    const response = await fetchApi("http://localhost:5235/api/workout-sessions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,4 +1,5 @@
 import {useEffect, useState} from "react";
+import { fetchApi } from "../../api/fetchApi";
 
 
 type ExerciseFormValues = {
@@ -42,7 +43,7 @@ export default function ExerciseForm({
 
   useEffect(() => {
     async function loadMuscleGroups() {
-      const response = await fetch("http://localhost:5235/api/muscle-groups");
+      const response = await fetchApi("http://localhost:5235/api/muscle-groups");
       const data = await response.json();
       setMuscleGroups(data);
     }
