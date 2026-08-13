@@ -49,6 +49,7 @@ useEffect(() => {
             email: email,
             password: password,
         }),
+        credentials: "include"
     });        
     if (response.status === 401) {
         throw new Error("Nieprawidłowy email lub hasło");
