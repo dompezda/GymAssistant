@@ -2,7 +2,7 @@
 
 This document describes the current HTTP API exposed by the GymAssistant backend.
 
-The API is implemented as a .NET Minimal API and all application endpoints use the `/api` prefix.
+The API is implemented as a .NET 9 Minimal API and application endpoints use the `/api` prefix.
 
 Local frontend currently calls the API at:
 
@@ -10,32 +10,53 @@ Local frontend currently calls the API at:
 http://localhost:5235
 ```
 
-> Authentication endpoints are implemented. User ownership and authorization are not yet consistently enforced across all domain endpoints.
+## Authorization model
+
+`POST /api/auth/login` is public. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
+
+Protected requests use:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+The backend resolves the authenticated user through `ICurrentUser`. Ownership identifiers are derived from the validated JWT and are not accepted from workout-template or workout-session request bodies.
+
+Current data rules:
+
+- workout templates belong to one user,
+- workout sessions belong to one user,
+- private exercises belong to one user through `OwnerUserId`,
+- system exercises are global and have `OwnerUserId = null`,
+- exercise history is filtered through workout sessions owned by the authenticated user.
+
+The frontend uses `fetchApi` for protected domain requests so the bearer token is attached in one place.
 
 ---
 
 ## Endpoint overview
 
-| Method | Endpoint | Description |
-| ------ | -------- | ----------- |
-| POST | `/api/auth/login` | Authenticates a user and returns a JWT access token |
-| GET | `/api/auth/me` | Returns the currently authenticated user |
-| GET | `/api/exercises` | Returns all exercises |
-| POST | `/api/exercises` | Creates a new exercise |
-| PATCH | `/api/exercises/{exerciseId}` | Updates an existing exercise |
-| GET | `/api/exercises/{exerciseId}/history` | Returns exercise history grouped by workout session |
-| GET | `/api/muscle-groups` | Returns available muscle groups |
-| GET | `/api/workout-templates` | Returns workout templates |
-| POST | `/api/workout-templates` | Creates a workout template |
-| GET | `/api/workout-templates/{id}` | Returns workout template details |
-| PATCH | `/api/workout-templates/{id}` | Updates a workout template |
-| GET | `/api/workout-sessions` | Returns finished workout sessions |
-| POST | `/api/workout-sessions` | Starts a new workout session |
-| GET | `/api/workout-sessions/{id}` | Returns active/full workout session details |
-| PATCH | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Updates sets for one exercise inside a session |
-| PATCH | `/api/workout-sessions/{sessionId}/finish` | Finishes a workout session |
-| GET | `/api/workout-sessions/{sessionId}/summary` | Returns workout session summary |
-| POST | `/api/workout-sessions/{sessionId}/exercises` | Adds an exercise to an existing workout session |
+| Method | Endpoint | Authorization | Description |
+| ------ | -------- | ------------- | ----------- |
+| POST | `/api/auth/login` | Public | Authenticates a user and returns a JWT access token |
+| GET | `/api/auth/me` | Required | Returns the currently authenticated user |
+| GET | `/api/exercises` | Required | Returns system exercises plus the current user's private exercises |
+| POST | `/api/exercises` | Required | Creates an exercise using the current development system/private flow |
+| PATCH | `/api/exercises/{exerciseId}` | Required | Updates an accessible exercise |
+| GET | `/api/exercises/{exerciseId}/history` | Required | Returns the current user's history for an accessible exercise |
+| GET | `/api/muscle-groups` | Required | Returns available muscle groups |
+| GET | `/api/workout-templates` | Required | Returns the current user's workout templates |
+| POST | `/api/workout-templates` | Required | Creates a workout template owned by the current user |
+| GET | `/api/workout-templates/{id}` | Required | Returns an owned workout template |
+| PATCH | `/api/workout-templates/{id}` | Required | Updates an owned workout template |
+| GET | `/api/workout-sessions` | Required | Returns the current user's finished workout sessions |
+| POST | `/api/workout-sessions` | Required | Starts a workout session owned by the current user |
+| GET | `/api/workout-sessions/{id}` | Required | Returns an owned workout session |
+| PATCH | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Required | Updates sets for an exercise inside an owned session |
+| PATCH | `/api/workout-sessions/{sessionId}/finish` | Required | Finishes an owned workout session |
+| GET | `/api/workout-sessions/{sessionId}/summary` | Required | Returns summary data for an owned session |
+| POST | `/api/workout-sessions/{sessionId}/exercises` | Required | Adds an accessible exercise to an owned session |
+| DELETE | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Required | Removes an exercise from an owned active session |
 
 ---
 
@@ -43,11 +64,9 @@ http://localhost:5235
 
 ## POST `/api/auth/login`
 
-Authenticates a user with an email address and password. ASP.NET Core Identity is used to locate the user and verify the password.
+Authenticates a user with email and password through ASP.NET Core Identity.
 
-The endpoint returns the same generic `401 Unauthorized` response for an unknown email and an invalid password. This prevents the API from revealing which accounts exist.
-
-### Request body
+### Request
 
 ```json
 {
@@ -56,48 +75,28 @@ The endpoint returns the same generic `401 Unauthorized` response for an unknown
 }
 ```
 
-### Request fields
+### Responses
 
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `email` | `string` | Yes | User email address |
-| `password` | `string` | Yes | User password |
+- `200 OK` — credentials are valid.
+- `400 Bad Request` — email or password is empty/invalid input.
+- `401 Unauthorized` — credentials are invalid.
 
-### Validation
-
-Returns `400 Bad Request` when `email` or `password` is empty or whitespace.
-
-Returns `401 Unauthorized` when the credentials are invalid.
-
-### Response `200 OK`
+Successful response:
 
 ```json
 {
   "accessToken": "jwt-access-token",
-  "expiresAtUtc": "2026-08-02T14:30:00Z"
+  "expiresAtUtc": "2026-08-09T14:30:00Z"
 }
 ```
 
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `accessToken` | `string` | JWT access token used to authorize protected API requests |
-| `expiresAtUtc` | `DateTime` | Access-token expiration time in UTC |
+The login response intentionally does not reveal whether an email exists.
 
 ---
 
 ## GET `/api/auth/me`
 
-Returns the user associated with the current JWT access token.
-
-This endpoint requires authorization.
-
-### Request headers
-
-```http
-Authorization: Bearer <access-token>
-```
+Returns the Identity user associated with the validated JWT.
 
 ### Response `200 OK`
 
@@ -108,27 +107,25 @@ Authorization: Bearer <access-token>
 }
 ```
 
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `id` | `Guid` | Authenticated user identifier |
-| `email` | `string` | Authenticated user email address |
-
-Returns `401 Unauthorized` when:
-
-- the bearer token is missing,
-- the token is invalid or expired,
-- the token does not contain a valid `sub` claim,
-- the referenced user does not exist.
+Returns `401 Unauthorized` when the bearer token is missing, invalid or expired, or the authenticated user cannot be resolved.
 
 ---
 
 # Exercises
 
+All exercise endpoints require authorization.
+
+An authenticated user may read:
+
+```txt
+IsSystem == true
+OR
+OwnerUserId == currentUser.UserId
+```
+
 ## GET `/api/exercises`
 
-Returns all exercises with their assigned muscle groups.
+Returns system exercises and private exercises owned by the authenticated user.
 
 ### Response `200 OK`
 
@@ -144,23 +141,13 @@ Returns all exercises with their assigned muscle groups.
 ]
 ```
 
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `id` | `Guid` | Exercise identifier |
-| `name` | `string` | Exercise name |
-| `muscleGroups` | `int[]` | Muscle group enum values |
-| `muscleGroupLabels` | `string[]` | Muscle group names |
-| `isSystem` | `bool` | Indicates whether the exercise is a system/default exercise |
-
 ---
 
 ## POST `/api/exercises`
 
 Creates a new exercise.
 
-### Request body
+### Current development request
 
 ```json
 {
@@ -170,21 +157,14 @@ Creates a new exercise.
 }
 ```
 
-### Request fields
+Validation rejects an empty name, an empty muscle-group collection and unknown enum values.
 
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `name` | `string` | Yes | Exercise name |
-| `muscleGroups` | `int[]` | Yes | Muscle group enum values |
-| `isSystem` | `bool` | Yes | Indicates whether the exercise is a system/default exercise |
+During development, `isSystem` is deliberately exposed so both ownership modes can be tested. The backend sets ownership itself:
 
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `name` is empty or whitespace,
-- `muscleGroups` is null or empty,
-- at least one muscle group value is not defined in the `MuscleGroup` enum.
+```txt
+isSystem = true  -> OwnerUserId = null
+isSystem = false -> OwnerUserId = currentUser.UserId
+```
 
 ### Response `201 Created`
 
@@ -198,19 +178,15 @@ Returns `400 Bad Request` when:
 }
 ```
 
+> `isSystem` is a temporary development capability. A production-ready user endpoint should not allow an ordinary authenticated user to create global system exercises.
+
 ---
 
 ## PATCH `/api/exercises/{exerciseId}`
 
-Updates an existing exercise and synchronizes its muscle groups.
+Updates an exercise that is either system-wide or owned by the authenticated user.
 
-### Route parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `exerciseId` | `Guid` | Exercise identifier |
-
-### Request body
+### Request
 
 ```json
 {
@@ -220,44 +196,28 @@ Updates an existing exercise and synchronizes its muscle groups.
 }
 ```
 
-### Request fields
+The current development flow also updates ownership according to `isSystem`:
 
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `name` | `string` | Yes | New exercise name |
-| `muscleGroups` | `int[]` | Yes | Full target list of muscle group enum values |
-| `isSystem` | `bool` | Yes | Indicates whether the exercise is a system/default exercise |
+- `true` clears `OwnerUserId`,
+- `false` assigns `OwnerUserId = currentUser.UserId`.
 
-### Validation
+Returns `404 Not Found` when the exercise is not accessible to the authenticated user.
 
-Returns `400 Bad Request` when:
-
-- `exerciseId` is empty,
-- `name` is empty or whitespace,
-- `muscleGroups` is null or empty,
-- at least one muscle group value is not defined in the `MuscleGroup` enum.
-
-Returns `404 Not Found` when the exercise does not exist.
-
-### Response `200 OK`
-
-```json
-"5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a"
-```
+> Because system/private switching is still a test feature, an authenticated user can currently edit a system exercise. This is a known temporary limitation and must be replaced by a seed/admin strategy before the feature is production-ready.
 
 ---
 
 ## GET `/api/exercises/{exerciseId}/history`
 
-Returns the selected exercise history grouped by workout session.
+Returns exercise history grouped by workout session.
 
-Only sets belonging to the selected exercise are returned. Workout entries are ordered by workout date descending, so the most recent workout is returned first.
+The endpoint first verifies that the exercise is system-wide or owned by the authenticated user. It then returns only matching workout sessions where:
 
-### Route parameters
+```txt
+WorkoutSession.UserId == currentUser.UserId
+```
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `exerciseId` | `Guid` | Exercise identifier |
+This means a shared system exercise can be visible to multiple users while each user sees only their own training history.
 
 ### Response `200 OK`
 
@@ -268,19 +228,13 @@ Only sets belonging to the selected exercise are returned. Workout entries are o
   "workouts": [
     {
       "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
-      "workoutDate": "2026-07-06T18:00:00.0000000Z",
+      "workoutDate": "2026-08-09T10:00:00Z",
       "sets": [
         {
           "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
           "reps": 8,
-          "weight": 74,
+          "weight": 80,
           "setNumber": 1
-        },
-        {
-          "id": "7ae29166-f73c-43df-82ff-b7f8837cc3f2",
-          "reps": 6,
-          "weight": 76,
-          "setNumber": 2
         }
       ]
     }
@@ -288,38 +242,7 @@ Only sets belonging to the selected exercise are returned. Workout entries are o
 }
 ```
 
-When the exercise exists but has not been used in any workout session, `workouts` is returned as an empty array.
-
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `name` | `string` | Current exercise name |
-| `id` | `Guid` | Exercise identifier |
-| `workouts` | `ExerciseHistoryWorkoutResponse[]` | Workout sessions containing the selected exercise |
-
-### `ExerciseHistoryWorkoutResponse`
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `id` | `Guid` | Workout session identifier |
-| `workoutDate` | `DateTime` | Workout session start date |
-| `sets` | `WorkoutSet[]` | Sets performed for the selected exercise during this workout |
-
-### `WorkoutSet`
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `id` | `Guid` | Set identifier |
-| `reps` | `int?` | Number of repetitions |
-| `weight` | `decimal?` | Set weight |
-| `setNumber` | `int` | Set order within the exercise |
-
-### Validation
-
-Returns `400 Bad Request` when `exerciseId` is empty.
-
-Returns `404 Not Found` when the exercise does not exist.
+Returns `404 Not Found` when the exercise does not exist or is not accessible to the current user.
 
 ---
 
@@ -327,63 +250,34 @@ Returns `404 Not Found` when the exercise does not exist.
 
 ## GET `/api/muscle-groups`
 
-Returns available muscle groups.
+Requires authorization and returns the `MuscleGroup` enum as value/label pairs.
 
-### Response `200 OK`
+Current values:
 
-```json
-[
-  {
-    "value": 1,
-    "label": "Chest"
-  },
-  {
-    "value": 2,
-    "label": "Back"
-  },
-  {
-    "value": 3,
-    "label": "Legs"
-  },
-  {
-    "value": 4,
-    "label": "Shoulders"
-  },
-  {
-    "value": 5,
-    "label": "Biceps"
-  },
-  {
-    "value": 6,
-    "label": "Triceps"
-  },
-  {
-    "value": 7,
-    "label": "Core"
-  },
-  {
-    "value": 8,
-    "label": "FullBody"
-  }
-]
-```
-
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `value` | `int` | Muscle group enum value |
-| `label` | `string` | Muscle group name |
+| Value | Label |
+| ----- | ----- |
+| 1 | Chest |
+| 2 | Back |
+| 3 | Legs |
+| 4 | Shoulders |
+| 5 | Biceps |
+| 6 | Triceps |
+| 7 | Core |
+| 8 | FullBody |
 
 ---
 
 # Workout templates
 
-A workout template defines a reusable workout plan. A template contains ordered exercises and planned set counts.
+All workout-template endpoints require authorization. A user can access only templates where:
+
+```txt
+WorkoutTemplate.UserId == currentUser.UserId
+```
 
 ## GET `/api/workout-templates`
 
-Returns all workout templates.
+Returns templates owned by the authenticated user.
 
 ### Response `200 OK`
 
@@ -397,21 +291,19 @@ Returns all workout templates.
 ]
 ```
 
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `id` | `Guid` | Workout template identifier |
-| `title` | `string` | Template title |
-| `notes` | `string?` | Optional template notes |
-
 ---
 
 ## POST `/api/workout-templates`
 
-Creates a new workout template.
+Creates a template and assigns:
 
-### Request body
+```txt
+UserId = currentUser.UserId
+```
+
+The frontend does not provide the owner id.
+
+### Request
 
 ```json
 {
@@ -422,39 +314,12 @@ Creates a new workout template.
       "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
       "plannedSets": 3,
       "order": 1
-    },
-    {
-      "exerciseId": "f7ab35e9-8f0e-4d87-bc01-59d2272d5e87",
-      "plannedSets": 4,
-      "order": 2
     }
   ]
 }
 ```
 
-### Request fields
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `title` | `string` | Yes | Template title |
-| `notes` | `string?` | No | Optional template notes |
-| `exercises` | `CreateWorkoutTemplateExerciseRequest[]` | Yes | Exercises included in the template |
-
-### `CreateWorkoutTemplateExerciseRequest`
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `exerciseId` | `Guid` | Yes | Exercise identifier |
-| `plannedSets` | `int` | Yes | Planned number of sets |
-| `order` | `int` | Yes | Exercise order in the template |
-
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `title` is empty or whitespace,
-- `exercises` is empty,
-- at least one exercise does not exist.
+Referenced exercises must be system exercises or private exercises owned by the authenticated user. Duplicate exercise ids are rejected.
 
 ### Response `201 Created`
 
@@ -468,13 +333,7 @@ Returns `400 Bad Request` when:
 
 ## GET `/api/workout-templates/{id}`
 
-Returns details of a single workout template.
-
-### Route parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `id` | `Guid` | Workout template identifier |
+Returns template details only when the template belongs to the authenticated user.
 
 ### Response `200 OK`
 
@@ -494,61 +353,33 @@ Returns details of a single workout template.
 }
 ```
 
-### Response `404 Not Found`
-
-Returned when the workout template does not exist.
+Returns `404 Not Found` for a missing template or a template owned by another user.
 
 ---
 
 ## PATCH `/api/workout-templates/{id}`
 
-Updates a workout template. The request contains the full target state of the template exercises. Existing template exercises are updated, missing ones are removed, and new ones are added.
+Updates an owned template using the full requested exercise state.
 
-### Route parameters
+Validation rejects:
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `id` | `Guid` | Workout template identifier |
+- an empty title,
+- an empty exercise list,
+- duplicate exercises,
+- `plannedSets <= 0`,
+- exercises that are neither system-wide nor owned by the authenticated user.
 
-### Request body
-
-```json
-{
-  "title": "FBW A - updated",
-  "notes": "Updated full body workout",
-  "exercises": [
-    {
-      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
-      "plannedSets": 4,
-      "order": 1
-    }
-  ]
-}
-```
-
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `title` is empty or whitespace,
-- `exercises` is empty,
-- duplicate exercises are provided,
-- any `plannedSets` value is less than or equal to `0`,
-- at least one exercise does not exist.
-
-Returns `404 Not Found` when the workout template does not exist.
+Existing template exercises missing from the request are removed, existing entries are updated and new entries are added. Order is normalized by the backend.
 
 ### Response `204 No Content`
-
-No response body.
 
 ---
 
 # Workout sessions
 
-A workout session represents a started workout. It contains ordered session exercises and sets.
+All workout-session endpoints require authorization.
 
-The current model is:
+A session is the ownership boundary for its nested `WorkoutSessionExercise` and `WorkoutSessionSet` records:
 
 ```txt
 WorkoutSession
@@ -556,15 +387,15 @@ WorkoutSession
       -> WorkoutSessionSet
 ```
 
-Each `WorkoutSessionExercise` stores `ExerciseNameSnapshot`. This preserves historical training data even if the original exercise name is changed later.
+Once a session has been resolved with `WorkoutSession.UserId == currentUser.UserId`, nested session exercises/sets are accessed through that owned session.
 
----
+Each `WorkoutSessionExercise` stores `ExerciseNameSnapshot` so historical workout data remains readable after the source exercise name changes.
 
 ## GET `/api/workout-sessions`
 
-Returns finished workout sessions ordered by start date descending.
+Returns the authenticated user's finished sessions ordered by start date descending.
 
-Only sessions with `finishedAt != null` are returned.
+Only records with `FinishedAt != null` are returned.
 
 ### Response `200 OK`
 
@@ -573,44 +404,29 @@ Only sessions with `finishedAt != null` are returned.
   {
     "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
     "notes": null,
-    "startedAt": "2026-06-21T11:41:06.0000000Z",
-    "finishedAt": "2026-06-21T11:59:48.0000000Z",
+    "startedAt": "2026-08-09T10:00:00Z",
+    "finishedAt": "2026-08-09T10:45:00Z",
     "exerciseCount": 4,
     "setCount": 16,
     "totalVolume": 8450,
-    "durationMinutes": 18
+    "durationMinutes": 45
   }
 ]
 ```
-
-### Response fields
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `id` | `Guid` | Workout session identifier |
-| `notes` | `string?` | Optional session notes |
-| `startedAt` | `DateTime` | Session start time in UTC |
-| `finishedAt` | `DateTime?` | Session finish time in UTC |
-| `exerciseCount` | `int` | Number of exercises in the session |
-| `setCount` | `int` | Number of sets in the session |
-| `totalVolume` | `decimal?` | Sum of `reps * weight` across all sets |
-| `durationMinutes` | `int?` | Duration between `startedAt` and `finishedAt` in minutes |
 
 ---
 
 ## POST `/api/workout-sessions`
 
-Starts a new workout session. The session may optionally be created from a workout template.
+Starts a workout session and assigns:
 
-The backend sets:
+```txt
+UserId = currentUser.UserId
+```
 
-- `id`,
-- `startedAt`,
-- `exerciseNameSnapshot` for every session exercise.
+If `workoutTemplateId` is provided, the template must belong to the authenticated user. Every exercise must be system-wide or owned by the authenticated user.
 
-> User ownership is not yet assigned from the authenticated user in this endpoint.
-
-### Request body - from template
+### Request
 
 ```json
 {
@@ -623,67 +439,15 @@ The backend sets:
           "setNumber": 1,
           "weight": null,
           "reps": null
-        },
-        {
-          "setNumber": 2,
-          "weight": null,
-          "reps": null
         }
-      ]
+      ],
+      "sessionExerciseId": "00000000-0000-0000-0000-000000000000"
     }
   ]
 }
 ```
 
-### Request body - empty/custom workout
-
-```json
-{
-  "workoutTemplateId": null,
-  "exercises": [
-    {
-      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
-      "sets": [
-        {
-          "setNumber": 1,
-          "weight": null,
-          "reps": null
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Request fields
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `workoutTemplateId` | `Guid?` | No | Template used to start the session, if any |
-| `exercises` | `CreateWorkoutSessionExerciseRequest[]` | Yes | Exercises included in the session |
-
-### `CreateWorkoutSessionExerciseRequest`
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `exerciseId` | `Guid` | Yes | Exercise identifier |
-| `sets` | `CreateWorkoutSessionSetRequest[]` | Yes | Initial sets for the exercise |
-
-### `CreateWorkoutSessionSetRequest`
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `setNumber` | `int` | Yes | Initial set number. The backend reorders sets sequentially while creating the session. |
-| `weight` | `decimal?` | No | Set weight |
-| `reps` | `int?` | No | Set repetitions |
-
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `exercises` is empty,
-- `workoutTemplateId` is provided but does not exist,
-- at least one exercise does not exist.
+The backend generates session, session-exercise and set ids and normalizes exercise/set order. `ExerciseNameSnapshot` is copied from the selected exercise.
 
 ### Response `201 Created`
 
@@ -697,66 +461,19 @@ Returns `400 Bad Request` when:
 
 ## GET `/api/workout-sessions/{id}`
 
-Returns full workout session details, including exercises and sets.
+Returns exercises and sets only when the session belongs to the authenticated user.
 
-This endpoint is used by the active workout session page.
+Exercise names are returned from `ExerciseNameSnapshot`, not the current `Exercise.Name` value.
 
-### Route parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `id` | `Guid` | Workout session identifier |
-
-### Response `200 OK`
-
-```json
-{
-  "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79",
-  "workoutTemplateId": "4eb84d11-8f8d-4e3e-9f4c-94849f7a4c71",
-  "exercises": [
-    {
-      "id": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
-      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
-      "exerciseName": "Bench Press",
-      "order": 1,
-      "sets": [
-        {
-          "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
-          "setNumber": 1,
-          "weight": 80,
-          "reps": 8
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Response `404 Not Found`
-
-Returned when the workout session does not exist.
+Returns `404 Not Found` when the session cannot be resolved for the current user.
 
 ---
 
 ## PATCH `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}`
 
-Updates all sets for a single exercise inside a workout session.
+Updates the full set state for one exercise inside an owned session.
 
-The request represents the full target state of the exercise sets:
-
-- sets missing from the request are removed,
-- existing sets are updated,
-- new sets are added,
-- `setNumber` is recalculated sequentially by the backend.
-
-### Route parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `sessionId` | `Guid` | Workout session identifier |
-| `sessionExerciseId` | `Guid` | Identifier of the exercise inside the workout session |
-
-### Request body
+The request contains:
 
 ```json
 {
@@ -766,236 +483,102 @@ The request represents the full target state of the exercise sets:
       "setNumber": 1,
       "reps": 8,
       "weight": 80
-    },
-    {
-      "id": "7ae29166-f73c-43df-82ff-b7f8837cc3f2",
-      "setNumber": 2,
-      "reps": 7,
-      "weight": 80
     }
   ]
 }
 ```
 
-### Request fields
+Validation rejects:
 
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `sets` | `WorkoutSessionSetSummaryDto[]` | Yes | Full target list of sets for this session exercise |
+- an empty set list,
+- negative reps or weight,
+- empty set ids,
+- duplicate set ids.
 
-### `WorkoutSessionSetSummaryDto`
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `id` | `Guid` | Yes | Set identifier. New frontend-created sets must provide a generated GUID. |
-| `setNumber` | `int` | Yes | Current set number. The backend recalculates it sequentially. |
-| `reps` | `int?` | No | Set repetitions. Must be `0` or greater when provided. |
-| `weight` | `decimal?` | No | Set weight. Must be `0` or greater when provided. |
-
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `sets` is null or empty,
-- any `reps` value is less than `0`,
-- any `weight` value is less than `0`,
-- any set `id` is empty,
-- duplicate set ids are provided.
-
-Returns `404 Not Found` when:
-
-- the workout session does not exist,
-- the selected session exercise does not exist in that session.
-
-### Response `200 OK`
-
-No response body.
+Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially.
 
 ---
 
 ## PATCH `/api/workout-sessions/{sessionId}/finish`
 
-Finishes a workout session by setting `finishedAt` to the current UTC time.
+Finds the session using both `sessionId` and `currentUser.UserId` and sets:
 
-### Route parameters
+```txt
+FinishedAt = DateTime.UtcNow
+```
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `sessionId` | `Guid` | Workout session identifier |
-
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `sessionId` is empty,
-- the session does not exist.
-
-### Response `200 OK`
-
-No response body.
+Returns `400 Bad Request` for an empty id or when the session cannot be found by the current user.
 
 ---
 
 ## GET `/api/workout-sessions/{sessionId}/summary`
 
-Returns workout session summary data.
+Returns summary data for an owned session, including `StartedAt`, `FinishedAt`, ordered session exercises, name snapshots and sets.
 
-This endpoint is used by the workout summary page after finishing a session and by the training history page when opening a past session.
-
-### Route parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `sessionId` | `Guid` | Workout session identifier |
-
-### Response `200 OK`
-
-```json
-{
-  "startedAt": "2026-06-21T11:41:06.0000000Z",
-  "finishedAt": "2026-06-21T11:59:48.0000000Z",
-  "sessionExercises": [
-    {
-      "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
-      "sets": [
-        {
-          "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
-          "setNumber": 1,
-          "reps": 8,
-          "weight": 80
-        }
-      ],
-      "sessionExerciseId": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
-      "exerciseName": "Bench Press",
-      "order": 1
-    }
-  ]
-}
-```
-
-### Validation
-
-Returns `400 Bad Request` when `sessionId` is empty.
-
-Returns `404 Not Found` when the workout session does not exist.
+Returns `404 Not Found` when the session cannot be resolved for the current user.
 
 ---
 
 ## POST `/api/workout-sessions/{sessionId}/exercises`
 
-Adds an exercise to an existing workout session.
+Adds an exercise to an owned workout session.
 
-The backend creates a new `WorkoutSessionExercise` with:
+The selected source exercise must satisfy:
 
-- a new session exercise id,
-- `exerciseNameSnapshot` based on the current exercise name,
-- `order` equal to the next position in the session,
-- one empty set with `setNumber = 1`.
-
-### Route parameters
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `sessionId` | `Guid` | Workout session identifier |
-
-### Request body
-
-```json
-{
-  "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a"
-}
+```txt
+Exercise.IsSystem == true
+OR
+Exercise.OwnerUserId == currentUser.UserId
 ```
 
-### Request fields
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `exerciseId` | `Guid` | Yes | Exercise identifier to add to the session |
-
-### Validation
-
-Returns `400 Bad Request` when:
-
-- `sessionId` is empty,
-- `exerciseId` is empty.
-
-Returns `404 Not Found` when:
-
-- the workout session does not exist,
-- the exercise does not exist.
-
-Returns `409 Conflict` when the selected exercise already exists in the session.
-
-### Response `200 OK`
-
-```json
-{
-  "id": "2937f7ed-df91-460c-8ab1-6d61db6ef4ab",
-  "exerciseId": "5f6c0e70-2f53-4cb4-9b20-29c9d7e48c0a",
-  "exerciseName": "Bench Press",
-  "order": 4,
-  "sets": [
-    {
-      "id": "39a38b2d-b8de-43af-b39c-487aeacb7a37",
-      "setNumber": 1,
-      "weight": null,
-      "reps": null
-    }
-  ]
-}
-```
+The endpoint rejects duplicate exercises in the same session. A new session exercise receives the next order value, an `ExerciseNameSnapshot` and one empty initial set.
 
 ---
 
-# Domain notes
+## DELETE `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}`
 
-## Current user handling
+Removes an exercise from an owned workout session.
 
-JWT authentication and the `/api/auth/login` and `/api/auth/me` endpoints are implemented.
+The endpoint rejects deletion when:
 
-Remaining ownership work:
+- the session has already been finished,
+- the session exercise does not exist,
+- the exercise is the last remaining exercise in the session.
 
-- require authorization on domain endpoints,
-- read the current user identifier from JWT claims,
-- assign new templates and sessions to the authenticated user,
-- filter exercises, templates, sessions and history by user,
-- keep system exercises globally available,
-- never accept ownership fields from the frontend.
+After deletion, remaining exercise order values are recalculated sequentially.
 
-## Exercise name snapshot
+### Response `204 No Content`
 
-Workout sessions store `ExerciseNameSnapshot` on each `WorkoutSessionExercise`.
+---
 
-This is intentional. Historical training data should remain readable even if the original exercise name is edited later.
+# Frontend request flow
 
-## Current session model
+Protected domain requests use `frontend/src/api/fetchApi.ts`.
 
-The current model supports regular exercises and sets:
+The wrapper preserves the caller's `RequestInit`, converts existing headers to a `Headers` object and adds the bearer token when available:
 
-```txt
-WorkoutSession
-  -> WorkoutSessionExercise
-      -> WorkoutSessionSet
+```ts
+const token = localStorage.getItem("accessToken");
+const headers = new Headers(options.headers);
+
+if (token) {
+  headers.set("Authorization", `Bearer ${token}`);
+}
+
+return fetch(url, { ...options, headers });
 ```
 
-Future features such as supersets, circuits or grouped blocks may require introducing an additional level, for example:
-
-```txt
-WorkoutSession
-  -> WorkoutSessionBlock
-      -> WorkoutSessionExercise
-          -> WorkoutSessionSet
-```
-
-This is not implemented yet.
+The wrapper does not yet centralize `401 Unauthorized` handling. `AuthProvider` separately handles login and startup `/api/auth/me` validation.
 
 ---
 
 # Current limitations
 
-- Authentication endpoints are implemented, but domain endpoints are not yet consistently protected or filtered by the authenticated user.
-- Registration and account-management features are not implemented yet.
-- Most validation is currently implemented directly inside endpoint handlers.
-- FluentValidation is planned but not implemented yet.
-- Trainer mode is planned but not implemented yet.
-- Statistics and charts are planned but not implemented yet.
+- `isSystem` is still exposed in the normal exercise create/edit flow for development testing. A production-safe seed/admin flow is still required.
+- The database does not yet enforce the final `IsSystem` / `OwnerUserId` invariant with a check constraint.
+- Existing demo data may need to be reset after ownership work is finalized.
+- Centralized frontend handling for expired/stale JWTs is not implemented yet.
+- Authentication and two-user data-isolation integration tests are not implemented yet.
+- Registration, refresh tokens, account-management features and server-side logout are outside the current MVP.
+- Most validation is currently implemented directly inside endpoint handlers; FluentValidation is not integrated yet.
+- Trainer mode, statistics and charts are planned but not implemented yet.
