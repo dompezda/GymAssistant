@@ -129,6 +129,38 @@ namespace GymAssistant.Api.Migrations
                     b.ToTable("ExerciseMuscleGroups");
                 });
 
+            modelBuilder.Entity("GymAssistant.Api.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -337,6 +369,17 @@ namespace GymAssistant.Api.Migrations
                     b.Navigation("Exercise");
                 });
 
+            modelBuilder.Entity("GymAssistant.Api.Models.RefreshToken", b =>
+                {
+                    b.HasOne("GymAssistant.Api.Models.ApplicationUser", "ApplicationUser")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
+                });
+
             modelBuilder.Entity("GymAssistant.Api.Models.WorkoutSession", b =>
                 {
                     b.HasOne("GymAssistant.Api.Models.ApplicationUser", "User")
@@ -439,6 +482,11 @@ namespace GymAssistant.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("GymAssistant.Api.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("RefreshTokens");
                 });
 
             modelBuilder.Entity("GymAssistant.Api.Models.Exercise", b =>

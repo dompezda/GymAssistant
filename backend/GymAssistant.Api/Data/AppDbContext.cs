@@ -13,6 +13,21 @@ public class AppDbContext : IdentityUserContext<ApplicationUser, Guid>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(x => x.ApplicationUser)
+            .WithMany(x => x.RefreshTokens)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RefreshToken>()
+            .Property(x => x.TokenHash)
+            .IsRequired()
+            .HasColumnType("binary(32)");
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(x => x.TokenHash)
+            .IsUnique();
+
         modelBuilder.Entity<ExerciseMuscleGroup>()
             .HasOne(x => x.Exercise)
             .WithMany(x => x.ExerciseMuscleGroups)
@@ -38,4 +53,7 @@ public class AppDbContext : IdentityUserContext<ApplicationUser, Guid>
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<WorkoutSessionExercise> WorkoutSessionExercises => Set<WorkoutSessionExercise>();
     public DbSet<WorkoutSessionSet> WorkoutSessionSets => Set<WorkoutSessionSet>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
 }

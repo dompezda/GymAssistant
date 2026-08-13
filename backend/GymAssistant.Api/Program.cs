@@ -25,7 +25,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 builder.Services
@@ -93,9 +94,14 @@ builder.Services.AddSingleton<
     IAccessTokenService,
     AccessTokenService>();
     
+builder.Services.AddSingleton<
+    IRefreshTokenService,
+    RefreshTokenService>();
+
 var app = builder.Build();
 
 app.UseCors("Frontend");
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

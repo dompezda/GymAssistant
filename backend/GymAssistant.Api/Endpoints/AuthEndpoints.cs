@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using GymAssistant.Api.Authentication;
+using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -7,13 +8,17 @@ namespace GymAssistant.Api.Endpoints;
 
 public static class AuthEndpoints
 {
+
     public static void MapAuthEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/auth");
 
         group.MapPost("/login", async (
             LoginRequest request,
+            AppDbContext dbContext,
+            HttpResponse response,
             UserManager<ApplicationUser> userManager,
+            IRefreshTokenService refreshTokenService,
             IAccessTokenService tokenService) => {
             if(string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
@@ -30,7 +35,25 @@ public static class AuthEndpoints
             {
                 return Results.Unauthorized();
             }
+            var refreshToken = refreshTokenService.GenerateRefreshToken();
+            var now = DateTime.UtcNow;
+            var expires = now.AddDays(7);
+            dbContext.RefreshTokens.Add(new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = refreshTokenService.HashRefreshToken(refreshToken),
+                CreatedAtUtc = now,
+                ExpiresAtUtc = expires           
+            });
+            await dbContext.SaveChangesAsync();
             var accessToken = tokenService.CreateToken(user);
+            response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = expires
+            });
             return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
         });
         group.MapGet("/me",async (
