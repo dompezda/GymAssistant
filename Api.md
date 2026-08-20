@@ -12,7 +12,7 @@ http://localhost:5235
 
 ## Authorization model
 
-`POST /api/auth/login` is public. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
+`POST /api/auth/login`, `POST /api/auth/refresh` and `POST /api/auth/logout` do not require a valid access JWT. Refresh and logout use the `refreshToken` HttpOnly cookie when available. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
 
 Protected requests use:
 
@@ -30,7 +30,7 @@ Current data rules:
 - system exercises are global and have `OwnerUserId = null`,
 - exercise history is filtered through workout sessions owned by the authenticated user.
 
-The frontend uses `fetchApi` for protected domain requests so the bearer token is attached in one place.
+The frontend uses `fetchApi` for protected domain requests so bearer-token attachment, refresh and one-time retry are centralized.
 
 ---
 
@@ -38,7 +38,9 @@ The frontend uses `fetchApi` for protected domain requests so the bearer token i
 
 | Method | Endpoint | Authorization | Description |
 | ------ | -------- | ------------- | ----------- |
-| POST | `/api/auth/login` | Public | Authenticates a user and returns a JWT access token |
+| POST | `/api/auth/login` | Public | Authenticates a user, returns a JWT access token and creates the refresh-token cookie |
+| POST | `/api/auth/refresh` | Refresh cookie | Validates and rotates the refresh token, then returns a new JWT access token |
+| POST | `/api/auth/logout` | Refresh cookie optional | Revokes the active refresh token when present and deletes the refresh cookie |
 | GET | `/api/auth/me` | Required | Returns the currently authenticated user |
 | GET | `/api/exercises` | Required | Returns system exercises plus the current user's private exercises |
 | POST | `/api/exercises` | Required | Creates an exercise using the current development system/private flow |
@@ -86,11 +88,60 @@ Successful response:
 ```json
 {
   "accessToken": "jwt-access-token",
-  "expiresAtUtc": "2026-08-09T14:30:00Z"
+  "expiresAtUtc": "2026-08-20T20:30:00Z"
 }
 ```
 
+Successful login also creates a random seven-day refresh token. Only its SHA-256 hash is persisted in SQL Server; the raw token is returned only through the `refreshToken` cookie configured as `HttpOnly`, `Secure` and `SameSite=Strict`.
+
 The login response intentionally does not reveal whether an email exists.
+
+---
+
+## POST `/api/auth/refresh`
+
+Issues a replacement access JWT when the browser has a valid refresh-token cookie. A valid access JWT is not required.
+
+The endpoint:
+
+1. reads `refreshToken` from the request cookie,
+2. hashes the raw value,
+3. finds a matching persisted token that has not expired and has not been revoked,
+4. resolves the owning Identity user,
+5. sets `RevokedAtUtc` on the used token,
+6. creates and persists a replacement refresh-token hash,
+7. replaces the browser cookie with the new raw refresh token,
+8. returns a new access JWT and expiration.
+
+Successful response:
+
+```json
+{
+  "accessToken": "replacement-jwt-access-token",
+  "expiresAtUtc": "2026-08-20T20:45:00Z"
+}
+```
+
+### Responses
+
+- `200 OK` — refresh succeeded and refresh-token rotation completed.
+- `401 Unauthorized` — the cookie is missing/empty, the token does not exist, is expired/revoked, or its user cannot be resolved.
+
+Each successful refresh invalidates the refresh token that was just used and makes the replacement token the active refresh credential.
+
+---
+
+## POST `/api/auth/logout`
+
+Revokes the refresh token represented by the current cookie when a matching non-revoked record exists, deletes the `refreshToken` cookie and returns `204 No Content`.
+
+The endpoint is intentionally idempotent. Missing cookies, unknown tokens and already-revoked tokens still result in `204 No Content` because the requested logged-out end state is already satisfied.
+
+A valid access JWT is not required, so logout can still be attempted when the access token is expired.
+
+### Response
+
+- `204 No Content` — logout processing completed.
 
 ---
 
@@ -555,20 +606,15 @@ After deletion, remaining exercise order values are recalculated sequentially.
 
 Protected domain requests use `frontend/src/api/fetchApi.ts`.
 
-The wrapper preserves the caller's `RequestInit`, converts existing headers to a `Headers` object and adds the bearer token when available:
+The wrapper preserves the caller's `RequestInit`, converts existing headers to a `Headers` object and attaches the current access token when available.
 
-```ts
-const token = localStorage.getItem("accessToken");
-const headers = new Headers(options.headers);
+If the first request returns anything other than `401 Unauthorized`, that response is returned directly. On `401`, the wrapper first checks whether another request has already replaced the access token in `localStorage`. If so, it retries once with the newer token.
 
-if (token) {
-  headers.set("Authorization", `Bearer ${token}`);
-}
+Otherwise all concurrent unauthorized requests share one module-level `refreshPromise`. The first request starts `refreshAccessToken()` and the others await the same promise. The refresh call uses native `fetch` with `credentials: "include"`, stores the new access token/expiration on success, and the original request is retried once with the replacement bearer token.
 
-return fetch(url, { ...options, headers });
-```
+If refresh fails, stale local access-token data is removed and the original unauthorized response is returned. The refresh endpoint is never called through `fetchApi`, preventing recursive `401 -> refresh` loops.
 
-The wrapper does not yet centralize `401 Unauthorized` handling. `AuthProvider` separately handles login and startup `/api/auth/me` validation.
+`AuthProvider` also uses `fetchApi` for startup `/api/auth/me` validation. Therefore a page refresh can recover an authenticated session even when the access token is missing or stale, as long as the HttpOnly refresh cookie is still valid.
 
 ---
 
@@ -577,8 +623,11 @@ The wrapper does not yet centralize `401 Unauthorized` handling. `AuthProvider` 
 - `isSystem` is still exposed in the normal exercise create/edit flow for development testing. A production-safe seed/admin flow is still required.
 - The database does not yet enforce the final `IsSystem` / `OwnerUserId` invariant with a check constraint.
 - Existing demo data may need to be reset after ownership work is finalized.
-- Centralized frontend handling for expired/stale JWTs is not implemented yet.
+- Refresh-token lifetime is currently hard-coded to seven days instead of coming from configuration.
+- Frontend API URLs are currently hard-coded to the local backend address in several auth/request locations.
+- Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
 - Authentication and two-user data-isolation integration tests are not implemented yet.
-- Registration, refresh tokens, account-management features and server-side logout are outside the current MVP.
+- If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.
+- Registration, password reset, external providers, roles and broader account-management features are outside the current MVP.
 - Most validation is currently implemented directly inside endpoint handlers; FluentValidation is not integrated yet.
 - Trainer mode, statistics and charts are planned but not implemented yet.
