@@ -59,6 +59,34 @@ public static class AuthEndpoints
             return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
         });
 
+
+        group.MapPost("/logout", async (
+            AppDbContext dbContext,
+            IRefreshTokenService refreshTokenService,
+            HttpRequest request,
+            HttpResponse response
+        )=>
+        {
+            if (!request.Cookies.TryGetValue("refreshToken", out var refreshToken)
+            || string.IsNullOrWhiteSpace(refreshToken))
+            {
+                response.Cookies.Delete("refreshToken");
+                return Results.NoContent();
+            }
+            var now = DateTime.UtcNow;
+            var hashedToken = refreshTokenService.HashRefreshToken(refreshToken);
+            var activeToken = await dbContext.RefreshTokens
+                .FirstOrDefaultAsync(x=>x.TokenHash.SequenceEqual(hashedToken) && x.RevokedAtUtc == null);
+            if(activeToken!=null)
+            {
+                activeToken.RevokedAtUtc = now;
+                await dbContext.SaveChangesAsync();
+            }
+            
+            response.Cookies.Delete("refreshToken");
+            return Results.NoContent();
+        });
+
         group.MapPost("/refresh", async (
             HttpRequest request,
             HttpResponse response,

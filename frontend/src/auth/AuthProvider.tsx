@@ -5,6 +5,7 @@ import {
     type AuthStatus,
     type AuthUser,
 } from "./authContext";
+import { fetchApi } from "../api/fetchApi";
 
 type LoginResponse = {
     accessToken: string;
@@ -18,24 +19,36 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
 const [status, setStatus] = useState<AuthStatus>("loading");
 const [user, setUser] = useState<AuthUser | null>(null);
-
+const [errorMessage, setErrorMessage] = useState<string | null>(null);
 const authContextValue: AuthContextValue = {
     status,
     user,
     login: login,
     logout: logout,
+    errorMessage: errorMessage
 };
 useEffect(() => {
     console.log("Auth state changed:", status, user);
 }, [status, user]);
 
 
-    function logout() : void
+    async function logout() : Promise<void>
     {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("expiresAtUtc");
-        setUser(null);
-        setStatus("unauthenticated");
+        try
+        {
+            await fetch("http://localhost:5235/api/auth/logout", {
+            method: "POST",
+            credentials: "include"
+        }); 
+        }
+        finally
+        {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("expiresAtUtc");
+            setUser(null);
+            setErrorMessage(null);
+            setStatus("unauthenticated");
+        }
     }
 
     async function login(email: string, password: string):Promise<void> {
@@ -88,40 +101,35 @@ catch(err) {
 }}
 
 
-
-
 useEffect(() => {
 
     async function checkAuthentication() {
-        const accessToken = localStorage.getItem("accessToken");
-        if(!accessToken) {
-            setStatus("unauthenticated");
-            return;
-        };
         try
         {
-            const response = await fetch("http://localhost:5235/api/auth/me", {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                },
+            const response = await fetchApi("http://localhost:5235/api/auth/me", {
             });
-
-            if (!response.ok) {
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("expiresAtUtc");
+            if(response.status === 401)
+            {
                 setUser(null);
                 setStatus("unauthenticated");
+                setErrorMessage(null);
                 return;
             }
-
+            if(!response.ok)
+            {
+                setStatus("error");
+                setErrorMessage(`Błąd odpowiedzi ${response.status}`);
+                return;
+            }
             const userData: AuthUser = await response.json();
             setUser(userData);
+            setErrorMessage(null);
             setStatus("authenticated");
         }
         catch
         {
-            setUser(null);
-            setStatus("unauthenticated");
+            setErrorMessage("Nie udało się połączyć z serwerem");
+            setStatus("error");
         }      
     }
     checkAuthentication();
