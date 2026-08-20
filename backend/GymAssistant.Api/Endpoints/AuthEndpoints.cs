@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using GymAssistant.Api.Authentication;
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace GymAssistant.Api.Endpoints;
 
@@ -56,6 +58,62 @@ public static class AuthEndpoints
             });
             return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
         });
+
+        group.MapPost("/refresh", async (
+            HttpRequest request,
+            HttpResponse response,
+            IRefreshTokenService refreshTokenService,
+            AppDbContext dbContext,
+            UserManager<ApplicationUser> userManager,
+            IAccessTokenService accessTokenService) =>
+            {
+            if (!request.Cookies.TryGetValue("refreshToken", out var refreshToken)
+            || string.IsNullOrWhiteSpace(refreshToken))
+            {
+                return Results.Unauthorized();
+            }
+            var hashedToken = refreshTokenService.HashRefreshToken(refreshToken);
+            var now = DateTime.UtcNow;       
+            var storedToken = await dbContext.RefreshTokens
+                .FirstOrDefaultAsync(x=>x.TokenHash.SequenceEqual(hashedToken) 
+                && x.ExpiresAtUtc > now 
+                && x.RevokedAtUtc == null);
+            if(storedToken is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var user = await userManager.FindByIdAsync(storedToken.UserId.ToString());
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+            storedToken.RevokedAtUtc = now;
+            var newRefreshToken = refreshTokenService.GenerateRefreshToken();
+            var refreshTokenExpires = now.AddDays(7);
+
+            dbContext.RefreshTokens.Add(new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = refreshTokenService.HashRefreshToken(newRefreshToken),
+                CreatedAtUtc = now,
+                ExpiresAtUtc = refreshTokenExpires
+            });
+
+            await dbContext.SaveChangesAsync();
+
+            response.Cookies.Append("refreshToken", newRefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = refreshTokenExpires
+            });
+
+            var accessToken = accessTokenService.CreateToken(user);
+            return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
+            });
+
         group.MapGet("/me",async (
         UserManager<ApplicationUser> userManager,
         ICurrentUser currentUser) =>
