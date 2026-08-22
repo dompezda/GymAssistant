@@ -26,7 +26,7 @@ export default function ExercisePickerModal({
     const [exercises, setExercises] = useState<Exercise[]>([]);
     useEffect(() => {
         async function loadExercises() {
-            const response = await fetchApi("http://localhost:5235/api/exercises");
+            const response = await fetchApi("/api/exercises");
             const data = await response.json();
             setExercises(data);
         }

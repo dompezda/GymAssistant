@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import '../../styles/global.css';
 import useAuth from '../../auth/useAuth';
+import { getApiUrl } from '../../config/apiConfig';
 
 
 export default function MainMenu() {
@@ -8,12 +9,12 @@ export default function MainMenu() {
   const {logout} = useAuth();
   async function checkMe(): Promise<void> {
     const accessToken = localStorage.getItem("accessToken");
-
+    const apiUrl = getApiUrl();
     if (!accessToken) {
         console.error("Access token is missing");
         return;
     }
-    const response = await fetch("http://localhost:5235/api/auth/me", {
+    const response = await fetch(`${apiUrl}/api/auth/me`, {
         headers: {
             Authorization: `Bearer ${accessToken}`,
         },

@@ -36,9 +36,7 @@ const [error, setError] = useState<string | null>(null);
 
 useEffect(() => {
   async function fetchExerciseById(): Promise<Exercise> {
-    const response = await fetchApi(
-      `http://localhost:5235/api/exercises/${id}/history`
-    );
+    const response = await fetchApi(`/api/exercises/${id}/history`);
 
     if (!response.ok) {
       const errorMessage = await response.text();

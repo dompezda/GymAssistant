@@ -43,7 +43,7 @@ export default function ExerciseForm({
 
   useEffect(() => {
     async function loadMuscleGroups() {
-      const response = await fetchApi("http://localhost:5235/api/muscle-groups");
+      const response = await fetchApi("/api/muscle-groups");
       const data = await response.json();
       setMuscleGroups(data);
     }

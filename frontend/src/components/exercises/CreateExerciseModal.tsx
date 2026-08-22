@@ -32,7 +32,7 @@ export default function CreateExerciseModal({
 
   
 async function createExercise(exercise : ExerciseFormValues){
-  const response = await fetchApi("http://localhost:5235/api/exercises", {
+  const response = await fetchApi("/api/exercises", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

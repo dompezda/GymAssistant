@@ -19,7 +19,7 @@ export default function ExercisesPage() {
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     
 async function fetchExercises(): Promise<Exercise[]> {
-  const response = await fetchApi("http://localhost:5235/api/exercises");
+  const response = await fetchApi("/api/exercises");
 
   if (!response.ok) {
     const error = await response.text();

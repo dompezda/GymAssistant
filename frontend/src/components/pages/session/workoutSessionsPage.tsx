@@ -21,7 +21,7 @@ useEffect(()=>
 {
 
     async function fetchSessions(): Promise<WorkoutSession[]> {
-        const response = await fetchApi("http://localhost:5235/api/workout-sessions");
+        const response = await fetchApi("/api/workout-sessions");
         if (!response.ok) {
             const error = await response.text();
             console.error(error);

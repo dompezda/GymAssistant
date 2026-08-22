@@ -27,7 +27,7 @@ export default function WorkoutTemplateExercisesPage() {
   >([]);
 
   async function fetchExercises(): Promise<Exercise[]> {
-    const response = await fetchApi("http://localhost:5235/api/exercises");
+    const response = await fetchApi("/api/exercises");
 
       if (!response.ok) {
         const error = await response.text();
@@ -107,8 +107,7 @@ export default function WorkoutTemplateExercisesPage() {
       return;
     }
 
-    const response = await fetchApi(
-      "http://localhost:5235/api/workout-templates",
+    const response = await fetchApi("/api/workout-templates",
       {
         method: "POST",
         headers: {

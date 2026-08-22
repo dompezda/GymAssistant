@@ -6,6 +6,7 @@ import {
     type AuthUser,
 } from "./authContext";
 import { fetchApi } from "../api/fetchApi";
+import { getApiUrl } from "../config/apiConfig";
 
 type LoginResponse = {
     accessToken: string;
@@ -31,12 +32,12 @@ useEffect(() => {
     console.log("Auth state changed:", status, user);
 }, [status, user]);
 
-
+    const apiUrl = getApiUrl();
     async function logout() : Promise<void>
     {
         try
         {
-            await fetch("http://localhost:5235/api/auth/logout", {
+            await fetch(`${apiUrl}/api/auth/logout`, {
             method: "POST",
             credentials: "include"
         }); 
@@ -53,7 +54,7 @@ useEffect(() => {
 
     async function login(email: string, password: string):Promise<void> {
     try {
-    const response = await fetch("http://localhost:5235/api/auth/login", {
+    const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -77,7 +78,7 @@ useEffect(() => {
     localStorage.setItem("expiresAtUtc", data.expiresAtUtc);
 
 
-    const authMeRequest = await fetch("http://localhost:5235/api/auth/me", {
+    const authMeRequest = await fetch(`${apiUrl}/api/auth/me`, {
         headers: {
             Authorization: `Bearer ${data.accessToken}`,
         },
@@ -106,7 +107,7 @@ useEffect(() => {
     async function checkAuthentication() {
         try
         {
-            const response = await fetchApi("http://localhost:5235/api/auth/me", {
+            const response = await fetchApi("/api/auth/me", {
             });
             if(response.status === 401)
             {

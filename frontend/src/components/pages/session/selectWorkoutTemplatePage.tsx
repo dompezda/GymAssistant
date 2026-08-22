@@ -14,7 +14,7 @@ export default function SelectWorkoutTemplatePage() {
 
   useEffect(() => {
     async function loadTemplates() {
-      const response = await fetchApi("http://localhost:5235/api/workout-templates");
+      const response = await fetchApi("/api/workout-templates");
 
       if (!response.ok) {
         console.error(await response.text());

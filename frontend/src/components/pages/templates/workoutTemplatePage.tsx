@@ -27,7 +27,7 @@ export default function WorkoutTemplatePage() {
     if (!id) return;
 
     async function loadTemplate() {
-      const response = await fetchApi(`http://localhost:5235/api/workout-templates/${id}`);
+      const response = await fetchApi(`/api/workout-templates/${id}`);
 
       if (!response.ok) {
         throw new Error("Failed to load workout template");

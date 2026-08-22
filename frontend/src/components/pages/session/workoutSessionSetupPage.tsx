@@ -63,7 +63,7 @@ useEffect(() => {
     setLoading(true);
 
     const response = await fetchApi(
-      `http://localhost:5235/api/workout-templates/${templateId}`
+      `/api/workout-templates/${templateId}`
     );
 
     if (!response.ok) {
@@ -129,7 +129,7 @@ function removeExercise(exerciseId: string) {
       })),
     };
 
-    const response = await fetchApi("http://localhost:5235/api/workout-sessions", {
+    const response = await fetchApi("/api/workout-sessions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

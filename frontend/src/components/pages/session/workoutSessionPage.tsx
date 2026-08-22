@@ -44,7 +44,7 @@ export default function WorkoutSessionPage() {
 
     if(!id) return;
     console.log("Fetching workout session with ID:", id);
-    fetchApi(`http://localhost:5235/api/workout-sessions/${id}`, {
+    fetchApi(`/api/workout-sessions/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json"
@@ -133,7 +133,7 @@ if (exercises.length === 0 || !currentExercise) {
 
   
   async function patchExerciseData (sessionExercise: WorkoutSessionExercise) : Promise<Response> {
-    return  fetchApi(`http://localhost:5235/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
+    return  fetchApi(`/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json"
@@ -156,7 +156,7 @@ if (exercises.length === 0 || !currentExercise) {
       return;
     }
 
-    const finishResponse = await fetchApi(`http://localhost:5235/api/workout-sessions/${id}/finish`, {
+    const finishResponse = await fetchApi(`/api/workout-sessions/${id}/finish`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json"
@@ -254,7 +254,7 @@ if (exercises.length === 0 || !currentExercise) {
       return;
     }
     const newExerciseIndex = session.exercises.length;
-    const response = await fetchApi(`http://localhost:5235/api/workout-sessions/${session.id}/exercises`, {
+    const response = await fetchApi(`/api/workout-sessions/${session.id}/exercises`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -305,7 +305,7 @@ if (exercises.length === 0 || !currentExercise) {
       return;
     }
 
-    const response = await fetchApi(`http://localhost:5235/api/workout-sessions/${session.id}/exercises/${id}`, {
+    const response = await fetchApi(`/api/workout-sessions/${session.id}/exercises/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json"

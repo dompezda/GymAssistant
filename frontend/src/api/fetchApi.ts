@@ -1,17 +1,21 @@
+import { getApiUrl } from "../config/apiConfig";
+
 type TokenResponse = {
     accessToken: string;
     expiresAtUtc: string;
 };
 
-    
+
+const apiUrl = getApiUrl();
 let refreshPromise: Promise<string | null> | null = null;
-export const fetchApi = async (url: string, options: RequestInit = {}) => {
+export const fetchApi = async (path: string, options: RequestInit = {}) => {
+    const requestUrl = `${apiUrl}${path}`;
     const token = localStorage.getItem("accessToken");
     const headers = new Headers(options.headers);
     if (token) {
         headers.set("Authorization", `Bearer ${token}`);
     }
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(requestUrl, { ...options, headers });
     if(response.status !== 401) {
         return response;
     }
@@ -20,7 +24,7 @@ export const fetchApi = async (url: string, options: RequestInit = {}) => {
 
     if (currentToken && currentToken !== token) {
         headers.set("Authorization", `Bearer ${currentToken}`);
-        return fetch(url, { ...options, headers });
+        return fetch(requestUrl, { ...options, headers });
     }
     if (!refreshPromise) {
         refreshPromise = refreshAccessToken()
@@ -35,11 +39,11 @@ export const fetchApi = async (url: string, options: RequestInit = {}) => {
     }
     headers.set("Authorization", `Bearer ${newJwtToken}`);
 
-    return fetch(url, { ...options, headers });
+    return fetch(requestUrl, { ...options, headers });
 };
 
 export const refreshAccessToken = async(): Promise<string | null> => {
-    const response = await fetch("http://localhost:5235/api/auth/refresh", {
+    const response = await fetch(`${apiUrl}/api/auth/refresh`, {
         method: "POST",
         credentials: "include",
     });   

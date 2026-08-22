@@ -36,9 +36,7 @@ type ExerciseSummary = {
 };
 
 async function fetchSession(id: string): Promise<WorkoutSession> {
-  const response = await fetchApi(
-    `http://localhost:5235/api/workout-sessions/${id}/summary`,
-  );
+  const response = await fetchApi(`/api/workout-sessions/${id}/summary`);
 
   console.log(response);
 
