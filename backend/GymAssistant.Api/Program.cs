@@ -18,12 +18,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+
+var frontendOrigin = builder.Configuration["Frontend:Origin"]
+    ?? throw new InvalidOperationException(
+        "Frontend origin configuration is missing.");
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(frontendOrigin)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -35,6 +39,8 @@ builder.Services
 
 var jwtSection = builder.Configuration
     .GetRequiredSection(JwtOptions.SectionName);
+var tokenOptionsSection = builder.Configuration
+    .GetRequiredSection(RefreshTokenOptions.SectionName);
 
 builder.Services
     .AddOptions<JwtOptions>()
@@ -57,6 +63,14 @@ builder.Services
 var jwtOptions = jwtSection.Get<JwtOptions>()
     ?? throw new InvalidOperationException(
         "JWT configuration section is missing.");
+
+builder.Services
+    .AddOptions<RefreshTokenOptions>()
+    .Bind(tokenOptionsSection)
+    .Validate(
+        options => options.LifetimeDays is > 0 and <= 90,
+        "Refresh token lifetime must be between 1 and 90 days.")
+    .ValidateOnStart();
 
 var signingKey = new SymmetricSecurityKey(
     Encoding.UTF8.GetBytes(jwtOptions.SigningKey));

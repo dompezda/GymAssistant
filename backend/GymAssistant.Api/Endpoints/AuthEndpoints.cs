@@ -5,6 +5,7 @@ using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace GymAssistant.Api.Endpoints;
 
@@ -21,6 +22,7 @@ public static class AuthEndpoints
             HttpResponse response,
             UserManager<ApplicationUser> userManager,
             IRefreshTokenService refreshTokenService,
+            IOptions<RefreshTokenOptions> refreshTokenOptions,
             IAccessTokenService tokenService) => {
             if(string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
@@ -39,7 +41,7 @@ public static class AuthEndpoints
             }
             var refreshToken = refreshTokenService.GenerateRefreshToken();
             var now = DateTime.UtcNow;
-            var expires = now.AddDays(7);
+            var expires = now.AddDays(refreshTokenOptions.Value.LifetimeDays);
             dbContext.RefreshTokens.Add(new RefreshToken
             {
                 UserId = user.Id,
@@ -93,7 +95,8 @@ public static class AuthEndpoints
             IRefreshTokenService refreshTokenService,
             AppDbContext dbContext,
             UserManager<ApplicationUser> userManager,
-            IAccessTokenService accessTokenService) =>
+            IAccessTokenService accessTokenService,
+            IOptions<RefreshTokenOptions> refreshTokenOptions) =>
             {
             if (!request.Cookies.TryGetValue("refreshToken", out var refreshToken)
             || string.IsNullOrWhiteSpace(refreshToken))
@@ -118,7 +121,7 @@ public static class AuthEndpoints
             }
             storedToken.RevokedAtUtc = now;
             var newRefreshToken = refreshTokenService.GenerateRefreshToken();
-            var refreshTokenExpires = now.AddDays(7);
+            var refreshTokenExpires = now.AddDays(refreshTokenOptions.Value.LifetimeDays);
 
             dbContext.RefreshTokens.Add(new RefreshToken
             {
