@@ -19,6 +19,7 @@ Implemented:
 - frontend login, `AuthProvider`, `useAuth()` and protected routes,
 - access-token persistence in `localStorage`,
 - shared frontend `fetchApi` wrapper that attaches the bearer token to protected API requests,
+- centralized frontend API base URL through `VITE_API_URL` and `getApiUrl()`, with `fetchApi` receiving relative `/api/...` paths,
 - centralized `401 Unauthorized -> refresh -> retry once` handling,
 - concurrent refresh protection through a shared refresh promise and stale-request token comparison,
 - startup/F5 session recovery through `/api/auth/me` plus automatic refresh when necessary,
@@ -28,9 +29,10 @@ Implemented:
 - cryptographically random refresh-token generation and hashing through `IRefreshTokenService`,
 - refresh-token creation during successful login,
 - refresh-token validation, rotation and revocation,
+- refresh-token lifetime configured through `RefreshTokenOptions` / `RefreshToken:LifetimeDays` with startup validation,
 - raw refresh token stored in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie while only its hash is stored in SQL Server,
 - server-side logout that revokes the active refresh token and deletes the cookie,
-- credential-enabled CORS for the local React origin and `credentials: "include"` where cookie transport is required,
+- credential-enabled CORS with the allowed frontend origin read from `Frontend:Origin`,
 - authorization and user-data isolation for workout templates,
 - authorization and user-data isolation for workout sessions,
 - exercise visibility rules: system exercises are global and private exercises are scoped to their owner,
@@ -39,8 +41,6 @@ Implemented:
 
 Still in progress / planned hardening:
 
-- move refresh-token lifetime and related auth values to configuration,
-- centralize frontend API base URL/configuration,
 - final production-safe system-exercise creation/editing flow,
 - database constraints for valid `IsSystem` / `OwnerUserId` combinations,
 - reset or migration of old development data,

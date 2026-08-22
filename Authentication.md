@@ -15,6 +15,8 @@ Implemented authentication currently includes:
 - cryptographically random refresh-token generation and SHA-256 hashing through `IRefreshTokenService`,
 - an `HttpOnly` refresh-token cookie created during login and replaced during token rotation,
 - refresh-token validation, rotation and revocation,
+- refresh-token lifetime configured through `RefreshTokenOptions`,
+- centralized frontend API base URL through `VITE_API_URL` and `getApiUrl()`,
 - centralized frontend `401 -> refresh -> retry once` behavior,
 - shared frontend refresh work so concurrent `401` responses do not start duplicate refresh requests,
 - session recovery on application startup when the access token is missing or stale but the refresh cookie is still valid,
@@ -38,7 +40,7 @@ POST /api/auth/login
 
 The frontend stores the access token and its expiration in `localStorage`. The raw refresh token is not returned in JSON and is not accessible through application JavaScript.
 
-The frontend login request uses `credentials: "include"`. Backend CORS allows credentials for the local Vite origin `http://localhost:5173`.
+The frontend login request uses `credentials: "include"`. Backend CORS allows credentials for the configured frontend origin read from `Frontend:Origin`; the current development value is `http://localhost:5173`.
 
 ## Refresh-token persistence
 
@@ -57,7 +59,7 @@ Deleting an application user cascades to their refresh-token records.
 
 `TokenHash` is stored as required SQL Server `binary(32)` with a unique index. SHA-256 produces exactly 32 bytes, so the database stores the binary hash rather than a text representation. Only the hash is persisted; the raw token stays in the browser cookie.
 
-The current refresh-token lifetime is seven days and is still hard-coded.
+The refresh-token lifetime is configured through the `RefreshToken:LifetimeDays` setting and bound to `RefreshTokenOptions`. The current development value is seven days. Configuration is validated on application startup and must be between 1 and 90 days.
 
 ## Refresh-token cookie
 
@@ -92,21 +94,30 @@ This implements refresh-token rotation: a successfully used refresh token cannot
 
 The refresh endpoint returns `401 Unauthorized` when the cookie is missing/empty, the token cannot be found, the token is expired or revoked, or its user cannot be resolved.
 
+## Frontend API configuration
+
+The frontend API base URL is read from Vite configuration through `VITE_API_URL`. `frontend/src/config/apiConfig.ts` exposes `getApiUrl()`, which fails fast when the value is missing.
+
+Protected domain calls pass relative paths such as `/api/exercises` or `/api/workout-sessions/...` to `fetchApi`; the wrapper combines those paths with the configured API base URL. Login, logout and refresh requests also use the same centralized base URL instead of hard-coded backend addresses.
+
+Because `VITE_` variables are exposed to browser code, `VITE_API_URL` must contain only public configuration and must not contain secrets, tokens or connection strings.
+
 ## Frontend request and retry flow
 
 Protected domain requests use `frontend/src/api/fetchApi.ts`.
 
 The wrapper:
 
-1. reads the current access token from `localStorage`,
-2. attaches `Authorization: Bearer <token>` when available,
-3. returns successful/non-401 responses normally,
-4. on `401`, first checks whether another request has already replaced the access token,
-5. if a newer access token already exists, retries the original request once with that token,
-6. otherwise waits for a shared `refreshPromise`, creating one only when no refresh is already running,
-7. `refreshAccessToken()` calls `/api/auth/refresh` with `credentials: "include"`,
-8. a successful refresh stores the replacement access token and expiration,
-9. the original API request is retried once with the replacement bearer token.
+1. combines the configured API base URL with the relative endpoint path,
+2. reads the current access token from `localStorage`,
+3. attaches `Authorization: Bearer <token>` when available,
+4. returns successful/non-401 responses normally,
+5. on `401`, first checks whether another request has already replaced the access token,
+6. if a newer access token already exists, retries the original request once with that token,
+7. otherwise waits for a shared `refreshPromise`, creating one only when no refresh is already running,
+8. `refreshAccessToken()` calls `/api/auth/refresh` with `credentials: "include"`,
+9. a successful refresh stores the replacement access token and expiration,
+10. the original API request is retried once with the replacement bearer token.
 
 The refresh request deliberately uses native `fetch`, not `fetchApi`, so a failed `/refresh` response cannot recursively trigger another refresh attempt.
 
@@ -163,6 +174,8 @@ Frontend `logout()` calls this endpoint with `credentials: "include"` and clears
 
 A current edge case remains: if the backend cannot be reached during explicit logout, the frontend is cleared locally but the server-side refresh token and HttpOnly cookie may remain valid because the revoke request never reached the API. This can be hardened later if required.
 
+Deleting a refresh-token cookie manually in the browser does not notify the backend. The corresponding database record therefore remains non-revoked until it expires; this is expected in the current multi-session model because the server stores only the token hash and revocation happens through refresh/logout requests that present the raw token.
+
 ## Domain authorization
 
 Frontend route protection is only a UX mechanism. Backend endpoints remain the security boundary.
@@ -180,12 +193,10 @@ The current exercise create/edit flow still allows authenticated users to set `i
 
 ## Remaining MVP / hardening work
 
-- move refresh-token lifetime and related auth values to configuration,
 - finalize system/private exercise ownership and remove the temporary normal-user system-exercise flow,
 - add database constraints for valid `IsSystem` / `OwnerUserId` combinations,
 - add authentication and two-user isolation integration tests,
 - remove temporary auth/debug behavior,
-- centralize frontend API base URL/configuration,
 - decide whether the access token should remain in `localStorage` for the production version,
 - optionally harden explicit logout behavior for the backend-unavailable edge case.
 
