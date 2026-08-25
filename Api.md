@@ -28,6 +28,9 @@ Current data rules:
 - workout sessions belong to one user,
 - private exercises belong to one user through `OwnerUserId`,
 - system exercises are global and have `OwnerUserId = null`,
+- ordinary users can create and edit only their own private exercises,
+- `IsSystem` is not accepted from normal exercise create/edit requests,
+- SQL Server enforces valid system/private ownership combinations through `CK_Exercises_SystemOwnership`,
 - exercise history is filtered through workout sessions owned by the authenticated user.
 
 The frontend uses `fetchApi` for protected domain requests so bearer-token attachment, refresh and one-time retry are centralized.
@@ -43,8 +46,8 @@ The frontend uses `fetchApi` for protected domain requests so bearer-token attac
 | POST | `/api/auth/logout` | Refresh cookie optional | Revokes the active refresh token when present and deletes the refresh cookie |
 | GET | `/api/auth/me` | Required | Returns the currently authenticated user |
 | GET | `/api/exercises` | Required | Returns system exercises plus the current user's private exercises |
-| POST | `/api/exercises` | Required | Creates an exercise using the current development system/private flow |
-| PATCH | `/api/exercises/{exerciseId}` | Required | Updates an accessible exercise |
+| POST | `/api/exercises` | Required | Creates a private exercise owned by the current user |
+| PATCH | `/api/exercises/{exerciseId}` | Required | Updates a private exercise owned by the current user |
 | GET | `/api/exercises/{exerciseId}/history` | Required | Returns the current user's history for an accessible exercise |
 | GET | `/api/muscle-groups` | Required | Returns available muscle groups |
 | GET | `/api/workout-templates` | Required | Returns the current user's workout templates |
@@ -92,7 +95,7 @@ Successful response:
 }
 ```
 
-Successful login also creates a random seven-day refresh token. Only its SHA-256 hash is persisted in SQL Server; the raw token is returned only through the `refreshToken` cookie configured as `HttpOnly`, `Secure` and `SameSite=Strict`.
+Successful login also creates a refresh token using the configured lifetime. Only its SHA-256 hash is persisted in SQL Server; the raw token is returned only through the `refreshToken` cookie configured as `HttpOnly`, `Secure` and `SameSite=Strict`.
 
 The login response intentionally does not reveal whether an email exists.
 
@@ -174,6 +177,14 @@ OR
 OwnerUserId == currentUser.UserId
 ```
 
+System/private ownership is additionally protected by the database check constraint:
+
+```txt
+(IsSystem = 1 AND OwnerUserId IS NULL)
+OR
+(IsSystem = 0 AND OwnerUserId IS NOT NULL)
+```
+
 ## GET `/api/exercises`
 
 Returns system exercises and private exercises owned by the authenticated user.
@@ -196,25 +207,24 @@ Returns system exercises and private exercises owned by the authenticated user.
 
 ## POST `/api/exercises`
 
-Creates a new exercise.
+Creates a new private exercise owned by the authenticated user.
 
-### Current development request
+### Request
 
 ```json
 {
   "name": "Incline Dumbbell Press",
-  "muscleGroups": [1, 6],
-  "isSystem": false
+  "muscleGroups": [1, 6]
 }
 ```
 
 Validation rejects an empty name, an empty muscle-group collection and unknown enum values.
 
-During development, `isSystem` is deliberately exposed so both ownership modes can be tested. The backend sets ownership itself:
+The endpoint does not accept `IsSystem`. Ownership is assigned by the backend:
 
 ```txt
-isSystem = true  -> OwnerUserId = null
-isSystem = false -> OwnerUserId = currentUser.UserId
+OwnerUserId = currentUser.UserId
+IsSystem = false
 ```
 
 ### Response `201 Created`
@@ -229,32 +239,32 @@ isSystem = false -> OwnerUserId = currentUser.UserId
 }
 ```
 
-> `isSystem` is a temporary development capability. A production-ready user endpoint should not allow an ordinary authenticated user to create global system exercises.
+System exercises are not created through this normal user endpoint. A dedicated seed/admin strategy for the system catalog is still planned.
 
 ---
 
 ## PATCH `/api/exercises/{exerciseId}`
 
-Updates an exercise that is either system-wide or owned by the authenticated user.
+Updates a private exercise owned by the authenticated user.
 
 ### Request
 
 ```json
 {
   "name": "Dumbbell Bench Press",
-  "muscleGroups": [1, 6],
-  "isSystem": false
+  "muscleGroups": [1, 6]
 }
 ```
 
-The current development flow also updates ownership according to `isSystem`:
+The endpoint does not accept `IsSystem` and does not change exercise ownership. It resolves the target only when:
 
-- `true` clears `OwnerUserId`,
-- `false` assigns `OwnerUserId = currentUser.UserId`.
+```txt
+Exercise.Id == exerciseId
+AND Exercise.OwnerUserId == currentUser.UserId
+AND Exercise.IsSystem == false
+```
 
-Returns `404 Not Found` when the exercise is not accessible to the authenticated user.
-
-> Because system/private switching is still a test feature, an authenticated user can currently edit a system exercise. This is a known temporary limitation and must be replaced by a seed/admin strategy before the feature is production-ready.
+Returns `404 Not Found` when the exercise does not exist, is owned by another user, or is a system exercise.
 
 ---
 
@@ -620,11 +630,8 @@ If refresh fails, stale local access-token data is removed and the original unau
 
 # Current limitations
 
-- `isSystem` is still exposed in the normal exercise create/edit flow for development testing. A production-safe seed/admin flow is still required.
-- The database does not yet enforce the final `IsSystem` / `OwnerUserId` invariant with a check constraint.
-- Existing demo data may need to be reset after ownership work is finalized.
-- Refresh-token lifetime is currently hard-coded to seven days instead of coming from configuration.
-- Frontend API URLs are currently hard-coded to the local backend address in several auth/request locations.
+- A production-safe seed/admin flow for creating and maintaining system exercises is still required.
+- Existing demo data may need to be reset before the production-ready release.
 - Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
 - Authentication and two-user data-isolation integration tests are not implemented yet.
 - If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.

@@ -22,7 +22,8 @@ Implemented authentication currently includes:
 - session recovery on application startup when the access token is missing or stale but the refresh cookie is still valid,
 - server-side logout that revokes the active refresh token and removes its cookie,
 - separate frontend authentication states for loading, authenticated, unauthenticated and technical-error cases,
-- user ownership enforcement for templates, sessions and private exercises.
+- user ownership enforcement for templates, sessions and private exercises,
+- system/private exercise ownership enforced by both API rules and a database check constraint.
 
 Registration, password reset, external providers and roles remain outside the current MVP scope.
 
@@ -184,17 +185,29 @@ Current rules:
 
 - workout templates belong to the authenticated user,
 - workout sessions belong to the authenticated user,
-- system exercises are globally readable,
+- system exercises are globally readable and have `OwnerUserId = null`,
 - private exercises are scoped by `OwnerUserId`,
+- ordinary authenticated users create exercises only as private records with `OwnerUserId = currentUser.UserId` and `IsSystem = false`,
+- ordinary authenticated users can edit only their own private exercises; system exercises cannot be modified through the normal user PATCH endpoint,
+- create/edit request DTOs do not accept `IsSystem`, so ownership mode is not trusted from the frontend,
 - exercise history is built only from the authenticated user's workout sessions,
 - ownership identifiers are resolved on the backend rather than trusted from frontend requests.
 
-The current exercise create/edit flow still allows authenticated users to set `isSystem` for development testing. This is temporary and must be replaced with a seed/admin strategy plus database constraints before the feature is production-ready.
+The database also enforces the exercise ownership invariant through `CK_Exercises_SystemOwnership`:
+
+```txt
+(IsSystem = 1 AND OwnerUserId IS NULL)
+OR
+(IsSystem = 0 AND OwnerUserId IS NOT NULL)
+```
+
+This prevents invalid system/private ownership combinations even if an application-level bug attempts to persist one.
+
+A dedicated production-safe seed/admin strategy for creating and maintaining system exercises is still planned. Normal authenticated users are intentionally not allowed to create or edit system exercises.
 
 ## Remaining MVP / hardening work
 
-- finalize system/private exercise ownership and remove the temporary normal-user system-exercise flow,
-- add database constraints for valid `IsSystem` / `OwnerUserId` combinations,
+- define the final seed/admin strategy for the system exercise catalog,
 - add authentication and two-user isolation integration tests,
 - remove temporary auth/debug behavior,
 - decide whether the access token should remain in `localStorage` for the production version,
