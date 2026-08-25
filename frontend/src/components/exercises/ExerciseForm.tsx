@@ -5,7 +5,6 @@ import { fetchApi } from "../../api/fetchApi";
 type ExerciseFormValues = {
   name: string;
   muscleGroups: number[];
-  isSystem: boolean;
 };
 
 type MuscleGroupOption = {
@@ -31,14 +30,12 @@ export default function ExerciseForm({
 
   const values = initialValues ?? {
       name: "",
-      muscleGroups: [],
-      isSystem: false,
+      muscleGroups: []
     };
 
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupOption[]>([]);
   const [name, setName] = useState(values.name);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<number[]>(values.muscleGroups);
-  const [isSystem,setIsSystem] = useState(values.isSystem);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,8 +72,7 @@ export default function ExerciseForm({
   }
   const result: ExerciseFormValues ={
     name: name.trim(),
-    muscleGroups: selectedMuscleGroups,
-    isSystem: isSystem
+    muscleGroups: selectedMuscleGroups
   };
   await onSubmit(result);
 }
@@ -100,16 +96,6 @@ return(
             required
           />
         </label>
-        <div className="checkbox-item">
-          <input
-            type="checkbox"
-            checked={isSystem}
-            onChange={(e) => setIsSystem(e.target.checked)}
-            />
-          <label> isSystem</label>
-
-        </div>
-
         <p>Grupy mięśniowe:</p>
 
         <div className="checkbox-grid">

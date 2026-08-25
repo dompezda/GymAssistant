@@ -106,7 +106,10 @@ namespace GymAssistant.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Exercises");
+                    b.ToTable("Exercises", t =>
+                        {
+                            t.HasCheckConstraint("CK_Exercises_SystemOwnership", "(IsSystem = 1 AND OwnerUserId IS NULL) OR (IsSystem = 0 AND OwnerUserId IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("GymAssistant.Api.Models.ExerciseMuscleGroup", b =>

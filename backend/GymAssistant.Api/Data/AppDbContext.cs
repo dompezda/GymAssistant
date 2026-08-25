@@ -41,6 +41,12 @@ public class AppDbContext : IdentityUserContext<ApplicationUser, Guid>
         modelBuilder.Entity<ExerciseMuscleGroup>()
             .HasIndex(x => new { x.ExerciseId, x.MuscleGroup })
             .IsUnique();
+
+        modelBuilder.Entity<Exercise>()
+            .ToTable(table => table.HasCheckConstraint(
+                "CK_Exercises_SystemOwnership",
+                "(IsSystem = 1 AND OwnerUserId IS NULL) OR (IsSystem = 0 AND OwnerUserId IS NOT NULL)"
+            ));
     }
 
     public DbSet<Exercise> Exercises => Set<Exercise>();

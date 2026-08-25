@@ -55,8 +55,8 @@ public static class ExercisesEndpoints {
             MuscleGroup = (MuscleGroup) group
           })        
           .ToList(),
-        OwnerUserId = request.isSystem ? null : currentUser.UserId,
-        IsSystem = request.isSystem
+        OwnerUserId = currentUser.UserId,
+        IsSystem = false
       };
 
       db.Exercises.Add(exercise);
@@ -94,13 +94,11 @@ public static class ExercisesEndpoints {
       if(!request.MuscleGroups.All(x=>Enum.IsDefined(typeof(MuscleGroup),x)))
         return Results.BadRequest("Unknown muscle group");
 
-      var exercise = await db.Exercises.FirstOrDefaultAsync(x=>x.Id == exerciseId && (x.OwnerUserId == currentUser.UserId || x.IsSystem));
+      var exercise = await db.Exercises.FirstOrDefaultAsync(x=>x.Id == exerciseId && x.OwnerUserId == currentUser.UserId && !x.IsSystem);
       if(exercise == null)
         return Results.NotFound(string.Format("Could not find exercise with id {0}",exerciseId));
 
       exercise.Name = request.Name.Trim();
-      exercise.IsSystem = request.IsSystem;
-      exercise.OwnerUserId = request.IsSystem ? null : currentUser.UserId;
       
       var existingExerciseMuscleGroupsIds = await db.ExerciseMuscleGroups.Where(x=>x.ExerciseId == exerciseId).Select(x=>(int)x.MuscleGroup).ToListAsync();
       var requestedIds = request.MuscleGroups.Distinct().ToList();
@@ -159,7 +157,7 @@ public static class ExercisesEndpoints {
         workoutExercises
       );
       
-      return Results.Ok(res);
+      return Results.Ok(res); 
 
     });
   }
@@ -184,7 +182,7 @@ public record WorkoutSet(
   int SetNumber
 );
 
-public record CreateExerciseRequest(string Name, int[] MuscleGroups, bool isSystem);
+public record CreateExerciseRequest(string Name, int[] MuscleGroups);
 public record ExerciseListItemResponse(
   Guid Id,
   string Name,
@@ -195,6 +193,5 @@ public record ExerciseListItemResponse(
 
 public record EditExerciseRequest(
   string Name,
-  int[] MuscleGroups,
-  bool IsSystem
+  int[] MuscleGroups
 );

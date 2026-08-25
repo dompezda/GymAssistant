@@ -58,13 +58,17 @@ return (
             <button
               key={exercise.id}
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-secondary exercise-picker-button"
               onClick={() => {
                 onSelect(exercise);
                 onClose();
               }}
             >
-              {exercise.name}
+              <span className="exercise-name">{exercise.name}</span>
+
+                {exercise.isSystem && (
+                  <span className="exercise-badge">System</span>
+                )}
             </button>
           ))}
         </div>

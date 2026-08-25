@@ -6,7 +6,6 @@ import { fetchApi } from "../../api/fetchApi";
 type ExerciseFormValues = {
   name: string;
   muscleGroups: number[];
-  isSystem: boolean;
 };
 type Exercise = {
   id: string;
@@ -34,9 +33,7 @@ export default function EditExerciseModal({
     const [error, setError] = useState<string | null>(null);
     const initialValue : ExerciseFormValues = {
         name : exercise.name,
-        muscleGroups: exercise.muscleGroups,
-        isSystem: exercise.isSystem
-        
+        muscleGroups: exercise.muscleGroups
     }
 
     async function editExercise(exerciseValues:ExerciseFormValues) {
@@ -47,8 +44,7 @@ export default function EditExerciseModal({
             },
             body: JSON.stringify({
                 name: exerciseValues.name.trim(),
-                muscleGroups: exerciseValues.muscleGroups,
-                isSystem: exerciseValues.isSystem
+                muscleGroups: exerciseValues.muscleGroups
             }),
         });
 

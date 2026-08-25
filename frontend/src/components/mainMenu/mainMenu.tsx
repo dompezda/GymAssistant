@@ -1,33 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import '../../styles/global.css';
 import useAuth from '../../auth/useAuth';
-import { getApiUrl } from '../../config/apiConfig';
-
 
 export default function MainMenu() {
   const navigate = useNavigate();
   const {logout} = useAuth();
-  async function checkMe(): Promise<void> {
-    const accessToken = localStorage.getItem("accessToken");
-    const apiUrl = getApiUrl();
-    if (!accessToken) {
-        console.error("Access token is missing");
-        return;
-    }
-    const response = await fetch(`${apiUrl}/api/auth/me`, {
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-        },
-    });
-
-    if (!response.ok) {
-        console.error("Check me failed:", response.status);
-        return;
-    }
-
-    const user = await response.json();
-    console.log(user);
-}
 
   return (
     <section className="page main-menu">
@@ -38,7 +15,6 @@ export default function MainMenu() {
       <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/start")}>Rozpocznij trening</button>
       <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions")}>Historia treningów</button>
       <button className="btn btn-secondary" onClick={() => navigate("/settings")}>Ustawienia</button>
-      <button className="btn btn-secondary" onClick={() => checkMe()}>Check Me</button>
       <button className="btn btn-secondary" onClick={logout}>Wyloguj</button>
     </section>
   );

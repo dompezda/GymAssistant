@@ -19,7 +19,6 @@ type CreateExerciseModalProps = {
 type ExerciseFormValues = {
   name: string;
   muscleGroups: number[];
-  isSystem: boolean;
 };
 
 export default function CreateExerciseModal({
@@ -39,8 +38,7 @@ async function createExercise(exercise : ExerciseFormValues){
     },
     body: JSON.stringify({
       name: exercise.name.trim(),
-      muscleGroups: exercise.muscleGroups,
-      isSystem: exercise.isSystem
+      muscleGroups: exercise.muscleGroups
     }),
   });
 
