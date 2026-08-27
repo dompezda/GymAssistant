@@ -1,401 +1,351 @@
 * {
   box-sizing: border-box;
-  }
+}
 
-/* colors */
+/* =========================
+   Theme
+   ========================= */
+
 :root {
+  /* Background / surfaces */
   --color-bg: #EEEDEA;
   --color-surface: #FAF9F6;
   --color-surface-muted: #E7E5E0;
 
+  /* Text */
   --color-text: #202225;
   --color-text-muted: #686B70;
   --color-text-soft: #92959A;
 
+  /* Borders */
   --color-border: #D5D2CB;
   --color-border-strong: #BBB8B1;
 
+  /* Primary */
   --color-primary: #292C30;
   --color-primary-hover: #181A1D;
   --color-primary-soft: #E1DFDA;
 
+  /* Accent */
+  --color-accent: #B9583B;
+  --color-accent-soft: #F1DFD8;
+
+  /* Success */
   --color-success: #477A59;
   --color-success-hover: #386648;
   --color-success-soft: #E1ECE4;
 
+  /* Warning */
   --color-warning: #B77A36;
   --color-warning-soft: #F2E8D8;
 
+  /* Danger */
   --color-danger: #B7473A;
   --color-danger-hover: #99392F;
   --color-danger-soft: #F1DEDB;
-
-  --color-accent: #B9583B;
---color-accent-soft: #F1DFD8;
 }
+
+/* =========================
+   Base / layout
+   ========================= */
+
 body {
-margin: 0;
-font-family: system-ui, Arial, sans-serif;
-background: var(--color-bg);
-color: var(--color-text);
+  margin: 0;
+  font-family: system-ui, Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .page {
-width: 100%;
-max-width: 520px;
-margin: 0 auto;
-padding: 16px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px;
 }
 
-.stack {
-display: flex;
-flex-direction: column;
-gap: 16px;
-}
-
+.stack,
 .main-menu {
-display: flex;
-flex-direction: column;
-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* Buttons */
+/* =========================
+   Buttons
+   ========================= */
 
 .btn {
-width: 100%;
-padding: 14px 18px;
-border: none;
-border-radius: 12px;
-font: inherit;
-font-weight: 600;
-cursor: pointer;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .btn-primary {
-background: var(--color-primary);
-color: var(--color-surface);
+  background: var(--color-primary);
+  color: var(--color-surface);
 }
 
 .btn-primary:hover {
-background: var(--color-primary-hover);
+  background: var(--color-primary-hover);
 }
 
 .btn-secondary {
-background: var(--color-primary-soft);
-color: var(--color-primary);
-border: 1px solid var(--color-border);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
 }
 
 .btn-secondary:hover {
-color: var(--color-primary-hover);
-border-color: var(--color-primary);
+  color: var(--color-primary-hover);
+  border-color: var(--color-primary);
 }
 
 .btn-danger {
-background: var(--color-danger);
-color: var(--color-surface);
+  background: var(--color-danger);
+  color: var(--color-surface);
 }
 
 .btn-danger:hover {
-background: var(--color-danger-hover);
+  background: var(--color-danger-hover);
 }
 
-/* Cards */
+/* =========================
+   Cards
+   ========================= */
 
 .card {
-padding: 16px;
-border-radius: 16px;
-background: var(--color-surface);
-border: 1px solid var(--color-border);
-margin: 10px 3px;
-}
-
-.summary-card {
-background: var(--color-success-soft);
-color: var(--color-text);
-border-color: var(--color-success);
+  margin: 10px 3px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
 }
 
 .card h2 {
-margin: 0 0 12px;
-font-size: 18px;
-font-style: italic;
-color: var(--color-text);
-text-align: center;
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-style: italic;
+  color: var(--color-text);
+  text-align: center;
 }
 
 .card p {
-margin: 0;
-color: var(--color-text-muted);
+  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .card-selected {
-border-color: var(--color-success);
-background: var(--color-success-soft);
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
 }
 
-/* Stats */
+.summary-card {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+  color: var(--color-text);
+}
+
+/* =========================
+   Stats
+   ========================= */
 
 .stat-list {
-width: 100%;
-max-width: 300px;
-margin: 0 auto;
-display: grid;
-gap: 6px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  display: grid;
+  gap: 6px;
 }
 
 .stat-row {
-display: grid;
-grid-template-columns: 1fr auto;
-gap: 16px;
-text-align: initial;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  text-align: initial;
 }
 
 .stat-row span {
-color: var(--color-text-muted);
+  color: var(--color-text-muted);
 }
 
 .stat-row strong {
-color: var(--color-text);
+  color: var(--color-text);
 }
 
-/* Forms */
+/* =========================
+   Forms
+   ========================= */
 
 .form-field {
-display: flex;
-flex-direction: column;
-gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 input,
 select,
 textarea {
-width: 100%;
-padding: 10px 12px;
-border: 1px solid var(--color-border-strong);
-border-radius: 10px;
-font: inherit;
-background: var(--color-surface);
-color: var(--color-text);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  font: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 textarea {
-resize: vertical;
+  resize: vertical;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-outline: none;
-border-color: var(--color-primary);
+  outline: none;
+  border-color: var(--color-primary);
 }
 
-/* Checkboxes */
+/* =========================
+   Checkboxes
+   ========================= */
 
 input[type="checkbox"] {
-width: auto;
+  width: auto;
 }
 
 .checkbox-grid {
-display: grid;
-grid-template-columns: repeat(2, minmax(0, 1fr));
-gap: 0.75rem 2rem;
-margin-top: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 2rem;
+  margin-top: 0.5rem;
 }
 
 .checkbox-item {
-display: flex;
-align-items: center;
-gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Sets */
+/* =========================
+   Sets
+   ========================= */
 
 .sets-row {
-display: flex;
-justify-content: center;
-align-items: center;
-gap: 12px;
-margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .sets-list {
-display: flex;
-flex-direction: column;
-gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .set-row {
-display: grid;
-grid-template-columns: 90px 1fr 1fr;
-gap: 12px;
-align-items: end;
-padding: 12px;
-border: 1px solid var(--color-border);
-border-radius: 12px;
-background: var(--color-surface-muted);
+  display: grid;
+  grid-template-columns: 90px 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-muted);
 }
 
 .set-number {
-font-weight: 600;
-padding-bottom: 10px;
+  padding-bottom: 10px;
+  font-weight: 600;
 }
 
 .set-field {
-display: flex;
-flex-direction: column;
-gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .set-field label {
-font-size: 0.85rem;
-color: var(--color-text-muted);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 .set-field input {
-width: 100%;
-box-sizing: border-box;
-padding: 10px 12px;
-border: 1px solid var(--color-border-strong);
-border-radius: 10px;
-font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  font-size: 1rem;
 }
 
 .set-field input:focus {
-outline: none;
-border-color: var(--color-primary);
+  outline: none;
+  border-color: var(--color-primary);
 }
 
-/* Modal */
+/* =========================
+   Modals
+   ========================= */
 
 .modal-backdrop {
-position: fixed;
-inset: 0;
-background: rgba(17, 24, 39, 0.45);
-display: flex;
-align-items: center;
-justify-content: center;
-padding: 16px;
-z-index: 1000;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(17, 24, 39, 0.45);
+  z-index: 1000;
 }
 
 .modal {
-width: 100%;
-max-width: 480px;
-background: var(--color-surface);
-border-radius: 20px;
-padding: 20px;
+  width: 100%;
+  max-width: 480px;
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--color-surface);
 }
 
 .modal-scrollable {
-max-height: 85vh;
-display: flex;
-flex-direction: column;
-overflow: hidden;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
-display: flex;
-flex-direction: column;
-gap: 12px;
-margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .modal-header h3 {
-margin: 0;
+  margin: 0;
 }
 
 .modal-body {
-overflow-y: auto;
-display: flex;
-flex-direction: column;
-gap: 8px;
-padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+  overflow-y: auto;
 }
 
 .modal-footer {
-margin-top: 16px;
+  margin-top: 16px;
 }
 
-/* Workout session */
+/* =========================
+   Exercise UI
+   ========================= */
 
-.workout-session-topbar {
-display: flex;
-justify-content: space-between;
-align-items: center;
-gap: 12px;
-margin-bottom: 24px;
-}
-
-.workout-session-header {
-margin-bottom: 20px;
-}
-
-.workout-session-progress {
-margin: 0 0 6px;
-font-size: 0.9rem;
-opacity: 0.75;
-}
-
-.workout-session-title {
-margin: 0;
-font-size: 1.8rem;
-line-height: 1.2;
-}
-
-.exercise-card {
-border: 1px solid var(--color-border);
-border-radius: 16px;
-padding: 20px;
-margin-bottom: 20px;
-background: var(--color-surface);
-}
-
-.exercise-name {
-margin: 0 0 18px;
-font-size: 1.4rem;
-}
-
-.exercise-navigation {
-display: flex;
-justify-content: space-between;
-gap: 12px;
-margin-bottom: 20px;
-}
-
-.exercise-navigation button {
-flex: 1;
-}
-
-.finish-workout-button {
-width: 100%;
-padding: 12px 16px;
-border-radius: 12px;
-font-weight: 600;
-}
-
-@media (max-width: 560px) {
-.workout-session-page {
-padding: 16px 12px;
-}
-
-.exercise-card {
-padding: 16px;
-}
-
-.set-row {
-grid-template-columns: 1fr;
-gap: 10px;
-}
-
-.set-number {
-padding-bottom: 0;
-}
-
-.exercise-navigation {
-flex-direction: column;
-}
-}
 .exercise-picker-button {
   position: relative;
 }
@@ -404,7 +354,6 @@ flex-direction: column;
   display: block;
   max-width: 75%;
   margin: 0 auto;
-
   font-size: 1rem;
   line-height: 1.2;
   text-align: center;
@@ -414,7 +363,6 @@ flex-direction: column;
   position: absolute;
   top: 0.45rem;
   right: 0.6rem;
-
   font-size: 0.6rem;
   font-weight: 600;
 }
@@ -426,21 +374,21 @@ flex-direction: column;
   flex-wrap: wrap;
   gap: 8px;
 }
+
 .exercise-meta {
+  font-size: 0.95rem;
   color: var(--color-text-muted);
   text-align: center;
-  font-size: 0.95rem;
 }
 
 .system-badge {
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 1;
-  padding: 4px 7px;
-  border-radius: 4px;
-
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
 }
 
 .form-title {
@@ -454,21 +402,16 @@ flex-direction: column;
   margin: 0;
 }
 
-.system-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #e9eef8;
-  color: #4b5563;
-}
+/* =========================
+   Exercises page
+   ========================= */
 
 .exercises-page .back-button {
   width: auto;
   align-self: flex-start;
   padding: 8px 10px;
-  background: transparent;
   border: none;
+  background: transparent;
   color: var(--color-text-muted);
 }
 
@@ -477,4 +420,85 @@ flex-direction: column;
   padding: 16px 18px;
   border-radius: 8px;
   cursor: pointer;
+}
+
+/* =========================
+   Workout session
+   ========================= */
+
+.workout-session-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.workout-session-header {
+  margin-bottom: 20px;
+}
+
+.workout-session-progress {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.workout-session-title {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.exercise-card {
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.exercise-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.exercise-navigation button {
+  flex: 1;
+}
+
+.finish-workout-button {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* =========================
+   Responsive
+   ========================= */
+
+@media (max-width: 560px) {
+  .workout-session-page {
+    padding: 16px 12px;
+  }
+
+  .exercise-card {
+    padding: 16px;
+  }
+
+  .set-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .set-number {
+    padding-bottom: 0;
+  }
+
+  .exercise-navigation {
+    flex-direction: column;
+  }
 }
