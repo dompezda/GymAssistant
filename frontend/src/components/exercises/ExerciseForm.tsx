@@ -16,7 +16,8 @@ type ExerciseFormProps = {
   onSubmit: (values: ExerciseFormValues) => void | Promise<void>;
   title: string;
   buttonValue: string;
-  initialValues?: ExerciseFormValues
+  initialValues?: ExerciseFormValues;
+  readOnly?:boolean
 };
 
 export default function ExerciseForm({
@@ -24,7 +25,8 @@ export default function ExerciseForm({
   onSubmit,
   title,
   buttonValue,
-  initialValues
+  initialValues,
+  readOnly
 }: ExerciseFormProps) {
 
 
@@ -37,7 +39,6 @@ export default function ExerciseForm({
   const [name, setName] = useState(values.name);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<number[]>(values.muscleGroups);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     async function loadMuscleGroups() {
       const response = await fetchApi("/api/muscle-groups");
@@ -81,7 +82,10 @@ export default function ExerciseForm({
 
 return(
 <div>
-      <h2>{title}</h2>
+      <div className="form-title">
+        <h2>{title}</h2>
+        {readOnly && <span className="system-badge">System</span>}
+      </div>
 
       <form className="stack" onSubmit={handleSubmit}>
         {error && <p className="error">{error}</p>}
@@ -94,8 +98,10 @@ return(
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            disabled = {readOnly}
           />
         </label>
+
         <p>Grupy mięśniowe:</p>
 
         <div className="checkbox-grid">
@@ -105,15 +111,17 @@ return(
         type="checkbox"
         checked={selectedMuscleGroups.includes(group.value)}
         onChange={() => toggleMuscleGroup(group.value)}
+        disabled = {readOnly}
       />
       {group.label}
     </label>
   ))}
 </div>
-
-        <button className="btn btn-primary" type="submit">
-          {buttonValue}
-        </button>
+        {!readOnly &&
+          <button className="btn btn-primary" type="submit" >
+            {buttonValue}
+          </button>
+        }
         <button className="btn btn-secondary" type="button" onClick={onClose}>
           Zamknij
         </button>

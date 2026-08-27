@@ -423,3 +423,44 @@ flex-direction: column;
   font-size: 0.6rem;
   font-weight: 600;
 }
+
+.exercise-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.system-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 1;
+
+  padding: 4px 7px;
+  border-radius: 999px;
+
+  background: #e9eef8;
+  color: #4b5563;
+}
+
+.form-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.form-title h2 {
+  margin: 0;
+}
+
+.system-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e9eef8;
+  color: #4b5563;
+}

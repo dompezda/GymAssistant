@@ -76,12 +76,19 @@ useEffect(() => {
 
       <div className="stack">
         {visibleExercises.map((exercise) => (
-          <article key={exercise.id} className="card" onClick={() =>setSelectedExercise(exercise)}>
-            <h2>{exercise.name}</h2>
+          <article key={exercise.id} className="card" onClick={() =>setSelectedExercise(exercise)}
+           >
+            <h2 className="exercise-title">
+              <span>{exercise.name}</span>
 
+              {exercise.isSystem && (
+                <span className="system-badge">System</span>
+              )}
+            </h2>
             {exercise.muscleGroupLabels?.length > 0 && (
               <p>{exercise.muscleGroupLabels.join(", ")}</p>
             )}
+            
           </article>
         ))}
       </div>

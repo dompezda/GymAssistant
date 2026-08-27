@@ -59,20 +59,20 @@ export default function EditExerciseModal({
 
     if(!isOpen)
         return null;
-    if (!exercise) {
-        return <div>Ładowanie...</div>;
-    }
+
     return(
     <section>
 <div className="modal-backdrop">
     <div className="modal">
         <ExerciseForm
-            title="Edytuj ćwiczenie"
+            title={exercise.isSystem ? "Podgląd ćwiczenia systemowego" :"Edytuj ćwiczenie"}
             buttonValue="Edytuj"
             initialValues={initialValue}
             onClose = {onClose}
+            readOnly = {exercise.isSystem}
             onSubmit={async (exerciseValues : ExerciseFormValues)=>{
                 await editExercise(exerciseValues)
+            
             }}
         />
         <button className="btn btn-secondary" onClick={()=>navigate(`/exercises/${exercise.id}/history`)}>
