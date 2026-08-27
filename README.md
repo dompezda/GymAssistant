@@ -38,7 +38,8 @@ Implemented:
 - exercise visibility rules: system exercises are global and private exercises are scoped to their owner,
 - ordinary users can create and edit only their own private exercises; `IsSystem` is no longer accepted from create/edit requests,
 - database check constraint enforcing valid `IsSystem` / `OwnerUserId` combinations,
-- system-exercise badge in the exercise picker,
+- system exercises are marked with a `System` badge in the exercise picker and main exercise list,
+- system exercise details use a read-only frontend mode: the name and muscle groups cannot be changed and the edit action is not rendered,
 - exercise history filtered through the authenticated user's workout sessions,
 - protected muscle-group endpoint.
 

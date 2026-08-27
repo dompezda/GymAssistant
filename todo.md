@@ -4,11 +4,10 @@ The core authentication flow is implemented: login, persisted refresh tokens, re
 
 Configuration cleanup for the current auth/frontend flow is also complete: the frontend API base URL is centralized through `VITE_API_URL`, refresh-token lifetime is configured and validated through `RefreshTokenOptions`, and the credential-enabled CORS origin is read from backend configuration.
 
-System/private exercise ownership is now enforced: normal users create and edit only their own private exercises, `IsSystem` is not accepted from create/edit requests, and SQL Server enforces valid `IsSystem` / `OwnerUserId` combinations through a check constraint. The exercise picker already marks system exercises with a `System` badge.
+System/private exercise ownership is now enforced: normal users create and edit only their own private exercises, `IsSystem` is not accepted from create/edit requests, and SQL Server enforces valid `IsSystem` / `OwnerUserId` combinations through a check constraint. The frontend marks system exercises with a `System` badge in both the exercise picker and the main exercise list, and system exercise details are presented in a read-only mode without an edit action.
 
 ## Remaining work
 
-- [ ] Add a `System` badge to system exercises on the main exercise list.
 - [ ] Define the production-safe seed/admin strategy for creating and maintaining the system exercise catalog.
 - [ ] Add authentication and two-user data-isolation integration tests.
 - [ ] Clean up temporary authentication/debug behavior.
