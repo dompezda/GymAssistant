@@ -36,14 +36,16 @@ Implemented:
 - authorization and user-data isolation for workout templates,
 - authorization and user-data isolation for workout sessions,
 - exercise visibility rules: system exercises are global and private exercises are scoped to their owner,
+- ordinary users can create and edit only their own private exercises; `IsSystem` is no longer accepted from create/edit requests,
+- database check constraint enforcing valid `IsSystem` / `OwnerUserId` combinations,
+- system-exercise badge in the exercise picker,
 - exercise history filtered through the authenticated user's workout sessions,
 - protected muscle-group endpoint.
 
 Still in progress / planned hardening:
 
-- final production-safe system-exercise creation/editing flow,
-- database constraints for valid `IsSystem` / `OwnerUserId` combinations,
-- reset or migration of old development data,
+- final seed/admin strategy for creating and maintaining the system exercise catalog,
+- reset of development/demo data before the production-ready release,
 - authentication and two-user isolation integration tests,
 - cleanup of temporary authentication/debug code,
 - explicit decision on production access-token storage instead of treating `localStorage` as final by default,
