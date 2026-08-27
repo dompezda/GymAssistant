@@ -56,8 +56,8 @@ useEffect(() => {
   );
 
   return (
-    <section className="page stack">
-      <button className="btn btn-secondary" onClick={() => navigate("/")}>
+    <section className="page stack exercises-page">
+      <button className="btn btn-secondary back-button" onClick={() => navigate("/")}>
         ← Wróć
       </button>
 
@@ -86,7 +86,7 @@ useEffect(() => {
               )}
             </h2>
             {exercise.muscleGroupLabels?.length > 0 && (
-              <p>{exercise.muscleGroupLabels.join(", ")}</p>
+              <div className="exercise-meta">{exercise.muscleGroupLabels.join(" · ")}</div>
             )}
             
           </article>

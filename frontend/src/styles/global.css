@@ -4,40 +4,35 @@
 
 /* colors */
 :root {
-/* Background */
---color-bg: #F3F4F6;
---color-surface: #FFFFFF;
---color-surface-muted: #F9FAFB;
+  --color-bg: #EEEDEA;
+  --color-surface: #FAF9F6;
+  --color-surface-muted: #E7E5E0;
 
-/* Text */
---color-text: #111827;
---color-text-muted: #6B7280;
---color-text-soft: #9CA3AF;
+  --color-text: #202225;
+  --color-text-muted: #686B70;
+  --color-text-soft: #92959A;
 
-/* Border / shadow */
---color-border: #E5E7EB;
---color-border-strong: #D1D5DB;
+  --color-border: #D5D2CB;
+  --color-border-strong: #BBB8B1;
 
-/* Primary */
---color-primary: #2563EB;
---color-primary-hover: #1D4ED8;
---color-primary-soft: #DBEAFE;
+  --color-primary: #292C30;
+  --color-primary-hover: #181A1D;
+  --color-primary-soft: #E1DFDA;
 
-/* Success / training completed / progress */
---color-success: #16A34A;
---color-success-hover: #15803D;
---color-success-soft: #DCFCE7;
+  --color-success: #477A59;
+  --color-success-hover: #386648;
+  --color-success-soft: #E1ECE4;
 
-/* Warning */
---color-warning: #F59E0B;
---color-warning-soft: #FEF3C7;
+  --color-warning: #B77A36;
+  --color-warning-soft: #F2E8D8;
 
-/* Danger */
---color-danger: #DC2626;
---color-danger-hover: #B91C1C;
---color-danger-soft: #FEE2E2;
+  --color-danger: #B7473A;
+  --color-danger-hover: #99392F;
+  --color-danger-soft: #F1DEDB;
+
+  --color-accent: #B9583B;
+--color-accent-soft: #F1DFD8;
 }
-
 body {
 margin: 0;
 font-family: system-ui, Arial, sans-serif;
@@ -431,18 +426,21 @@ flex-direction: column;
   flex-wrap: wrap;
   gap: 8px;
 }
+.exercise-meta {
+  color: var(--color-text-muted);
+  text-align: center;
+  font-size: 0.95rem;
+}
 
 .system-badge {
   font-size: 0.65rem;
-  font-weight: 600;
-  font-style: normal;
+  font-weight: 700;
   line-height: 1;
-
   padding: 4px 7px;
-  border-radius: 999px;
+  border-radius: 4px;
 
-  background: #e9eef8;
-  color: #4b5563;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 .form-title {
@@ -463,4 +461,20 @@ flex-direction: column;
   border-radius: 999px;
   background: #e9eef8;
   color: #4b5563;
+}
+
+.exercises-page .back-button {
+  width: auto;
+  align-self: flex-start;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+}
+
+.exercises-page .card {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 8px;
+  cursor: pointer;
 }
