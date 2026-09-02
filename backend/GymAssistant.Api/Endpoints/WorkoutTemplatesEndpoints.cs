@@ -33,12 +33,12 @@ public static class WorkoutTemplatesEndpoints
         {
             if (string.IsNullOrWhiteSpace(request.Title))
             {
-                return Results.BadRequest("Title is required.");
+                return Results.BadRequest("Tytuł planu treningowego jest wymagany.");
             }
 
             if (request.Exercises.Count == 0)
             {
-                return Results.BadRequest("Workout template must contain at least one exercise.");
+                return Results.BadRequest("Plan treningowy musi zawierać przynajmniej jedno ćwiczenie.");
             }
 
             var exerciseIds = request.Exercises
@@ -51,11 +51,11 @@ public static class WorkoutTemplatesEndpoints
 
             if(request.Exercises.Count != request.Exercises.Select(x=>x.ExerciseId).Distinct().Count())
             {
-                return Results.BadRequest("Duplicate exercises are not allowed.");
+                return Results.BadRequest("Plan treningowy nie może zawierać tego samego ćwiczenia więcej niż raz.");
             }
             if (existingExercisesCount != exerciseIds.Count)
             {
-                return Results.BadRequest("One or more exercises do not exist.");
+                return Results.BadRequest("Jedno lub więcej wybranych ćwiczeń nie istnieje.");
             }
 
 
@@ -109,7 +109,7 @@ public static class WorkoutTemplatesEndpoints
                     .OrderBy(x => x.Order)
                     .Select(x => new WorkoutTemplateExerciseResponseDto(
                         x.ExerciseId,
-                        x.Exercise?.Name ?? "Unknown exercise",
+                        x.Exercise?.Name ?? "Nieznane ćwiczenie",
                         x.PlannedSets,
                         x.Order
                     ))
@@ -136,15 +136,15 @@ public static class WorkoutTemplatesEndpoints
             }
             if(request.Title==null || request.Title.Trim() == "")
             {
-                return Results.BadRequest("Title is required.");
+                return Results.BadRequest("Tytuł planu treningowego jest wymagany.");
             }
             if(request.Exercises.Count == 0)
             {
-                return Results.BadRequest("Workout template must contain at least one exercise.");
+                return Results.BadRequest("Plan treningowy musi zawierać przynajmniej jedno ćwiczenie.");
             }
             if(request.Exercises.Count != request.Exercises.Select(x=>x.ExerciseId).Distinct().Count())
             {
-                return Results.BadRequest("Duplicate exercises are not allowed.");
+                return Results.BadRequest("Plan treningowy nie może zawierać tego samego ćwiczenia więcej niż raz.");
             }
 
             if(template.Title != request.Title.Trim())
@@ -158,7 +158,7 @@ public static class WorkoutTemplatesEndpoints
             }
             if(request.Exercises.All(x=>x.PlannedSets>0) == false)
             {
-                return Results.BadRequest("Planned sets must be greater than 0.");
+                return Results.BadRequest("Liczba planowanych serii musi być większa od 0.");
             }
             var existingExercisesCount = await db.Exercises
              .Where(x=>x.OwnerUserId==currentUser.UserId || x.IsSystem)
@@ -166,7 +166,7 @@ public static class WorkoutTemplatesEndpoints
 
             if (existingExercisesCount != request.Exercises.Count)
             {
-                return Results.BadRequest("One or more exercises do not exist.");
+                return Results.BadRequest("Jedno lub więcej wybranych ćwiczeń nie istnieje.");
             }
 
             var requestByExerciseId = new Dictionary<Guid, CreateWorkoutTemplateExerciseRequest>();

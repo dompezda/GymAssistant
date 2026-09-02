@@ -26,7 +26,7 @@ public static class AuthEndpoints
             IAccessTokenService tokenService) => {
             if(string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return Results.BadRequest("Email and password are required.");
+                return Results.BadRequest("Email i hasło są wymagane.");
             }
             var user = await userManager.FindByEmailAsync(request.Email);
             if(user is null)
@@ -151,7 +151,7 @@ public static class AuthEndpoints
         {
             if(request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return Results.BadRequest("Email and password are required.");
+                return Results.BadRequest(new[] { "Email i hasło są wymagane." });
             }
             var result = await userManager.CreateAsync(new ApplicationUser
             {

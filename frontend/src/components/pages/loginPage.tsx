@@ -25,7 +25,7 @@ export default function LoginPage() {
     return (
 
         <div className="loginPage">
-            <h1>Login Page</h1>
+            <h1>Logowanie</h1>
             <div className="modal-body">
                 <input
                     type="text"
@@ -35,13 +35,13 @@ export default function LoginPage() {
                 />
                 <input
                     type="password"
-                    placeholder="Password"
+                    placeholder="Hasło"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />
                 {error && <p>{error}</p>}
                 <button className="btn btn-primary" onClick={handleLogin}>
-                    Login
+                    Zaloguj się
                 </button>
                 <div className="auth-switch">
                     Nie masz konta? <Link to="/register">Zarejestruj się</Link>

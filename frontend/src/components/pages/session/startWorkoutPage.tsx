@@ -9,7 +9,7 @@ export default function StartWorkoutPage() {
         ← Wróć
       </button>
       <h1>Sesja treningowa!</h1>
-      <p>W jakim trybie rozpocząc trening?</p>
+      <p>W jakim trybie rozpocząć trening?</p>
       <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/select-template")}>Wybierz plan treningowy</button>
       <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/setup")}>Pusty trening</button>
     </section>

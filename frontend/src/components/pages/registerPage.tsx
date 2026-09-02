@@ -15,11 +15,11 @@ export default function RegisterPage() {
     {
         setError("");
         if(!email || !password || !confirmPassword) {
-            setError("All fields are required.");
+            setError("Wszystkie pola są wymagane.");
             return;
         }
         if(password !== confirmPassword) {
-            setError("Passwords do not match.");
+            setError("Hasła nie są zgodne.");
             return;
         }
 
@@ -53,17 +53,17 @@ export default function RegisterPage() {
     <div className="page auth-page">
     <div className="card auth-card">
         <div className="stack">
-            <h1>Register</h1>
+            <h1>Rejestracja</h1>
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" />
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Password" />
-            <input value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="Confirm Password" />
+            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Hasło" />
+            <input value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="Powtórz hasło" />
             {error && (
                 <div className="form-error">
                     {error}
                 </div>
             )}
             <button className="btn btn-primary" onClick={handleRegister}>
-                Register
+                Zarejestruj się
             </button>
             <div className="auth-switch">
                 Masz już konto? <Link to="/login">Zaloguj się</Link>

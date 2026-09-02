@@ -44,7 +44,7 @@ public static class WorkoutSessionsEndpoints
         {
             if (request.Exercises.Count == 0)
             {
-                return Results.BadRequest("Workout session must contain at least one exercise.");
+                return Results.BadRequest("Trening musi zawierać przynajmniej jedno ćwiczenie.");
             }
 
             if (request.WorkoutTemplateId != null)
@@ -55,7 +55,7 @@ public static class WorkoutSessionsEndpoints
 
                 if (!templateExists)
                 {
-                    return Results.BadRequest("Workout template does not exist.");
+                    return Results.BadRequest("Wybrany plan treningowy nie istnieje.");
                 }
             }
 
@@ -70,7 +70,7 @@ public static class WorkoutSessionsEndpoints
 
             if (existingExercisesCount != exerciseIds.Count)
             {
-                return Results.BadRequest("One or more exercises do not exist.");
+                return Results.BadRequest("Jedno lub więcej wybranych ćwiczeń nie istnieje.");
             }
 
             var exercisesDictionary = await db.Exercises
@@ -124,7 +124,7 @@ public static class WorkoutSessionsEndpoints
 
             if (session == null)
             {
-                return Results.NotFound("Workout session not found.");
+                return Results.NotFound("Nie znaleziono treningu.");
             }
             
             var response = new WorkoutSessionResponseDto(
@@ -162,15 +162,15 @@ public static class WorkoutSessionsEndpoints
         {
 
             if(request.Sets == null || request.Sets.Length == 0)
-                return Results.BadRequest("Sets cannot be null or empty");
+                return Results.BadRequest("Ćwiczenie musi zawierać przynajmniej jedną serię.");
             
             if(request.Sets.Any(x=>x.reps<0 || x.weight <0))
-                return Results.BadRequest("Reps and weight have to be 0 or greater for each set");
+                return Results.BadRequest("Liczba powtórzeń i ciężar nie mogą być ujemne.");
             HashSet<Guid> guids = request.Sets.Select(x=>x.id).ToHashSet<Guid>();
             if(guids.Contains(Guid.Empty))
-                return Results.BadRequest("Set id cannot be empty");
+                return Results.BadRequest("Id serii nie może być puste.");
             if(guids.Count != request.Sets.Length)
-                return Results.BadRequest("Found duplicated ids");
+                return Results.BadRequest("Wykryto zduplikowane identyfikatory serii.");
             var session = await db.WorkoutSessions
             .Where(x => x.UserId == currentUser.UserId)
             .Include(x => x.Exercises)
@@ -178,11 +178,11 @@ public static class WorkoutSessionsEndpoints
             .FirstOrDefaultAsync(x => x.Id == sessionId);
 
             if(session == null)
-                return Results.NotFound("Workout session not found.");
+                return Results.NotFound("Nie znaleziono treningu.");
             var exerciseFromDb = session.Exercises
                 .FirstOrDefault(x=>x.Id == sessionExerciseId);
             if(exerciseFromDb == null)
-                return Results.NotFound("Exercise not found in the specified workout session.");
+                return Results.NotFound("Nie znaleziono ćwiczenia w tym treningu.");
             var dbSets = exerciseFromDb.Sets;
         
             List<WorkoutSessionSet> setsToRemove = new List<WorkoutSessionSet>();
@@ -228,12 +228,12 @@ public static class WorkoutSessionsEndpoints
         )=>
         {
             if(sessionId == Guid.Empty)
-                return Results.BadRequest("SessionId cannot be empty");
+                return Results.BadRequest("Id treningu nie może być puste.");
             var session =await db.WorkoutSessions
                 .Where(x => x.UserId == currentUser.UserId)
                 .FirstOrDefaultAsync(x=>x.Id == sessionId);
             if(session== null)
-                return Results.BadRequest("Couldnt find Session with selected Id");
+                return Results.BadRequest("Nie znaleziono treningu.");
             session.FinishedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
@@ -246,7 +246,7 @@ public static class WorkoutSessionsEndpoints
             ICurrentUser currentUser) =>
         {
     if (sessionId == Guid.Empty)
-        return Results.BadRequest("SessionId cannot be empty");
+        return Results.BadRequest("Id treningu nie może być puste.");
 
     var session = await db.WorkoutSessions
         .Where(x => x.UserId == currentUser.UserId)
@@ -254,7 +254,7 @@ public static class WorkoutSessionsEndpoints
             .ThenInclude(x => x.Sets)
         .FirstOrDefaultAsync(x => x.Id == sessionId);
     if (session == null)
-        return Results.NotFound("Session not found");
+        return Results.NotFound("Nie znaleziono treningu.");
 
     var result = new WorkoutSessionSummaryResponseDto(
         StartedAt: session.StartedAt,
@@ -295,9 +295,9 @@ public static class WorkoutSessionsEndpoints
         )=>
         {
             if(sessionId==Guid.Empty)
-                return Results.BadRequest("SessionId cannot be empty");
+                return Results.BadRequest("Id treningu nie może być puste.");
             if(sessionExerciseId == Guid.Empty)
-                return Results.BadRequest("SessionExerciseId cannot be empty");
+                return Results.BadRequest("Id ćwiczenia w treningu nie może być puste.");
 
 
     var session =await db.WorkoutSessions
@@ -305,19 +305,19 @@ public static class WorkoutSessionsEndpoints
         .Include(x=>x.Exercises)
         .FirstOrDefaultAsync(x=>x.Id == sessionId);
     if(session==null)
-        return Results.NotFound("Couldnt find session with id");
+        return Results.NotFound("Nie znaleziono treningu.");
 
     if(session.FinishedAt!=null)
-        return Results.Conflict("You cannot delete exercises from finished session");
+        return Results.Conflict("Nie można usuwać ćwiczeń z zakończonego treningu.");
 
     var exercise = session.Exercises
         .FirstOrDefault(x=>x.Id==sessionExerciseId);
 
     if(exercise==null)
-        return Results.NotFound("Couldnt find exercise with id");
+        return Results.NotFound("Nie znaleziono ćwiczenia w tym treningu.");
 
     if(session.Exercises.Count<=1)
-        return Results.Conflict("Cannot delete last exercise");
+        return Results.Conflict("Nie można usunąć ostatniego ćwiczenia z treningu.");
 
     db.Remove(exercise);
     var remainingExercises = session.Exercises
@@ -341,23 +341,23 @@ public static class WorkoutSessionsEndpoints
         ICurrentUser currentUser) =>
     {
         if (sessionId == Guid.Empty)
-            return Results.BadRequest("SessionId cannot be empty");
+            return Results.BadRequest("Id treningu nie może być puste.");
         if(request.ExerciseId == Guid.Empty)
-            return Results.BadRequest("ExerciseId cannot be empty");
+            return Results.BadRequest("Id ćwiczenia nie może być puste.");
         var session = await db.WorkoutSessions
             .Where(x => x.UserId == currentUser.UserId)
             .Include(x => x.Exercises)
             .FirstOrDefaultAsync(x => x.Id == sessionId);
 
         if (session == null)
-            return Results.NotFound("Session not found");
+            return Results.NotFound("Nie znaleziono treningu.");
         if(session.Exercises.Any(x => x.ExerciseId == request.ExerciseId))
-            return Results.Conflict("Exercise already exists in the session");
+            return Results.Conflict("To ćwiczenie jest już dodane do treningu.");
         var exercise = await db.Exercises
         .Where(x=>x.OwnerUserId == currentUser.UserId || x.IsSystem)
         .FirstOrDefaultAsync(x => x.Id == request.ExerciseId);
         if(exercise == null)
-            return Results.NotFound("Exercise does not exist");
+            return Results.NotFound("Wybrane ćwiczenie nie istnieje.");
 
         var newSessionExercise = new WorkoutSessionExercise
         {

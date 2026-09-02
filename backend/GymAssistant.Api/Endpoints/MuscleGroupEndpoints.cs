@@ -13,7 +13,7 @@ public static class MuscleGroupEndpoints
                 .Select(x => new
                 {
                     value = (int)x,
-                    label = x.ToString()
+                    label = x.ToDisplayName()
                 });
         }).RequireAuthorization();
     }

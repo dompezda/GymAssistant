@@ -14,21 +14,30 @@ public static class ExercisesEndpoints {
     var group = app.MapGroup("/api/exercises")
     .RequireAuthorization();
     group.MapGet("", async (AppDbContext db, ICurrentUser currentUser) => {
-      var result = await db.Exercises
+      var exercises = await db.Exercises
         .Where(x=>x.OwnerUserId==currentUser.UserId || x.IsSystem)
-        .Include(x => x.ExerciseMuscleGroups)
+        .Select(x => new
+        {
+          x.Id,
+          x.Name,
+          MuscleGroups = x.ExerciseMuscleGroups
+            .Select(mg => (int)mg.MuscleGroup)
+            .ToArray(),
+          x.IsSystem
+        })
+        .ToListAsync();
+
+      var result = exercises
         .Select(x => new ExerciseListItemResponse(
           x.Id,
           x.Name,
-          x.ExerciseMuscleGroups
-          .Select(mg => (int) mg.MuscleGroup)
-          .ToArray(),
-          x.ExerciseMuscleGroups
-          .Select(mg => mg.MuscleGroup.ToString())
-          .ToArray(),
+          x.MuscleGroups,
+          x.MuscleGroups
+            .Select(mg => ((MuscleGroup)mg).ToDisplayName())
+            .ToArray(),
           x.IsSystem
         ))
-        .ToListAsync();
+        .ToList();
 
       return Results.Ok(result);
     });
@@ -70,7 +79,7 @@ public static class ExercisesEndpoints {
               .Select(x => (int)x.MuscleGroup)
               .ToArray(),
           muscleGroupLabels = exercise.ExerciseMuscleGroups
-              .Select(x => x.MuscleGroup.ToString())
+              .Select(x => x.MuscleGroup.ToDisplayName())
               .ToArray(),
           isSystem = exercise.IsSystem
       });
@@ -83,20 +92,20 @@ public static class ExercisesEndpoints {
        ICurrentUser currentUser
        ) => {
       if(exerciseId == Guid.Empty)
-        return Results.BadRequest("ExerciseId cannot be empty");
+        return Results.BadRequest("Id ćwiczenia nie może być puste.");
 
       if(string.IsNullOrWhiteSpace(request.Name))
-        return Results.BadRequest("Name cannot be empty");
+        return Results.BadRequest("Nazwa ćwiczenia nie może być pusta.");
 
       if(request.MuscleGroups == null || request.MuscleGroups.Length <= 0)
-        return Results.BadRequest("MuscleGroup cannot be empty array");
+        return Results.BadRequest("Wybierz przynajmniej jedną grupę mięśniową.");
       
       if(!request.MuscleGroups.All(x=>Enum.IsDefined(typeof(MuscleGroup),x)))
-        return Results.BadRequest("Unknown muscle group");
+        return Results.BadRequest("Nieprawidłowa grupa mięśniowa.");
 
       var exercise = await db.Exercises.FirstOrDefaultAsync(x=>x.Id == exerciseId && x.OwnerUserId == currentUser.UserId && !x.IsSystem);
       if(exercise == null)
-        return Results.NotFound(string.Format("Could not find exercise with id {0}",exerciseId));
+        return Results.NotFound($"Nie znaleziono ćwiczenia o id {exerciseId}.");
 
       exercise.Name = request.Name.Trim();
       
@@ -131,10 +140,10 @@ public static class ExercisesEndpoints {
     ) =>
     {
       if(exerciseId==Guid.Empty)
-        return Results.BadRequest("ExerciseId cannot be empty");
+        return Results.BadRequest("Id ćwiczenia nie może być puste.");
       var exercise =await db.Exercises.FirstOrDefaultAsync(x=>x.Id==exerciseId && (x.IsSystem || x.OwnerUserId==currentUser.UserId));
       if(exercise==null)
-        return Results.NotFound($"Couldnt find exercise with id {exerciseId}");
+        return Results.NotFound($"Nie znaleziono ćwiczenia o id {exerciseId}.");
 
       var workouts = await db.WorkoutSessions
       .Where(x=>x.UserId==currentUser.UserId)

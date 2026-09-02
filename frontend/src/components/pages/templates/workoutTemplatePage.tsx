@@ -30,7 +30,7 @@ export default function WorkoutTemplatePage() {
       const response = await fetchApi(`/api/workout-templates/${id}`);
 
       if (!response.ok) {
-        throw new Error("Failed to load workout template");
+        throw new Error("Nie udało się załadować planu treningowego.");
       }
 
       const data: WorkoutTemplateResponseDto = await response.json();

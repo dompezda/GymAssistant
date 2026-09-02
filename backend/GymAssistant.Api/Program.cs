@@ -44,6 +44,7 @@ builder.Services
         options.Password.RequireNonAlphanumeric = true;
         options.Password.RequiredLength = 8;
     })
+    .AddErrorDescriber<PolishIdentityErrorDescriber>()
     .AddEntityFrameworkStores<AppDbContext>();
 
 var jwtSection = builder.Configuration
