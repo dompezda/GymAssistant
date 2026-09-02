@@ -10,9 +10,11 @@ Local frontend currently calls the API at:
 http://localhost:5235
 ```
 
+In the Development environment, the backend also maps the OpenAPI document and a Scalar API reference for manual endpoint testing. Scalar is backed by the existing ASP.NET Core OpenAPI definition and is not mapped outside Development.
+
 ## Authorization model
 
-`POST /api/auth/login`, `POST /api/auth/refresh` and `POST /api/auth/logout` do not require a valid access JWT. Refresh and logout use the `refreshToken` HttpOnly cookie when available. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
+`POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh` and `POST /api/auth/logout` do not require a valid access JWT. Refresh and logout use the `refreshToken` HttpOnly cookie when available. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
 
 Protected requests use:
 
@@ -41,6 +43,7 @@ The frontend uses `fetchApi` for protected domain requests so bearer-token attac
 
 | Method | Endpoint | Authorization | Description |
 | ------ | -------- | ------------- | ----------- |
+| POST | `/api/auth/register` | Public | Creates a new Identity user using email/password validation and the configured password policy |
 | POST | `/api/auth/login` | Public | Authenticates a user, returns a JWT access token and creates the refresh-token cookie |
 | POST | `/api/auth/refresh` | Refresh cookie | Validates and rotates the refresh token, then returns a new JWT access token |
 | POST | `/api/auth/logout` | Refresh cookie optional | Revokes the active refresh token when present and deletes the refresh cookie |
@@ -66,6 +69,51 @@ The frontend uses `fetchApi` for protected domain requests so bearer-token attac
 ---
 
 # Authentication
+
+## POST `/api/auth/register`
+
+Creates a new ASP.NET Core Identity user. A valid access JWT is not required.
+
+### Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "Example123!"
+}
+```
+
+The backend creates the Identity user with:
+
+```txt
+UserName = request.Email
+Email = request.Email
+```
+
+Email is therefore the user-facing login identifier and is also stored as the technical Identity username value.
+
+Identity is configured with unique-email enforcement and the following password policy:
+
+```txt
+minimum length: 8
+requires digit: yes
+requires lowercase: yes
+requires uppercase: yes
+requires non-alphanumeric character: yes
+```
+
+`UserManager.CreateAsync()` performs the actual Identity validation and password hashing. The endpoint does not implement custom password hashing.
+
+When the same email already exists, Identity can produce both username and email duplicate errors because `UserName` and `Email` contain the same value. The endpoint filters the technical `DuplicateUserName` error and keeps the email-oriented validation result.
+
+### Responses
+
+- `200 OK` — the user was created successfully.
+- `400 Bad Request` — email/password is missing or Identity validation fails, for example because the email is invalid/already used or the password does not satisfy the configured policy.
+
+The frontend registration page also checks that password and confirmation match before sending the request. After `200 OK`, it calls the existing frontend `login(email, password)` flow and navigates to `/main-menu`. The registration endpoint itself does not issue JWT or refresh tokens.
+
+---
 
 ## POST `/api/auth/login`
 
@@ -626,6 +674,8 @@ If refresh fails, stale local access-token data is removed and the original unau
 
 `AuthProvider` also uses `fetchApi` for startup `/api/auth/me` validation. Therefore a page refresh can recover an authenticated session even when the access token is missing or stale, as long as the HttpOnly refresh cookie is still valid.
 
+Registration uses the centralized API base URL but intentionally calls the public registration endpoint directly. On successful registration, the page reuses `AuthProvider.login()` rather than duplicating token/session setup logic.
+
 ---
 
 # Current limitations
@@ -635,6 +685,6 @@ If refresh fails, stale local access-token data is removed and the original unau
 - Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
 - Authentication and two-user data-isolation integration tests are not implemented yet.
 - If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.
-- Registration, password reset, external providers, roles and broader account-management features are outside the current MVP.
-- Most validation is currently implemented directly inside endpoint handlers; FluentValidation is not integrated yet.
+- Password reset, email confirmation, external providers, roles and broader account-management features are outside the current MVP.
+- Most validation is currently implemented directly inside endpoint handlers or ASP.NET Core Identity; FluentValidation is not integrated yet.
 - Trainer mode, statistics and charts are planned but not implemented yet.

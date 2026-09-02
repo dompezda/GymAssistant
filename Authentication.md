@@ -6,11 +6,14 @@ This document describes the authentication and authorization flow currently impl
 
 Implemented authentication currently includes:
 
+- public email/password registration through ASP.NET Core Identity,
 - email/password login through ASP.NET Core Identity,
+- unique email enforcement and a configured Identity password policy,
 - JWT bearer access tokens,
-- `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` and protected `GET /api/auth/me`,
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` and protected `GET /api/auth/me`,
 - `ICurrentUser` for backend user resolution,
-- frontend `AuthProvider`, `useAuth()`, protected routes and centralized bearer-token handling,
+- frontend `/register` and `/login` flows, `AuthProvider`, `useAuth()`, protected routes and centralized bearer-token handling,
+- automatic login after successful frontend registration,
 - persisted refresh-token records linked to `ApplicationUser`,
 - cryptographically random refresh-token generation and SHA-256 hashing through `IRefreshTokenService`,
 - an `HttpOnly` refresh-token cookie created during login and replaced during token rotation,
@@ -25,7 +28,52 @@ Implemented authentication currently includes:
 - user ownership enforcement for templates, sessions and private exercises,
 - system/private exercise ownership enforced by both API rules and a database check constraint.
 
-Registration, password reset, external providers and roles remain outside the current MVP scope.
+Password reset, email confirmation, external providers and roles remain outside the current MVP scope.
+
+## Registration flow
+
+`POST /api/auth/register` is public and creates a new `ApplicationUser` through ASP.NET Core Identity.
+
+The request contains email and password only. The backend creates the Identity user with:
+
+```txt
+UserName = request.Email
+Email = request.Email
+```
+
+The current application therefore treats email as the user-facing login identifier while Identity `UserName` is used only as the matching technical username value.
+
+Identity configuration currently requires:
+
+```txt
+RequireUniqueEmail = true
+RequiredLength = 8
+RequireDigit = true
+RequireLowercase = true
+RequireUppercase = true
+RequireNonAlphanumeric = true
+```
+
+`UserManager.CreateAsync()` remains the source of truth for password and email validation. The endpoint does not hash or validate password complexity manually.
+
+Registration flow:
+
+```txt
+POST /api/auth/register
+    -> reject missing email/password
+    -> create ApplicationUser with UserName = Email
+    -> UserManager.CreateAsync validates email, uniqueness and password policy
+    -> success: return 200 OK
+    -> failure: return Identity validation descriptions
+```
+
+Because the same value is stored as both `UserName` and `Email`, a duplicate account can produce both `DuplicateUserName` and `DuplicateEmail` inside Identity. The endpoint filters the technical `DuplicateUserName` result and exposes the email-related error instead.
+
+The frontend `/register` page validates that all fields are present and that password/confirmation match before sending the request. Identity validation errors returned by the backend are displayed to the user.
+
+After a successful registration, the frontend calls the existing `login(email, password)` function from `AuthProvider` and navigates to `/main-menu`. The registration endpoint itself does not create JWT or refresh tokens; token creation remains centralized in the normal login flow.
+
+The login and registration pages provide navigation links between `/login` and `/register`.
 
 ## Login flow
 
@@ -99,7 +147,7 @@ The refresh endpoint returns `401 Unauthorized` when the cookie is missing/empty
 
 The frontend API base URL is read from Vite configuration through `VITE_API_URL`. `frontend/src/config/apiConfig.ts` exposes `getApiUrl()`, which fails fast when the value is missing.
 
-Protected domain calls pass relative paths such as `/api/exercises` or `/api/workout-sessions/...` to `fetchApi`; the wrapper combines those paths with the configured API base URL. Login, logout and refresh requests also use the same centralized base URL instead of hard-coded backend addresses.
+Protected domain calls pass relative paths such as `/api/exercises` or `/api/workout-sessions/...` to `fetchApi`; the wrapper combines those paths with the configured API base URL. Registration, login, logout and refresh requests also use the same centralized base URL instead of hard-coded backend addresses.
 
 Because `VITE_` variables are exposed to browser code, `VITE_API_URL` must contain only public configuration and must not contain secrets, tokens or connection strings.
 

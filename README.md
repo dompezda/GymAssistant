@@ -7,12 +7,17 @@ GymAssistant is a portfolio project for planning workouts, running workout sessi
 - Backend: .NET 9, Minimal API, Entity Framework Core, SQL Server
 - Frontend: React, TypeScript, Vite
 - Authentication: ASP.NET Core Identity, JWT bearer access tokens and persisted refresh tokens
+- API documentation/testing: ASP.NET Core OpenAPI with Scalar in Development
 
 ## Current authentication status
 
 Implemented:
 
 - development user stored through ASP.NET Core Identity,
+- public email/password registration through `POST /api/auth/register`,
+- Identity-enforced unique email addresses and password policy,
+- registration creates an `ApplicationUser` with email used as both `Email` and the technical Identity `UserName`,
+- frontend `/register` page with email/password confirmation, backend validation error display, Login/Register navigation and automatic login after successful registration,
 - JWT access-token generation and validation,
 - `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` and protected `GET /api/auth/me`,
 - `ICurrentUser` abstraction for reading the authenticated user id from JWT claims,
@@ -33,6 +38,7 @@ Implemented:
 - raw refresh token stored in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie while only its hash is stored in SQL Server,
 - server-side logout that revokes the active refresh token and deletes the cookie,
 - credential-enabled CORS with the allowed frontend origin read from `Frontend:Origin`,
+- development-only OpenAPI/Scalar API reference for manual endpoint testing,
 - authorization and user-data isolation for workout templates,
 - authorization and user-data isolation for workout sessions,
 - exercise visibility rules: system exercises are global and private exercises are scoped to their owner,
