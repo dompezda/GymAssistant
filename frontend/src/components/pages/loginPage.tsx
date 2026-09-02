@@ -18,6 +18,10 @@ export default function LoginPage() {
             await login(email, password)
             navigate("/main-menu");
         } catch (err) {
+            if (err instanceof TypeError) {
+                setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+                return;
+            }
             setError((err as Error).message);
         }
     }

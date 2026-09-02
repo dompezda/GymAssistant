@@ -42,8 +42,8 @@ export default function RegisterPage() {
                 const errors: string[] = await response.json();
                 setError(errors.join(`\n`));        
             }
-        } catch (err) {
-            setError((err as Error).message);
+        } catch {
+            setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
         }
     }
     return(
