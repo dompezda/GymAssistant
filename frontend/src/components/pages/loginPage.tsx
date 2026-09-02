@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../auth/useAuth";
 
 export default function LoginPage() {
@@ -43,6 +43,9 @@ export default function LoginPage() {
                 <button className="btn btn-primary" onClick={handleLogin}>
                     Login
                 </button>
+                <div className="auth-switch">
+                    Nie masz konta? <Link to="/register">Zarejestruj się</Link>
+                </div>
             </div>
         </div>
     )

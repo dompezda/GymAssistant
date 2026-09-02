@@ -145,6 +145,32 @@ public static class AuthEndpoints
             return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
             });
 
+        group.MapPost("/register", async (
+            RegisterRequest request,
+            UserManager<ApplicationUser> userManager) =>
+        {
+            if(request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return Results.BadRequest("Email and password are required.");
+            }
+            var result = await userManager.CreateAsync(new ApplicationUser
+            {
+                UserName = request.Email,
+                Email = request.Email
+            }, request.Password);
+
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors
+                    .Where(error => error.Code != "DuplicateUserName")
+                    .Select(error => error.Description);
+
+                return Results.BadRequest(errors);
+            }
+
+            return Results.Ok();
+        });
+
         group.MapGet("/me",async (
         UserManager<ApplicationUser> userManager,
         ICurrentUser currentUser) =>
@@ -160,10 +186,21 @@ public static class AuthEndpoints
         return Results.Ok(
             new AuthMeResponse(user.Id, user.Email));
     })
+
+
+    
     .RequireAuthorization();
     }
+
+
 }
 
+
+public record RegisterRequest
+(
+    string Email,
+    string Password
+);
 public record AuthMeResponse(
     Guid Id,
     string Email

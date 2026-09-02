@@ -20,6 +20,7 @@ import ExerciseHistory from "./components/pages/exercise/exerciseHistory";
 import LoginPage from "./components/pages/loginPage";
 import AuthProvider from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/protectedRoute";
+import RegisterPage from "./components/pages/registerPage";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/main-menu" replace />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
           <Route element={<ProtectedRoute />}>
           

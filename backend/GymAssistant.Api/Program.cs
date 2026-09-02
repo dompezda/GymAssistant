@@ -8,6 +8,7 @@ using System.Text;
 using GymAssistant.Api.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +35,15 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services
-    .AddIdentityCore<ApplicationUser>()
+    .AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
+        options.Password.RequiredLength = 8;
+    })
     .AddEntityFrameworkStores<AppDbContext>();
 
 var jwtSection = builder.Configuration
@@ -127,6 +136,8 @@ if (app.Environment.IsDevelopment())
     await DevelopmentUserSeeder.SeedAsync(
         userManager,
         app.Configuration);
+
+    app.MapScalarApiReference();
     app.MapOpenApi();
 }
 app.UseHttpsRedirection();

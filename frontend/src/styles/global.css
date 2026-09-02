@@ -501,4 +501,42 @@ input[type="checkbox"] {
   .exercise-navigation {
     flex-direction: column;
   }
+
+  .form-error {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  white-space: pre-line;
+}
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+}
+
+.auth-card {
+  width: 100%;
+}
+
+.auth-card h1 {
+  margin: 0;
+  text-align: center;
+}
+
+.auth-switch {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-switch a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
 }
