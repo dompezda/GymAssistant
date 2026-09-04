@@ -153,3 +153,4 @@ app.MapWorkoutSessionsEndpoints();
 app.MapAuthEndpoints();
 app.Run();
 
+public partial class Program { }
