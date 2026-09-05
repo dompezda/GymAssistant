@@ -26,7 +26,8 @@ Implemented authentication currently includes:
 - server-side logout that revokes the active refresh token and removes its cookie,
 - separate frontend authentication states for loading, authenticated, unauthenticated and technical-error cases,
 - user ownership enforcement for templates, sessions and private exercises,
-- system/private exercise ownership enforced by both API rules and a database check constraint.
+- system/private exercise ownership enforced by both API rules and a database check constraint,
+- backend integration-test infrastructure based on `WebApplicationFactory` and SQLite in-memory, including unauthenticated exercise access and two-user private-exercise visibility coverage.
 
 Password reset, email confirmation, external providers and roles remain outside the current MVP scope.
 
@@ -253,10 +254,24 @@ This prevents invalid system/private ownership combinations even if an applicati
 
 A dedicated production-safe seed/admin strategy for creating and maintaining system exercises is still planned. Normal authenticated users are intentionally not allowed to create or edit system exercises.
 
+## Integration-test coverage
+
+Backend integration tests use `WebApplicationFactory<Program>` and the `Testing` environment. The test host removes the production `AppDbContext` provider configuration and registers SQLite in-memory instead, keeping one SQLite connection open for the lifetime of the factory and creating the schema with `Database.EnsureCreated()`.
+
+Current exercise integration coverage includes:
+
+- unauthenticated `GET /api/exercises` returns `401 Unauthorized`,
+- a two-user isolation scenario creates two Identity users and one private exercise for each user, issues a real access JWT for the first user through `IAccessTokenService`, calls the protected endpoint through `HttpClient`, verifies that the first user's exercise is returned and verifies that the second user's exercise is not returned.
+
+The test deliberately bypasses the login endpoint when preparing the authenticated exercise request so the exercise-authorization test does not depend on the correctness of the separate login flow. Authentication endpoint integration coverage is still planned separately.
+
+The current `IClassFixture<GymAssistantWebApplicationFactory>` setup keeps the SQLite database alive across tests using the same factory. As the suite grows, test-data reset/isolation must be made explicit so tests do not become order-dependent or leak state into one another.
+
 ## Remaining MVP / hardening work
 
 - define the final seed/admin strategy for the system exercise catalog,
-- add authentication and two-user isolation integration tests,
+- expand integration-test coverage to authentication flows and additional two-user ownership boundaries,
+- add an explicit integration-test data reset/isolation strategy as the suite grows,
 - remove temporary auth/debug behavior,
 - decide whether the access token should remain in `localStorage` for the production version,
 - optionally harden explicit logout behavior for the backend-unavailable edge case.

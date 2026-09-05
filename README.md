@@ -8,6 +8,7 @@ GymAssistant is a portfolio project for planning workouts, running workout sessi
 - Frontend: React, TypeScript, Vite
 - Authentication: ASP.NET Core Identity, JWT bearer access tokens and persisted refresh tokens
 - API documentation/testing: ASP.NET Core OpenAPI with Scalar in Development
+- Integration testing: xUnit, `WebApplicationFactory` and SQLite in-memory
 
 ## Current authentication status
 
@@ -47,15 +48,17 @@ Implemented:
 - system exercises are marked with a `System` badge in the exercise picker and main exercise list,
 - system exercise details use a read-only frontend mode: the name and muscle groups cannot be changed and the edit action is not rendered,
 - exercise history filtered through the authenticated user's workout sessions,
-- protected muscle-group endpoint.
+- protected muscle-group endpoint,
+- backend integration-test host based on `WebApplicationFactory` with the production SQL Server registration replaced by an isolated SQLite in-memory database,
+- exercise endpoint integration coverage for unauthenticated `401 Unauthorized` and two-user private-exercise visibility isolation using a real JWT bearer token.
 
 Still in progress / planned hardening:
 
 - final seed/admin strategy for creating and maintaining the system exercise catalog,
-- reset of development/demo data before the production-ready release,
-- authentication and two-user isolation integration tests,
+- expand integration-test coverage to authentication flows and additional two-user ownership boundaries,
 - cleanup of temporary authentication/debug code,
 - explicit decision on production access-token storage instead of treating `localStorage` as final by default,
-- optional hardening for the edge case where explicit logout cannot reach the backend.
+- optional hardening for the edge case where explicit logout cannot reach the backend,
+- reset of development/demo data before the production-ready release.
 
 See [Authentication.md](Authentication.md) for the current authentication and authorization flow, [Api.md](Api.md) for the HTTP API and [todo.md](todo.md) for the implementation checklist.
