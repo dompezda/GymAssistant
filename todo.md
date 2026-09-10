@@ -8,7 +8,7 @@ Configuration cleanup for the current auth/frontend flow is also complete: the f
 
 System/private exercise ownership is now enforced: normal users create and edit only their own private exercises, `IsSystem` is not accepted from create/edit requests, and SQL Server enforces valid `IsSystem` / `OwnerUserId` combinations through a check constraint. The frontend marks system exercises with a `System` badge in both the exercise picker and the main exercise list, and system exercise details are presented in a read-only mode without an edit action.
 
-Backend integration testing is now bootstrapped with xUnit and `WebApplicationFactory`. The test host replaces the normal SQL Server `AppDbContext` configuration with SQLite in-memory, creates the schema for the test host and currently covers unauthenticated access to `/api/exercises` plus two-user private-exercise visibility isolation with a real JWT bearer token.
+Backend integration testing is bootstrapped with xUnit and `WebApplicationFactory`. The test host replaces the normal SQL Server `AppDbContext` configuration with SQLite in-memory and creates the schema for the test host. Current exercise coverage verifies unauthenticated `401 Unauthorized`, two-user private-exercise isolation, visibility of the current user's private exercises together with system exercises, ownership and `IsSystem = false` when creating a private exercise, and `400 Bad Request` for an empty exercise name. Authenticated cases use real JWT bearer tokens generated for Identity users created by the test setup.
 
 ## Remaining work
 
