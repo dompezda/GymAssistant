@@ -71,18 +71,18 @@ public static class ExercisesEndpoints {
       db.Exercises.Add(exercise);
       await db.SaveChangesAsync();
 
-      return Results.Created($"/api/exercises/{exercise.Id}", new
-      {
-          id = exercise.Id,
-          name = exercise.Name,
-          muscleGroups = exercise.ExerciseMuscleGroups
+      return Results.Created($"/api/exercises/{exercise.Id}", new ExerciseResponse
+      (
+          exercise.Id,
+          exercise.Name,
+          exercise.ExerciseMuscleGroups
               .Select(x => (int)x.MuscleGroup)
               .ToArray(),
-          muscleGroupLabels = exercise.ExerciseMuscleGroups
+          exercise.ExerciseMuscleGroups
               .Select(x => x.MuscleGroup.ToDisplayName())
               .ToArray(),
-          isSystem = exercise.IsSystem
-      });
+          exercise.IsSystem
+      ));
     });
 
     group.MapPatch("/{exerciseId:guid}", async (

@@ -36,19 +36,20 @@ public class ExercisesEndpointsTests
     public async Task GetExercises_ShouldNotReturnExercisesOwnedByOtherUser()
     {
         //Arrange
+        var suffix = Guid.NewGuid().ToString();
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         var user1 = new ApplicationUser
         {
-            UserName = "testuser",
-            Email = "testuser@example.com"
+            UserName = $"{suffix}-1",
+            Email = $"testuser-{suffix}@example.com"
         };
         var user2 = new ApplicationUser
         {
-            UserName = "otheruser",
-            Email = "otheruser@example.com"
+            UserName = $"{suffix}-2",
+            Email = $"otheruser-{suffix}@example.com"
         };
         var res1 = await userManager.CreateAsync(user1, "Test@123");
         
