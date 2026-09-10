@@ -78,10 +78,146 @@ public class ExercisesEndpointsTests
 
         //Assert
         response.EnsureSuccessStatusCode();
-        var exercises = await response.Content.ReadFromJsonAsync<List<ExerciseListItemResponse>>();
+        var exercises = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
         Assert.NotNull(exercises);
         Assert.Contains(exercises, e => e.Id == exercise.Id);
         Assert.DoesNotContain(exercises, e => e.Id == exercise2.Id);
     }
 
+    [Fact]
+    public async Task GetExercises_ShouldReturnCurrentUserAndSystemExercises()
+    {
+     //Arrange
+     HttpClient client = _factory.CreateClient();
+     using var scope = _factory.Services.CreateScope();
+     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();  
+     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+     var suffix = Guid.NewGuid().ToString();
+     var user = new ApplicationUser
+     {
+         UserName = "user1" + suffix,
+         Email = $"user1-{suffix}@app.com"
+     };
+     var user2 = new ApplicationUser
+     {
+         UserName = "user2" + suffix,
+         Email = $"user2-{suffix}@app.com"
+     };
+     var u1 = await userManager.CreateAsync(user, "Test@123");
+     var u2 = await userManager.CreateAsync(user2, "Test@123");
+     Assert.True(u1.Succeeded, "Failed to create test user1.");
+     Assert.True(u2.Succeeded, "Failed to create test user2.");
+
+     var exercise1 = new Exercise
+     {
+         Name = "Test Exercise 1",
+         OwnerUserId = user.Id,
+         IsSystem = false
+     };
+     var exercise2 = new Exercise
+     {
+         Name = "Test Exercise 2",
+         OwnerUserId = user2.Id,
+         IsSystem = false
+     };
+     var exercise3 = new Exercise
+     {
+         Name = "System Exercise",
+         OwnerUserId = null,
+         IsSystem = true
+     };
+    dbContext.Exercises.Add(exercise1);
+    dbContext.Exercises.Add(exercise2);
+    dbContext.Exercises.Add(exercise3);
+    await dbContext.SaveChangesAsync();
+
+    var token = scope.ServiceProvider.GetRequiredService<IAccessTokenService>().CreateToken(user).AccessToken;
+    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    
+    
+     //Act
+     var response = await client.GetAsync("/api/exercises");
+     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+     var exercises = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
+     //Assert 
+     Assert.NotNull(exercises); 
+     Assert.NotEmpty(exercises);
+     Assert.Contains(exercises, e => e.Id == exercise1.Id);
+     Assert.DoesNotContain(exercises, e => e.Id == exercise2.Id);
+     Assert.Contains(exercises, e => e.Id == exercise3.Id);
+    }
+
+
+    [Fact]
+    public async Task CreateExercise_ShouldCreateExerciseOwnedByCurrentUser()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString();
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = new ApplicationUser
+        {
+            UserName = $"{suffix}",
+            Email = $"{suffix}@app.com"
+        };
+        var result = await userManager.CreateAsync(user, "Test@123");
+        Assert.True(result.Succeeded, "Failed to create test user.");
+        CreateExerciseRequest request = new CreateExerciseRequest
+        (
+            Guid.NewGuid().ToString(),
+            [(int)MuscleGroup.Chest]
+        );
+
+        var token = scope.ServiceProvider.GetRequiredService<IAccessTokenService>().CreateToken(user).AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/exercises", request);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var createdExercise = await response.Content.ReadFromJsonAsync<ExerciseResponse>();
+
+        // Assert
+        Assert.NotNull(createdExercise);
+        var exerciseInDb = await dbContext.Exercises.FindAsync(createdExercise.Id);
+        Assert.NotNull(exerciseInDb);
+        Assert.Equal(user.Id, exerciseInDb.OwnerUserId);
+        Assert.False(exerciseInDb.IsSystem);
+    }
+
+    [Fact]
+    public async Task CreateExercise_ShouldReturnBadRequest_WhenNameIsEmpty()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString();
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser
+        {
+            UserName = $"{suffix}",
+            Email = $"{suffix}1@gmail.com"
+        };
+        var result = await userManager.CreateAsync(user, "Test@123");
+        Assert.True(result.Succeeded, "Failed to create test user.");
+        var token = scope.ServiceProvider.GetRequiredService<IAccessTokenService>().CreateToken(user).AccessToken;
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var request = new CreateExerciseRequest
+        (
+            "",
+            [(int)MuscleGroup.Chest]
+        );
+        //Act
+        var response = await client.PostAsJsonAsync("/api/exercises", request);
+
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errorMessage = await response.Content.ReadFromJsonAsync<string>();
+        Assert.Equal("Nazwa ćwiczenia jest wymagana.", errorMessage);
+
+    }
 }

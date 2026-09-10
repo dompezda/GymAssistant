@@ -28,7 +28,7 @@ public static class ExercisesEndpoints {
         .ToListAsync();
 
       var result = exercises
-        .Select(x => new ExerciseListItemResponse(
+        .Select(x => new ExerciseResponse(
           x.Id,
           x.Name,
           x.MuscleGroups,
@@ -192,7 +192,7 @@ public record WorkoutSet(
 );
 
 public record CreateExerciseRequest(string Name, int[] MuscleGroups);
-public record ExerciseListItemResponse(
+public record ExerciseResponse(
   Guid Id,
   string Name,
   int[] MuscleGroups,
