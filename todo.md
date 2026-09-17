@@ -8,12 +8,12 @@ Configuration cleanup for the current auth/frontend flow is also complete: the f
 
 System/private exercise ownership is now enforced: normal users create and edit only their own private exercises, `IsSystem` is not accepted from create/edit requests, and SQL Server enforces valid `IsSystem` / `OwnerUserId` combinations through a check constraint. The frontend marks system exercises with a `System` badge in both the exercise picker and the main exercise list, and system exercise details are presented in a read-only mode without an edit action.
 
-Backend integration testing is bootstrapped with xUnit and `WebApplicationFactory`. The test host replaces the normal SQL Server `AppDbContext` configuration with SQLite in-memory and creates the schema for the test host. Current exercise coverage verifies unauthenticated `401 Unauthorized`, two-user private-exercise isolation, visibility of the current user's private exercises together with system exercises, ownership and `IsSystem = false` when creating a private exercise, and `400 Bad Request` for an empty exercise name. Authenticated cases use real JWT bearer tokens generated for Identity users created by the test setup.
+Backend integration testing is bootstrapped with xUnit and `WebApplicationFactory`. The test host replaces the normal SQL Server `AppDbContext` configuration with SQLite in-memory and creates the schema for the test host. Current exercise coverage verifies unauthenticated `401 Unauthorized`, two-user private-exercise isolation, visibility of the current user's private exercises together with system exercises, ownership and `IsSystem = false` when creating a private exercise, `400 Bad Request` for an empty exercise name, successful editing of the current user's private exercise including muscle-group changes, and `404 Not Found` with unchanged persisted data when attempting to edit another user's or a system exercise. Authenticated cases use real JWT bearer tokens generated for Identity users created by the test setup.
 
 ## Remaining work
 
 - [ ] Define the production-safe seed/admin strategy for creating and maintaining the system exercise catalog.
-- [ ] Expand integration-test coverage to authentication flows and additional two-user ownership boundaries.
+- [ ] Expand integration-test coverage to authentication flows, exercise validation/history and remaining two-user ownership boundaries.
 - [ ] Add explicit test-data isolation/reset strategy as the integration-test suite grows.
 - [ ] Clean up temporary authentication/debug behavior.
 - [ ] Decide the production access-token storage model instead of treating `localStorage` as final by default.
