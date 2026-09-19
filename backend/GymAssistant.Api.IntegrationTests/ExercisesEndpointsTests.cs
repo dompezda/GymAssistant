@@ -461,4 +461,122 @@ public class ExercisesEndpointsTests
         Assert.Equal(originalGroups, currentGroups);
         
     }
+
+    [Fact]
+    public async Task PatchMuscleGroups_WithSameGroups_ShouldNotCreateDuplicates()
+    {
+        //Arrange
+        var suffix = Guid.NewGuid().ToString();
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var client = _factory.CreateClient();
+        var user1 = new ApplicationUser()
+        {
+            UserName= $"{suffix}-user1",
+            Email = $"{suffix}@gmail.com"
+        };
+        var result = await userManager.CreateAsync(user1);
+        Assert.True(result.Succeeded);
+
+        var exercise = new Exercise()
+        {
+            Name = $"{suffix}-exercise1",
+            ExerciseMuscleGroups =
+            [
+                new ExerciseMuscleGroup()
+                {
+                    MuscleGroup = MuscleGroup.Chest
+                }
+            ],
+            OwnerUserId = user1.Id
+        };
+        await db.Exercises.AddAsync(exercise);
+        await db.SaveChangesAsync();
+
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+        var token = tokenService.CreateToken(user1);
+        AuthenticationHeaderValue authenticationHeaderValue = new AuthenticationHeaderValue("Bearer",token.AccessToken);
+        client.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
+        //Act
+        var request = new EditExerciseRequest(exercise.Name,
+        [
+            (int)MuscleGroup.Chest
+        ]);
+        var response = await client.PatchAsJsonAsync($"/api/exercises/{exercise.Id}",request);
+        
+        //Assert
+        Assert.Equal(HttpStatusCode.OK,response.StatusCode);
+        db.ChangeTracker.Clear();
+        var currentExercise = await db.Exercises
+        .Include(x=>x.ExerciseMuscleGroups)
+        .FirstOrDefaultAsync(x=>x.Id == exercise.Id);
+        Assert.NotNull(currentExercise);
+        var countRelations = await db.ExerciseMuscleGroups.Where(x=>x.ExerciseId==currentExercise.Id).CountAsync();
+        var relation = Assert.Single(currentExercise.ExerciseMuscleGroups);
+        Assert.Equal(MuscleGroup.Chest,relation.MuscleGroup);
+    }
+
+    [Fact]
+    public async Task PatchMuscleGroups_WithNewGroup_ShouldAddOnlyMissingGroup()
+    {
+        //Arrange
+        var suffix = Guid.NewGuid().ToString();
+        using var scope = this._factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var client = this._factory.CreateClient();
+
+        var user = new ApplicationUser()
+        {
+            UserName = $"{suffix}-user1",
+            Email = $"{suffix}@gmail.com"
+        };
+        var res = await userManager.CreateAsync(user);
+        Assert.True(res.Succeeded);
+
+
+        var exercise = new Exercise()
+        {
+            OwnerUserId = user.Id,
+            Name = $"{suffix}-exercise",
+            ExerciseMuscleGroups =
+            [
+                new ExerciseMuscleGroup()
+                {
+                    MuscleGroup = MuscleGroup.Chest
+                }
+            ]
+        };
+        await db.Exercises.AddAsync(exercise);
+        await db.SaveChangesAsync();
+
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+        var token = tokenService.CreateToken(user);
+
+        var header = new AuthenticationHeaderValue("Bearer",token.AccessToken);
+        client.DefaultRequestHeaders.Authorization = header;
+
+        var request = new EditExerciseRequest(exercise.Name,
+        [
+            (int)MuscleGroup.Chest,
+            (int)MuscleGroup.Triceps
+        ]);
+        //Act
+        var response = await client.PatchAsJsonAsync($"/api/exercises/{exercise.Id}",request);
+
+        //Assert
+        Assert.Equal(HttpStatusCode.OK,response.StatusCode);
+        db.ChangeTracker.Clear();
+        var ex = await db.Exercises.Include(x=>x.ExerciseMuscleGroups).FirstOrDefaultAsync(x=>x.Id==exercise.Id);
+        Assert.NotNull(ex);
+        
+        var actualMuscleGroups = ex.ExerciseMuscleGroups
+            .Select(x => (int)x.MuscleGroup)
+            .OrderBy(x => x);
+
+        var expectedMuscleGroups = request.MuscleGroups.OrderBy(x => x);
+
+        Assert.Equal(expectedMuscleGroups, actualMuscleGroups);
+    }
 }
