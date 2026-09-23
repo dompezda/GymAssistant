@@ -8,6 +8,7 @@ using GymAssistant.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Writers;
 public class ExercisesEndpointsTests
     : IClassFixture<GymAssistantWebApplicationFactory>
 {
@@ -512,7 +513,6 @@ public class ExercisesEndpointsTests
         .Include(x=>x.ExerciseMuscleGroups)
         .FirstOrDefaultAsync(x=>x.Id == exercise.Id);
         Assert.NotNull(currentExercise);
-        var countRelations = await db.ExerciseMuscleGroups.Where(x=>x.ExerciseId==currentExercise.Id).CountAsync();
         var relation = Assert.Single(currentExercise.ExerciseMuscleGroups);
         Assert.Equal(MuscleGroup.Chest,relation.MuscleGroup);
     }
@@ -579,4 +579,183 @@ public class ExercisesEndpointsTests
 
         Assert.Equal(expectedMuscleGroups, actualMuscleGroups);
     }
+    //GetExerciseHistory_ForSystemExercise_ShouldReturnOnlyCurrentUsersWorkouts
+    //GetExerciseHistory_ForOtherUsersExercise_ShouldReturnNotFound
+    [Fact]
+    public async Task GetExerciseHistory_ForSystemExercise_ShouldReturnOnlyCurrentUsersWorkouts()
+    {
+        //arrange
+        var suffix = Guid.NewGuid().ToString();
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+        var user = new ApplicationUser()
+        {
+            UserName = $"{suffix}-1",
+            Email = $"{suffix}@gmail.com"
+        };
+        var userRes = await userManager.CreateAsync(user);
+        var user2 = new ApplicationUser()
+        {
+            UserName = $"{suffix}-2",
+            Email = $"{suffix}2@gmail.com"
+        };
+        var user2Res = await userManager.CreateAsync(user2);
+        Assert.True(userRes.Succeeded, "Nie udało sie utowrzyć user1");
+        Assert.True(user2Res.Succeeded, "Nie udało sie utowrzyć user2");
+        var exercise = new Exercise()
+        {
+            Name=$"{suffix}-exercise",
+            OwnerUserId = null,
+            IsSystem = true,
+            ExerciseMuscleGroups =
+            [
+                new ExerciseMuscleGroup()
+                {
+                    MuscleGroup = MuscleGroup.Back
+                },
+                new ExerciseMuscleGroup()
+                {
+                    MuscleGroup = MuscleGroup.Biceps
+                },
+                
+            ]
+        };
+        db.Exercises.Add(exercise);
+        await db.SaveChangesAsync();
+        var workout = new WorkoutSession()
+        {
+            User = user,
+            WorkoutTemplate = null,
+            Exercises = new List<WorkoutSessionExercise>()
+            {
+                new WorkoutSessionExercise()
+                {
+                    Exercise = exercise,
+                    Order = 1,
+                    Sets = new List<WorkoutSessionSet>()
+                    {
+                        new WorkoutSessionSet()
+                        {
+                            Reps=5,
+                            SetNumber = 1,
+                            Weight = 8
+                        },
+                        new WorkoutSessionSet()
+                        {
+                            Reps=12,
+                            SetNumber = 2,
+                            Weight = 18
+                        },
+                    }
+                }
+            }
+        };
+        db.WorkoutSessions.Add(workout);
+        await db.SaveChangesAsync();
+
+
+        var workoutUser2 = new WorkoutSession()
+        {
+            User = user2,
+            WorkoutTemplate = null,
+            Exercises = new List<WorkoutSessionExercise>()
+            {
+                new WorkoutSessionExercise()
+                {
+                    Exercise = exercise,
+                    Order = 1,
+                    Sets = new List<WorkoutSessionSet>()
+                    {
+                        new WorkoutSessionSet()
+                        {
+                            Reps=100,
+                            SetNumber = 1,
+                            Weight = 200
+                        },
+                        new WorkoutSessionSet()
+                        {
+                            Reps=120,
+                            SetNumber = 2,
+                            Weight = 180
+                        },
+                    }
+                }
+            }
+        };
+        db.WorkoutSessions.Add(workoutUser2);
+        await db.SaveChangesAsync();
+
+        var client = _factory.CreateClient();
+        var accessToken = tokenService.CreateToken(user).AccessToken;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",accessToken);
+        //act
+        db.ChangeTracker.Clear();
+        var response = await client.GetAsync($"/api/exercises/{exercise.Id}/history");
+        //assert
+        Assert.Equal(HttpStatusCode.OK,response.StatusCode);
+        var res = await response.Content.ReadFromJsonAsync<ExerciseHistoryResponse>();
+        Assert.NotNull(res);
+        Assert.NotEmpty(res.Workouts);
+        Assert.Single(res.Workouts);
+        Assert.Equal(workout.Id, res.Workouts.Single().Id);
+        Assert.DoesNotContain(res.Workouts, x => x.Id == workoutUser2.Id);
+        Assert.Equal(workout.Id, res.Workouts[0].Id);
+    }
+
+    [Fact]
+    public async Task GetExerciseHistory_ForOtherUsersExercise_ShouldReturnNotFound()
+    {
+        //arrange
+        var suffix = Guid.NewGuid().ToString();
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+        var user = new ApplicationUser()
+        {
+            UserName = $"{suffix}-1",
+            Email = $"{suffix}@gmail.com"
+        };
+        var userRes = await userManager.CreateAsync(user);
+        var user2 = new ApplicationUser()
+        {
+            UserName = $"{suffix}-2",
+            Email = $"{suffix}2@gmail.com"
+        };
+        var user2Res = await userManager.CreateAsync(user2);
+        Assert.True(userRes.Succeeded, "Nie udało sie utowrzyć user1");
+        Assert.True(user2Res.Succeeded, "Nie udało sie utowrzyć user2");
+        var exercise = new Exercise()
+        {
+            Name=$"{suffix}-exercise",
+            OwnerUserId = user2.Id,
+            IsSystem = false,
+            ExerciseMuscleGroups =
+            [
+                new ExerciseMuscleGroup()
+                {
+                    MuscleGroup = MuscleGroup.Back
+                },
+                new ExerciseMuscleGroup()
+                {
+                    MuscleGroup = MuscleGroup.Biceps
+                },
+                
+            ]
+        };
+        db.Exercises.Add(exercise);
+        await db.SaveChangesAsync();
+    
+        var client = _factory.CreateClient();
+        var accessToken = tokenService.CreateToken(user).AccessToken;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",accessToken);
+        //act
+        db.ChangeTracker.Clear();
+        var response = await client.GetAsync($"/api/exercises/{exercise.Id}/history");
+        //assert
+        Assert.Equal(HttpStatusCode.NotFound,response.StatusCode);
+    }
+
 }
