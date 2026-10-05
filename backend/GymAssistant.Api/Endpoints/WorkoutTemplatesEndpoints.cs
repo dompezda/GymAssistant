@@ -57,7 +57,10 @@ public static class WorkoutTemplatesEndpoints
             {
                 return Results.BadRequest("Jedno lub więcej wybranych ćwiczeń nie istnieje.");
             }
-
+            if(request.Exercises.Any(x => x.PlannedSets <= 0))
+            {
+                return Results.BadRequest("Liczba planowanych serii musi być większa od 0.");
+            }
 
             var workoutTemplate = new WorkoutTemplate
             {
@@ -156,7 +159,7 @@ public static class WorkoutTemplatesEndpoints
             {
                 template.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
             }
-            if(request.Exercises.All(x=>x.PlannedSets>0) == false)
+            if(request.Exercises.Any(x => x.PlannedSets <= 0))
             {
                 return Results.BadRequest("Liczba planowanych serii musi być większa od 0.");
             }
