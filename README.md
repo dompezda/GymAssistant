@@ -51,11 +51,12 @@ Implemented:
 - protected muscle-group endpoint,
 - backend integration-test host based on `WebApplicationFactory` with the production SQL Server registration replaced by SQLite in-memory,
 - exercise endpoint integration coverage for unauthenticated `401 Unauthorized`, two-user private-exercise visibility isolation, current-user plus system-exercise visibility, private-exercise ownership on create, empty-name `400 Bad Request` validation, successful editing of the current user's private exercise including muscle-group changes, blocked edits of another user's or a system exercise with persisted data verified unchanged, muscle-group patch behavior without duplicate relations and with only missing relations added, system-exercise history isolated to the authenticated user's workout sessions, and `404 Not Found` for another user's private exercise history; authenticated cases use real JWT bearer tokens.
+- workout-template integration coverage for ownership on create, required title/exercises, positive planned-set validation, blocking another user's private exercise, allowing system exercises, duplicate-exercise rejection, order normalization, list isolation between users and `404 Not Found` for another user's template.
 
 Still in progress / planned hardening:
 
 - final seed/admin strategy for creating and maintaining the system exercise catalog,
-- expand integration-test coverage to authentication flows, remaining exercise validation cases and remaining two-user ownership boundaries outside the exercise endpoints,
+- expand integration-test coverage to authentication flows, remaining exercise validation cases, workout-template update/detail flows and remaining two-user ownership boundaries,
 - add an explicit test-data isolation/reset strategy as the integration-test suite grows,
 - cleanup of temporary authentication/debug code,
 - explicit decision on production access-token storage instead of treating `localStorage` as final by default,
