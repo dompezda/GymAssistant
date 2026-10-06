@@ -202,19 +202,10 @@ public class ExercisesEndpointsTests
 
         var user1 = await UserHelper.CreateUserAsync(userManager);
         var user2 = await UserHelper.CreateUserAsync(userManager);
-        var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user1);
-        exercise1.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Chest
-            },
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Back
-            }
-        ];
-        await db.SaveChangesAsync();
+        var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(
+            db,
+            user1,
+            [MuscleGroup.Chest, MuscleGroup.Back]);
 
         string originalName = exercise1.Name;
         var originalGroups = exercise1.ExerciseMuscleGroups
@@ -259,19 +250,9 @@ public class ExercisesEndpointsTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await UserHelper.CreateUserAsync(userManager);
-        var exercise = await ExerciseHelper.CreateSystemExerciseAsync(db);
-        exercise.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Chest
-            },
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Back
-            }
-        ];
-        await db.SaveChangesAsync();
+        var exercise = await ExerciseHelper.CreateSystemExerciseAsync(
+            db,
+            [MuscleGroup.Chest, MuscleGroup.Back]);
 
         var originalName = exercise.Name;
         var originalGroups = exercise.ExerciseMuscleGroups
@@ -317,15 +298,10 @@ public class ExercisesEndpointsTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await UserHelper.CreateUserAsync(userManager);
-        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-        exercise.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Chest
-            }
-        ];
-        await db.SaveChangesAsync();
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(
+            db,
+            user,
+            [MuscleGroup.Chest]);
 
         AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
 
@@ -358,15 +334,10 @@ public class ExercisesEndpointsTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await UserHelper.CreateUserAsync(userManager);
-        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-        exercise.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Chest
-            }
-        ];
-        await db.SaveChangesAsync();
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(
+            db,
+            user,
+            [MuscleGroup.Chest]);
 
         AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
 
@@ -407,19 +378,9 @@ public class ExercisesEndpointsTests
 
         var user = await UserHelper.CreateUserAsync(userManager);
         var user2 = await UserHelper.CreateUserAsync(userManager);
-        var exercise = await ExerciseHelper.CreateSystemExerciseAsync(db);
-        exercise.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Back
-            },
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Biceps
-            }
-        ];
-        await db.SaveChangesAsync();
+        var exercise = await ExerciseHelper.CreateSystemExerciseAsync(
+            db,
+            [MuscleGroup.Back, MuscleGroup.Biceps]);
 
         var workout = new WorkoutSession
         {
@@ -510,19 +471,10 @@ public class ExercisesEndpointsTests
 
         var user = await UserHelper.CreateUserAsync(userManager);
         var user2 = await UserHelper.CreateUserAsync(userManager);
-        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user2);
-        exercise.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Back
-            },
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Biceps
-            }
-        ];
-        await db.SaveChangesAsync();
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(
+            db,
+            user2,
+            [MuscleGroup.Back, MuscleGroup.Biceps]);
 
         AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
 
