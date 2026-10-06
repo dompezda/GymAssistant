@@ -39,44 +39,15 @@ public class ExercisesEndpointsTests
     public async Task GetExercises_ShouldNotReturnExercisesOwnedByOtherUser()
     {
         //Arrange
-        var suffix = Guid.NewGuid().ToString();
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        var user1 = new ApplicationUser
-        {
-            UserName = $"{suffix}-1",
-            Email = $"testuser-{suffix}@example.com"
-        };
-        var user2 = new ApplicationUser
-        {
-            UserName = $"{suffix}-2",
-            Email = $"otheruser-{suffix}@example.com"
-        };
-        var res1 = await userManager.CreateAsync(user1, "Test@123");
-        
-
-        var res2 = await userManager.CreateAsync(user2, "Other@123");
-        Assert.True(res1.Succeeded, "Failed to create test user.");
-        Assert.True(res2.Succeeded, "Failed to create other user.");
-        var exercise = new Exercise
-        {
-            Name = "Test Exercise",
-            OwnerUserId = user1.Id
-        };
-        var exercise2 = new Exercise
-        {
-            Name = "Other User Exercise",
-            OwnerUserId = user2.Id
-        };
-
-        dbContext.Exercises.Add(exercise);
-        dbContext.Exercises.Add(exercise2);
-        await dbContext.SaveChangesAsync();
-        var token = scope.ServiceProvider.GetRequiredService<IAccessTokenService>().CreateToken(user1);
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.AccessToken);
-
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var user2 = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(dbContext, user1);
+        var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(dbContext, user2);
+        AuthHelper.AuthorizeClient(_client, user1, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
         //Act
         var response = await _client.GetAsync("/api/exercises");
 
@@ -135,12 +106,9 @@ public class ExercisesEndpointsTests
     dbContext.Exercises.Add(exercise3);
     await dbContext.SaveChangesAsync();
 
-    var token = scope.ServiceProvider.GetRequiredService<IAccessTokenService>().CreateToken(user).AccessToken;
-    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-    
-    
+    AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
      //Act
-     var response = await client.GetAsync("/api/exercises");
+     var response = await _client.GetAsync("/api/exercises");
      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
      var exercises = await response.Content.ReadFromJsonAsync<List<ExerciseResponse>>();
      //Assert 

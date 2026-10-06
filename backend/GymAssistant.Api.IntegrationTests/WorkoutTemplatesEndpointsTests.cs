@@ -458,84 +458,23 @@ public class WorkoutTemplatesEndpointsTests : IClassFixture<GymAssistantWebAppli
     [Fact]
     public async Task GetWorkoutTemplates_ShouldReturnOnlyCurrentUsersTemplates()
     {
-        //arrage
+        //arrange
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var guid = Guid.NewGuid();
-
-        var user1 = new ApplicationUser
-        {
-            UserName = $"user1{guid}",
-            Email = $"email{guid}@example.com"
-        };
-
-        var createUser1Result = await userManager.CreateAsync(user1, "Password123!");
-        Assert.True(createUser1Result.Succeeded, "Failed to create user1 for test.");
-
-        var user2 = new ApplicationUser
-        {
-            UserName = $"user2{guid}",
-            Email = $"email2{guid}@example.com"
-        };
-        var createUser2Result = await userManager.CreateAsync(user2, "Password123!");
-        Assert.True(createUser2Result.Succeeded, "Failed to create user2 for test.");
-
-        var exercise1 = new Exercise
-        {
-            Name = $"Test Exercise 1 {guid}",
-            OwnerUserId = user1.Id,
-            IsSystem = false
-        };
-        var exercise2 = new Exercise
-        {
-            Name = $"Test Exercise 2 {guid}",
-            OwnerUserId = user2.Id,
-            IsSystem = false
-        };
-        db.Exercises.AddRange(exercise1, exercise2);
-        await db.SaveChangesAsync();
-
-        var template1 = new WorkoutTemplate
-        {
-            Title = "User 1 Template",
-            UserId = user1.Id,
-            Exercises = new List<WorkoutTemplateExercise>
-            {
-                new WorkoutTemplateExercise
-                {
-                    ExerciseId = exercise1.Id,
-                    Order = 1,
-                    PlannedSets = 3
-                }
-            }
-        };
-        var template2 = new WorkoutTemplate
-        {
-            Title = "User 2 Template",
-            UserId = user2.Id,
-            Exercises = new List<WorkoutTemplateExercise>
-            {
-                new WorkoutTemplateExercise
-                {
-                    ExerciseId = exercise2.Id,
-                    Order = 1,
-                    PlannedSets = 4
-                }
-            }
-        };
-        db.WorkoutTemplates.AddRange(template1, template2);
-        await db.SaveChangesAsync();
-        db.ChangeTracker.Clear();
-        var token = scope.ServiceProvider.GetRequiredService<IAccessTokenService>().CreateToken(user1);
-        var authHeader = new AuthenticationHeaderValue("Bearer", token.AccessToken);
-        _client.DefaultRequestHeaders.Authorization = authHeader;
-        
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var user2 = await UserHelper.CreateUserAsync(userManager);
+        var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user1);
+        var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user2);
+        var template1 = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db, user1, [exercise1]);
+        await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db, user2, [exercise2]);
+        AuthHelper.AuthorizeClient(_client, user1, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
         //act
         var response = await _client.GetAsync("/api/workout-templates");
         //assert
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        var templates = await response.Content.ReadFromJsonAsync<List<WorkoutTemplateListItemResponse>>();Assert.NotNull(templates);
+        var templates = await response.Content.ReadFromJsonAsync<List<WorkoutTemplateListItemResponse>>();
+        Assert.NotNull(templates);
         Assert.Single(templates);
         Assert.Equal(template1.Title, templates[0].Title);
     }
