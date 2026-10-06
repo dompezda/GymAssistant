@@ -152,18 +152,11 @@ public class ExercisesEndpointsTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await UserHelper.CreateUserAsync(userManager);
-        var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-        exercise1.ExerciseMuscleGroups =
-        [
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.Chest
-            },
-            new ExerciseMuscleGroup
-            {
-                MuscleGroup = MuscleGroup.FullBody
-            }
-        ];
+        var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user, new[]
+        {
+            MuscleGroup.Chest,
+            MuscleGroup.FullBody
+        });
         await db.SaveChangesAsync();
 
         var request = new EditExerciseRequest($"{suffix}", new[]
