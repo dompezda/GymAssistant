@@ -258,12 +258,18 @@ A dedicated production-safe seed/admin strategy for creating and maintaining sys
 
 Backend integration tests use `WebApplicationFactory<Program>` and the `Testing` environment. The test host removes the production `AppDbContext` provider configuration and registers SQLite in-memory instead, keeping one SQLite connection open for the lifetime of the factory and creating the schema with `Database.EnsureCreated()`.
 
-Current exercise integration coverage includes:
+Common test setup is centralized in reusable helpers for:
 
-- unauthenticated `GET /api/exercises` returns `401 Unauthorized`,
-- a two-user isolation scenario creates two Identity users and one private exercise for each user, issues a real access JWT for the first user through `IAccessTokenService`, calls the protected endpoint through `HttpClient`, verifies that the first user's exercise is returned and verifies that the second user's exercise is not returned.
+- Identity user creation,
+- JWT bearer authorization of the test `HttpClient`,
+- private and system exercise creation, including optional muscle-group relations created before the initial save,
+- standard workout-template creation.
 
-The test deliberately bypasses the login endpoint when preparing the authenticated exercise request so the exercise-authorization test does not depend on the correctness of the separate login flow. Authentication endpoint integration coverage is still planned separately.
+Current exercise integration coverage verifies unauthenticated access, two-user private-exercise isolation, current-user plus system-exercise visibility, private-exercise ownership on create, empty-name validation, editing the current user's private exercise, blocked edits of another user's or a system exercise with persisted state verified unchanged, muscle-group patch behavior, system-exercise history isolation and `404 Not Found` for another user's private exercise history.
+
+Workout-template integration coverage verifies ownership on create, required title/exercises, positive planned-set validation, rejection of another user's private exercise, support for system exercises, duplicate-exercise rejection, exercise-order normalization, user-isolated template listing and `404 Not Found` for another user's template.
+
+Authenticated domain tests deliberately create Identity users and issue real access JWTs through `IAccessTokenService` instead of depending on the login endpoint. Authentication endpoint integration coverage is still planned separately.
 
 The current `IClassFixture<GymAssistantWebApplicationFactory>` setup keeps the SQLite database alive across tests using the same factory. As the suite grows, test-data reset/isolation must be made explicit so tests do not become order-dependent or leak state into one another.
 
