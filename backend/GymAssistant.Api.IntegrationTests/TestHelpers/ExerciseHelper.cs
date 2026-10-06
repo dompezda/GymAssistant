@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using GymAssistant.Api.Data;
 using GymAssistant.Api.Models;
 
@@ -8,7 +7,7 @@ public static class ExerciseHelper
     {
         return await CreateUserExerciseAsync(dbContext, user, [MuscleGroup.FullBody]);
     }
-        public static async Task<Exercise> CreateSystemExerciseAsync(AppDbContext dbContext)
+    public static async Task<Exercise> CreateSystemExerciseAsync(AppDbContext dbContext)
     {
         return await CreateSystemExerciseAsync(dbContext, [MuscleGroup.FullBody]);
     }
