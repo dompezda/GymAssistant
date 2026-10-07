@@ -683,7 +683,7 @@ Registration uses the centralized API base URL but intentionally calls the publi
 - A production-safe seed/admin flow for creating and maintaining system exercises is still required.
 - Existing demo data may need to be reset before the production-ready release.
 - Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
-- Authentication integration tests, workout-template update/detail coverage and broader two-user data-isolation coverage are not implemented yet.
+- Authentication integration tests, remaining workout-template validation cases and broader two-user data-isolation coverage are not implemented yet.
 - If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.
 - Password reset, email confirmation, external providers, roles and broader account-management features are outside the current MVP.
 - Most validation is currently implemented directly inside endpoint handlers or ASP.NET Core Identity; FluentValidation is not integrated yet.
