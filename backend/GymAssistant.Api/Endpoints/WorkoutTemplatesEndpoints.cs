@@ -130,14 +130,13 @@ public static class WorkoutTemplatesEndpoints
         {
            var template = await db.WorkoutTemplates
                 .Include(x => x.Exercises)
-                .ThenInclude(x => x.Exercise)
                 .FirstOrDefaultAsync(x => x.Id == id && x.UserId == currentUser.UserId);
            
-           if(template == null)
+            if(template == null)
             {
                 return Results.NotFound();
             }
-            if(request.Title==null || request.Title.Trim() == "")
+            if (string.IsNullOrWhiteSpace(request.Title))
             {
                 return Results.BadRequest("Tytuł planu treningowego jest wymagany.");
             }
@@ -172,16 +171,14 @@ public static class WorkoutTemplatesEndpoints
                 return Results.BadRequest("Jedno lub więcej wybranych ćwiczeń nie istnieje.");
             }
 
-            var requestByExerciseId = new Dictionary<Guid, CreateWorkoutTemplateExerciseRequest>();
-            foreach(var exercise in request.Exercises)
-            {
-                requestByExerciseId[exercise.ExerciseId] = exercise;
-            }
-            var templateByExerciseId = new Dictionary<Guid, WorkoutTemplateExercise>();
-            foreach(var exercise in template.Exercises)
-            {
-                templateByExerciseId[exercise.ExerciseId] = exercise;
-            }
+            var requestByExerciseId = request.Exercises
+                .ToDictionary(x => x.ExerciseId);
+
+            var orderedRequestExercises = request.Exercises
+                .OrderBy(x => x.Order)
+                .ToList();
+            var templateByExerciseId = template.Exercises
+                .ToDictionary(x => x.ExerciseId);
 
             foreach(var exercise in templateByExerciseId)
             {
@@ -191,16 +188,14 @@ public static class WorkoutTemplatesEndpoints
                 }
             }
             int index = 1;
-            foreach(var exercise in requestByExerciseId)
+            foreach(var exercise in orderedRequestExercises)
             {
 
-                if(templateByExerciseId.ContainsKey(exercise.Key))
+                if (templateByExerciseId.TryGetValue(exercise.ExerciseId, out var templateExercise))
                 {
-                    var templateExercise = templateByExerciseId[exercise.Key];
-                    var requestExercise = exercise.Value;
-                    if(templateExercise.PlannedSets != requestExercise.PlannedSets)
+                    if(templateExercise.PlannedSets != exercise.PlannedSets)
                     {
-                        templateExercise.PlannedSets = requestExercise.PlannedSets;
+                        templateExercise.PlannedSets = exercise.PlannedSets;
                     }
                     templateExercise.Order = index;
                 }
@@ -209,8 +204,8 @@ public static class WorkoutTemplatesEndpoints
                     var newTemplateExercise = new WorkoutTemplateExercise
                     {
                         Id = Guid.NewGuid(),
-                        ExerciseId = exercise.Key,
-                        PlannedSets = exercise.Value.PlannedSets,
+                        ExerciseId = exercise.ExerciseId,
+                        PlannedSets = exercise.PlannedSets,
                         Order = index,
                         WorkoutTemplateId = template.Id
                     };
