@@ -547,4 +547,218 @@ public class WorkoutTemplatesEndpointsTests : IClassFixture<GymAssistantWebAppli
         Assert.Equal(1, templateExercise.Order); 
     }
 
+    [Fact]
+    public async Task PatchWorkoutTemplate_WithoutTitle_ShouldReturnBadRequest()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenSerivce= scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise1 = await ExerciseHelper.CreateSystemExerciseAsync(db);
+        var template = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db,user,[exercise1]);
+        AuthHelper.AuthorizeClient(_client,user,tokenSerivce);
+
+        //Act
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            "",template.Notes,
+            [
+                new CreateWorkoutTemplateExerciseRequest(exercise1.Id,3,3)
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{template.Id}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest,res.StatusCode);
+    }
+
+    [Fact]
+    public async Task PatchWorkoutTemplate_WithoutExercises_ShouldReturnBadRequest()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenSerivce= scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise1 = await ExerciseHelper.CreateSystemExerciseAsync(db);
+        var template = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db,user,[exercise1]);
+        var oldTitle = template.Title;
+        AuthHelper.AuthorizeClient(_client,user,tokenSerivce);
+
+        //Act
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            template.Title,template.Notes,
+            []
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{template.Id}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest,res.StatusCode);
+    }
+
+    [Fact]
+    public async Task PatchWorkoutTemplate_WithOtherUsersExercise_ShouldReturnBadRequest()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var user2 = await UserHelper.CreateUserAsync(userManager);
+
+        var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db,user1);
+        var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db,user2);
+
+        var template = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db,user1,[exercise1]);
+
+        AuthHelper.AuthorizeClient(_client,user1,tokenService);
+        //Act
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            template.Title,template.Notes,
+            [
+                new CreateWorkoutTemplateExerciseRequest(exercise2.Id,3,3)
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{template.Id}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest,res.StatusCode);
+        db.ChangeTracker.Clear();
+        var templateFromDb = await db.WorkoutTemplates.Include(x=>x.Exercises).FirstOrDefaultAsync(x=>x.Id==template.Id);
+        Assert.NotNull(templateFromDb);
+        var templateExercise = Assert.Single(templateFromDb.Exercises);
+        Assert.Equal(exercise1.Id, templateExercise.ExerciseId);
+    }
+
+    [Fact] //TEN TEST W PRZYSZLOSCI BEDZIE DO SPRAWDZENIA BO W SUMIE MOZNA CHYBA 2 TAKIE SAME CWICZENIA MIEC W PLANIE
+    public async Task PatchWorkoutTemplate_WithDuplicateExercises_ShouldReturnBadRequest()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db,user1);
+
+        var template = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db,user1,[exercise]);
+
+        AuthHelper.AuthorizeClient(_client,user1,tokenService);
+        //Act
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            template.Title,template.Notes,
+            [
+                new CreateWorkoutTemplateExerciseRequest(exercise.Id,3,1),
+                new CreateWorkoutTemplateExerciseRequest(exercise.Id,4,2)
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{template.Id}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest,res.StatusCode);
+    }
+
+    [Fact] 
+    public async Task PatchWorkoutTemplate_WithNonPositivePlannedSets_ShouldReturnBadRequest()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db,user1);
+
+        var template = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db,user1,[exercise]);
+
+        AuthHelper.AuthorizeClient(_client,user1,tokenService);
+        //Act
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            template.Title,template.Notes,
+            [
+                new CreateWorkoutTemplateExerciseRequest(exercise.Id,-2,1),
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{template.Id}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.BadRequest,res.StatusCode);
+    }    
+    
+    [Fact] 
+    public async Task PatchWorkoutTemplate_WithSystemExercise_ShouldUpdateTemplate()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db,user1);
+        var systemExercise = await ExerciseHelper.CreateSystemExerciseAsync(db);
+        var template = await WorkoutTemplateHelper.CreateWorkoutTemplateAsync(db,user1,[exercise]);
+
+        AuthHelper.AuthorizeClient(_client,user1,tokenService);
+        //Act
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            template.Title,template.Notes,
+            [
+                new CreateWorkoutTemplateExerciseRequest(exercise.Id,1,1),
+                new CreateWorkoutTemplateExerciseRequest(systemExercise.Id,2,2),
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{template.Id}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.NoContent,res.StatusCode);
+        db.ChangeTracker.Clear();
+
+        var templateFromDb = await db.WorkoutTemplates
+            .Include(x=>x.Exercises)
+            .FirstOrDefaultAsync(x=>x.Id == template.Id);
+        
+        Assert.NotNull(templateFromDb);
+        Assert.Equal(template.Notes,templateFromDb.Notes);
+        Assert.Equal(2,templateFromDb.Exercises.Count);
+        Assert.Contains(
+            templateFromDb.Exercises,
+            x => x.ExerciseId == systemExercise.Id
+        );
+    }
+
+    [Fact] 
+    public async Task PatchWorkoutTemplate_WithNonExistingId_ShouldReturnNotFound()
+    {
+        //Arrange
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user1 = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db,user1);
+        AuthHelper.AuthorizeClient(_client,user1,tokenService);
+        var nonExistingId = Guid.NewGuid();
+        //Act
+
+        var requestBody= new CreateWorkoutTemplateRequest
+        (
+            $"Test Template","notes",
+            [
+                new CreateWorkoutTemplateExerciseRequest(exercise.Id,1,1)
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-templates/{nonExistingId}",requestBody);
+        //Assert
+        Assert.Equal(HttpStatusCode.NotFound,res.StatusCode);
+    }
 }
