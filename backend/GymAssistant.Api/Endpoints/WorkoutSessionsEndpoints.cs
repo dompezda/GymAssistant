@@ -46,11 +46,11 @@ public static class WorkoutSessionsEndpoints
             {
                 return Results.BadRequest("Trening musi zawierać przynajmniej jedno ćwiczenie.");
             }
-            if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Reps<=0)))
+            if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Reps<0)))
             { 
                 return Results.BadRequest("Liczba powtórzeń musi być większa lub równa 0.");
             }
-            if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Weight<=0)))
+            if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Weight<0)))
             { 
                 return Results.BadRequest("Ciężar musi być większy lub równy 0.");
             }
