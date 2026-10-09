@@ -46,6 +46,14 @@ public static class WorkoutSessionsEndpoints
             {
                 return Results.BadRequest("Trening musi zawierać przynajmniej jedno ćwiczenie.");
             }
+            if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Reps<=0)))
+            { 
+                return Results.BadRequest("Liczba powtórzeń musi być większa lub równa 0.");
+            }
+            if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Weight<=0)))
+            { 
+                return Results.BadRequest("Ciężar musi być większy lub równy 0.");
+            }
 
             if (request.WorkoutTemplateId != null)
             {
@@ -64,6 +72,11 @@ public static class WorkoutSessionsEndpoints
                 .Distinct()
                 .ToList();
 
+            if (exerciseIds.Count != request.Exercises.Count)
+            {
+                return Results.BadRequest(
+                    "Nie można dodać tego samego ćwiczenia więcej niż raz.");
+            }
             var existingExercisesCount = await db.Exercises
                 .Where(x=>x.OwnerUserId == currentUser.UserId || x.IsSystem)
                 .CountAsync(x => exerciseIds.Contains(x.Id));
