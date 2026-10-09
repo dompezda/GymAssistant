@@ -55,7 +55,7 @@ Implemented:
 - workout-template integration coverage for ownership on create, required title/exercises, positive planned-set validation, blocking another user's private exercise, allowing system exercises, duplicate-exercise rejection, create-order normalization, list isolation between users, owned-template detail responses, `404 Not Found` for another user's template, successful PATCH replacement/update behavior, PATCH order normalization, blocked PATCH access to another user's template with persisted data verified unchanged, and PATCH validation for missing title, empty exercises, other users' private exercises, duplicate exercises and non-positive planned sets; PATCH with a system exercise and a missing template id are also covered.
 
 - workout-session integration coverage for GET list/detail, finished-session filtering, user isolation, missing session ids, POST creation and persistence (ownership, exercises, sets, ordering and name snapshots), empty exercises, other users' templates/exercises, allowed system/private exercises, duplicate exercises and negative reps/weight inputs.
-- workout-session POST validation now rejects duplicate exercise ids and non-positive reps/weight values (the latter currently includes zero; see known validation inconsistency in `todo.md`).
+- workout-session POST validation rejects duplicate exercise ids and negative reps/weight values; zero and null are accepted, consistently with set-update PATCH validation.
 
 Still in progress / planned hardening:
 
