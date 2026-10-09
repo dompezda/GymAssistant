@@ -533,7 +533,7 @@ Starts a workout session and assigns:
 UserId = currentUser.UserId
 ```
 
-If `workoutTemplateId` is provided, the template must belong to the authenticated user. Every exercise must be system-wide or owned by the authenticated user. An empty exercise list and duplicate exercise ids are rejected. The POST handler also rejects non-positive `reps` and `weight` values when provided (`null` is accepted). **Known inconsistency:** it currently rejects `0` using `<= 0`, although the error messages say values may be greater than or equal to zero, and the session-set PATCH handler rejects only negative values. This needs alignment.
+If `workoutTemplateId` is provided, the template must belong to the authenticated user. Every exercise must be system-wide or owned by the authenticated user. An empty exercise list and duplicate exercise ids are rejected. The POST handler also rejects negative `reps` and `weight` values when provided. Both `0` and `null` are accepted, consistent with the session-set PATCH handler.
 
 ### Request
 
@@ -684,7 +684,6 @@ Registration uses the centralized API base URL but intentionally calls the publi
 - Existing demo data may need to be reset before the production-ready release.
 - Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
 - Authentication integration tests, some remaining workout-template edge cases and broader two-user data-isolation coverage are not implemented yet. Workout-template PATCH integration tests cover validation, system exercises, missing templates and ownership isolation. Workout-session GET and POST integration tests cover ownership, list filtering, creation/persistence and selected validation paths; session PATCH/finish/summary/add/delete coverage is still pending.
-- Workout-session POST currently rejects zero reps/weight despite its non-negative error messages and the PATCH endpoint's negative-only validation. The intended rule should be decided and both handlers aligned.
 - Workout-session finish and edit lifecycle is not fully enforced yet: set updates and adding an exercise currently do not reject a finished session, and finishing again can overwrite `FinishedAt`.
 - If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.
 - Password reset, email confirmation, external providers, roles and broader account-management features are outside the current MVP.
