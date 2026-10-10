@@ -604,7 +604,7 @@ Validation rejects:
 - empty set ids,
 - duplicate set ids.
 
-Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially.
+Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially from request array order, regardless of the supplied `setNumber` values. The endpoint returns `200 OK` on success, `400 Bad Request` for the validation failures above, and `404 Not Found` if the owned session or its requested exercise cannot be found. The current implementation does not yet prevent updating sets of a finished session.
 
 ---
 
@@ -616,7 +616,7 @@ Finds the session using both `sessionId` and `currentUser.UserId` and sets:
 FinishedAt = DateTime.UtcNow
 ```
 
-Returns `400 Bad Request` for an empty id or when the session cannot be found by the current user.
+Returns `400 Bad Request` for an empty id and `404 Not Found` when the session cannot be found by the current user (including a session owned by someone else). A successful finish returns `200 OK`. Repeated calls are idempotent: if `FinishedAt` is already set, the endpoint returns `200 OK` without saving or overwriting the original completion time.
 
 ---
 
@@ -683,8 +683,8 @@ Registration uses the centralized API base URL but intentionally calls the publi
 - A production-safe seed/admin flow for creating and maintaining system exercises is still required.
 - Existing demo data may need to be reset before the production-ready release.
 - Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
-- Authentication integration tests, some remaining workout-template edge cases and broader two-user data-isolation coverage are not implemented yet. Workout-template PATCH integration tests cover validation, system exercises, missing templates and ownership isolation. Workout-session GET and POST integration tests cover ownership, list filtering, creation/persistence and selected validation paths; session PATCH/finish/summary/add/delete coverage is still pending.
-- Workout-session finish and edit lifecycle is not fully enforced yet: set updates and adding an exercise currently do not reject a finished session, and finishing again can overwrite `FinishedAt`.
+- Authentication integration tests, some remaining workout-template edge cases and broader two-user data-isolation coverage are not implemented yet. Workout-template PATCH integration tests cover validation, system exercises, missing templates and ownership isolation. Workout-session integration tests cover GET/POST, set PATCH (updates, additions, removals, ordering, invalid inputs and ownership) and finish (success and idempotency). Summary/add/delete coverage and selected lifecycle edge cases remain.
+- Workout-session edit lifecycle is not fully enforced yet: set updates and adding an exercise currently do not reject a finished session. Repeated finish is already idempotent and preserves `FinishedAt`.
 - If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.
 - Password reset, email confirmation, external providers, roles and broader account-management features are outside the current MVP.
 - Most validation is currently implemented directly inside endpoint handlers or ASP.NET Core Identity; FluentValidation is not integrated yet.
