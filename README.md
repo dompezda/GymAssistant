@@ -56,11 +56,13 @@ Implemented:
 
 - workout-session integration coverage for GET list/detail, finished-session filtering, user isolation, missing session ids, POST creation and persistence (ownership, exercises, sets, ordering and name snapshots), empty exercises, other users' templates/exercises, allowed system/private exercises, duplicate exercises and negative reps/weight inputs.
 - workout-session POST validation rejects duplicate exercise ids and negative reps/weight values; zero and null are accepted, consistently with set-update PATCH validation.
+- workout-session set PATCH integration coverage for updating existing sets, adding/removing sets, request-order normalization, empty or duplicate set ids, empty set lists, negative values, missing sessions/exercises and cross-user isolation; rejected requests also verify unchanged persisted data.
+- workout-session finish integration coverage for successful completion, missing/empty ids, cross-user access and repeated finish without changing the original `FinishedAt` value.
 
 Still in progress / planned hardening:
 
 - final seed/admin strategy for creating and maintaining the system exercise catalog,
-- expand integration-test coverage to authentication flows, remaining exercise validation cases, workout-session PATCH/finish/add/delete/summary, remaining edge-case validation and broader two-user ownership boundaries,
+- expand integration-test coverage to authentication flows, remaining exercise validation cases, workout-session summary/add/delete, remaining PATCH lifecycle and cross-exercise set-id edge cases, and broader two-user ownership boundaries,
 - add an explicit test-data isolation/reset strategy as the integration-test suite grows,
 - cleanup of temporary authentication/debug code,
 - explicit decision on production access-token storage instead of treating `localStorage` as final by default,
