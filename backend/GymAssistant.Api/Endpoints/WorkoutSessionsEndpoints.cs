@@ -201,7 +201,7 @@ public static class WorkoutSessionsEndpoints
             List<WorkoutSessionSet> setsToRemove = new List<WorkoutSessionSet>();
             dbSets.ForEach(x =>
             {
-                
+
                 if(!guids.Contains(x.Id))
                     setsToRemove.Add(x);
             });
@@ -246,7 +246,9 @@ public static class WorkoutSessionsEndpoints
                 .Where(x => x.UserId == currentUser.UserId)
                 .FirstOrDefaultAsync(x=>x.Id == sessionId);
             if(session== null)
-                return Results.BadRequest("Nie znaleziono treningu.");
+                return Results.NotFound("Nie znaleziono treningu.");
+            if(session.FinishedAt!=null)
+                return Results.Ok();
             session.FinishedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
