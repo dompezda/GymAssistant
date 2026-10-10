@@ -1198,7 +1198,7 @@ public async Task PatchWorkoutSessionExercise_ShouldReturnNotFound_WhenSessionDo
     Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
 }
 [Fact]
-public async Task FinishWorkoutSession_ShouldReturnBadRequest_ForOtherUsersSession()
+public async Task FinishWorkoutSession_ShouldReturnNotFound_ForOtherUsersSession()
 {
     // Arrange
     using var scope = _factory.Services.CreateScope();
