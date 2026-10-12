@@ -17,8 +17,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         _client = factory.CreateClient();
         _factory = factory;
     }
-
-    [Fact]
+[Fact]
     public async Task GetWorkoutSession_ShouldReturnOk_WhenSessionExists()
     {
         //Arrange
@@ -60,7 +59,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         });    
     }
 
-    [Fact]
+[Fact]
     public async Task GetWorkoutSessions_ShouldReturnOnlyCurrentUsersSessions()
     {
         // Arrange
@@ -102,7 +101,8 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.Equal(session1.Id, returnedSession.Id);
         Assert.DoesNotContain(sessions, x => x.Id == session2.Id);
     }
-    [Fact]
+
+[Fact]
     public async Task GetWorkoutSessions_ShouldNotReturnUnfinishedSessions()
     {
         // Arrange
@@ -132,7 +132,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.Empty(sessions);
     }
 
-    [Fact]
+[Fact]
     public async Task GetWorkoutSession_ShouldReturnNotFound_ForOtherUsersSession()
     {
         // Arrange
@@ -162,7 +162,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
+[Fact]
     public async Task GetWorkoutSession_ShouldReturnNotFound_WhenSessionDoesNotExist()
     {
         // Arrange
@@ -183,7 +183,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
+[Fact]
     public async Task CreateWorkoutSession_ShouldReturnCreated_WhenRequestIsValid()
     {
         // Arrange
@@ -255,8 +255,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.Equal(8, setFromDb.Reps);
     }
 
-
-    [Fact]
+[Fact]
     public async Task CreateWorkoutSession_WithoutExercises_ShouldReturnBadRequest()
     {
         // Arrange
@@ -289,7 +288,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         );
     }
 
-    [Fact]
+[Fact]
     public async Task CreateWorkoutSession_WithOtherUsersTemplate_ShouldReturnBadRequest()
     {
         // Arrange
@@ -344,8 +343,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.False(sessionExists);
     }
 
-
-    [Fact]
+[Fact]
     public async Task CreateWorkoutSession_WithUserAndSystemExercises_ShouldReturnCreated()
     {
         // Arrange
@@ -425,7 +423,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
             x => x.ExerciseId == user2Exercise.Id);
     }
 
-    [Fact]
+[Fact]
     public async Task CreateWorkoutSession_WithOtherUsersExercise_ShouldReturnBadRequest()
     {
         // Arrange
@@ -495,7 +493,8 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
 
         Assert.False(sessionExists);
     }
-    [Fact]
+
+[Fact]
     public async Task CreateWorkoutSession_WithDuplicateExercises_ShouldReturnBadRequest()
     {
         // Arrange
@@ -548,8 +547,7 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.False(sessionExists);
     }
 
-
-    [Theory]
+[Theory]
     [InlineData(-1, 20)]
     [InlineData(10, -20)]
     public async Task CreateWorkoutSession_WithNegativeRepsOrWeight_ShouldReturnBadRequest(
@@ -598,7 +596,374 @@ public class WorkoutSessionsEndpointsTests : IClassFixture<GymAssistantWebApplic
         Assert.False(sessionExists);
     }
 
-    [Theory]
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnOk_WhenRequestIsValid()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user = await UserHelper.CreateUserAsync(userManager);
+    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+    var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user, null, [exercise1]);
+
+    var originalExerciseId = Assert.Single(session.Exercises).Id;
+
+    AuthHelper.AuthorizeClient(_client, user, tokenService);
+
+    var request = new AddExerciseToWorkoutSessionRequest(exercise2.Id);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{session.Id}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var dto = await response.Content
+        .ReadFromJsonAsync<WorkoutSessionExerciseResponseDto>();
+
+    Assert.NotNull(dto);
+    Assert.NotEqual(Guid.Empty, dto.Id);
+    Assert.Equal(exercise2.Id, dto.ExerciseId);
+    Assert.Equal(exercise2.Name, dto.ExerciseName);
+    Assert.Equal(2, dto.Order);
+
+    var responseSet = Assert.Single(dto.Sets);
+    Assert.NotEqual(Guid.Empty, responseSet.Id);
+    Assert.Equal(1, responseSet.SetNumber);
+    Assert.Null(responseSet.Reps);
+    Assert.Null(responseSet.Weight);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+            .ThenInclude(x => x.Sets)
+        .SingleAsync(x => x.Id == session.Id);
+
+    var exercises = sessionFromDb.Exercises
+        .OrderBy(x => x.Order)
+        .ToList();
+
+    Assert.Collection(
+        exercises,
+        first =>
+        {
+            Assert.Equal(originalExerciseId, first.Id);
+            Assert.Equal(exercise1.Id, first.ExerciseId);
+            Assert.Equal(1, first.Order);
+        },
+        second =>
+        {
+            Assert.Equal(dto.Id, second.Id);
+            Assert.Equal(exercise2.Id, second.ExerciseId);
+            Assert.Equal(exercise2.Name, second.ExerciseNameSnapshot);
+            Assert.Equal(2, second.Order);
+
+            var set = Assert.Single(second.Sets);
+            Assert.Equal(responseSet.Id, set.Id);
+            Assert.Equal(1, set.SetNumber);
+            Assert.Null(set.Reps);
+            Assert.Null(set.Weight);
+        }
+    );
+}
+
+[Theory]
+[InlineData(true)]
+[InlineData(false)]
+public async Task AddExerciseToWorkoutSession_ShouldReturnBadRequest_WhenIdIsEmpty(
+    bool emptySessionId)
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user = await UserHelper.CreateUserAsync(userManager);
+    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+    var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user, null, [exercise1]);
+
+    AuthHelper.AuthorizeClient(_client, user, tokenService);
+
+    var sessionId = emptySessionId ? Guid.Empty : session.Id;
+    var exerciseId = emptySessionId ? exercise2.Id : Guid.Empty;
+
+    var request = new AddExerciseToWorkoutSessionRequest(exerciseId);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{sessionId}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+        .SingleAsync(x => x.Id == session.Id);
+
+    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
+
+    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
+}
+
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_WhenSessionDoesNotExist()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user = await UserHelper.CreateUserAsync(userManager);
+    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+    AuthHelper.AuthorizeClient(_client, user, tokenService);
+
+    var nonExistingSessionId = Guid.NewGuid();
+    var request = new AddExerciseToWorkoutSessionRequest(exercise.Id);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{nonExistingSessionId}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var sessionExerciseExists = await db.WorkoutSessionExercises
+        .AnyAsync(x => x.ExerciseId == exercise.Id);
+
+    Assert.False(sessionExerciseExists);
+}
+
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_ForOtherUsersSession()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user1 = await UserHelper.CreateUserAsync(userManager);
+    var user2 = await UserHelper.CreateUserAsync(userManager);
+
+    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user2);
+    var exerciseToAdd = await ExerciseHelper.CreateSystemExerciseAsync(db);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user2, null, [exercise1]);
+
+    var originalSessionExerciseId = Assert.Single(session.Exercises).Id;
+
+    AuthHelper.AuthorizeClient(_client, user1, tokenService);
+
+    var request = new AddExerciseToWorkoutSessionRequest(exerciseToAdd.Id);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{session.Id}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+        .SingleAsync(x => x.Id == session.Id);
+
+    Assert.Equal(user2.Id, sessionFromDb.UserId);
+
+    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
+    Assert.Equal(originalSessionExerciseId, remainingExercise.Id);
+    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
+}
+
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_ForOtherUsersExercise()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user1 = await UserHelper.CreateUserAsync(userManager);
+    var user2 = await UserHelper.CreateUserAsync(userManager);
+
+    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user1);
+    var otherUsersExercise = await ExerciseHelper.CreateUserExerciseAsync(db, user2);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user1, null, [exercise1]);
+
+    AuthHelper.AuthorizeClient(_client, user1, tokenService);
+
+    var request = new AddExerciseToWorkoutSessionRequest(otherUsersExercise.Id);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{session.Id}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+        .SingleAsync(x => x.Id == session.Id);
+
+    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
+    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
+}
+
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnConflict_WhenExerciseAlreadyExists()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user = await UserHelper.CreateUserAsync(userManager);
+    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user, null, [exercise]);
+
+    var originalExercise = Assert.Single(session.Exercises);
+    var originalExerciseId = originalExercise.Id;
+
+    AuthHelper.AuthorizeClient(_client, user, tokenService);
+
+    var request = new AddExerciseToWorkoutSessionRequest(exercise.Id);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{session.Id}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+        .SingleAsync(x => x.Id == session.Id);
+
+    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
+
+    Assert.Equal(originalExerciseId, remainingExercise.Id);
+    Assert.Equal(exercise.Id, remainingExercise.ExerciseId);
+    Assert.Equal(1, remainingExercise.Order);
+}
+
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_WhenExerciseDoesNotExist()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user = await UserHelper.CreateUserAsync(userManager);
+    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user, null, [exercise]);
+
+    var originalExerciseId = Assert.Single(session.Exercises).Id;
+
+    AuthHelper.AuthorizeClient(_client, user, tokenService);
+
+    var request = new AddExerciseToWorkoutSessionRequest(Guid.NewGuid());
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{session.Id}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+        .SingleAsync(x => x.Id == session.Id);
+
+    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
+
+    Assert.Equal(originalExerciseId, remainingExercise.Id);
+    Assert.Equal(exercise.Id, remainingExercise.ExerciseId);
+}
+
+[Fact]
+public async Task AddExerciseToWorkoutSession_ShouldReturnConflict_WhenSessionIsFinished()
+{
+    // Arrange
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+    var user = await UserHelper.CreateUserAsync(userManager);
+
+    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+    var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+        db, user, null, [exercise1]);
+
+    var originalExerciseId = Assert.Single(session.Exercises).Id;
+
+    AuthHelper.AuthorizeClient(_client, user, tokenService);
+
+    var finishResponse = await _client.PatchAsync(
+        $"/api/workout-sessions/{session.Id}/finish", null);
+
+    Assert.Equal(HttpStatusCode.OK, finishResponse.StatusCode);
+
+    var request = new AddExerciseToWorkoutSessionRequest(exercise2.Id);
+
+    // Act
+    var response = await _client.PostAsJsonAsync(
+        $"/api/workout-sessions/{session.Id}/exercises", request);
+
+    // Assert
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    db.ChangeTracker.Clear();
+
+    var sessionFromDb = await db.WorkoutSessions
+        .Include(x => x.Exercises)
+        .SingleAsync(x => x.Id == session.Id);
+
+    Assert.NotNull(sessionFromDb.FinishedAt);
+
+    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
+
+    Assert.Equal(originalExerciseId, remainingExercise.Id);
+    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
+}
+
+[Theory]
     [InlineData(111,111)]
     [InlineData(222,222)]
     [InlineData(0,0.0)]
@@ -785,7 +1150,6 @@ public async Task PatchWorkoutSessionExercise_ShouldDeleteSet_WhenSetIsNotInRequ
     Assert.False(deletedSetExists);
 }
 
-
 [Fact]
 public async Task PatchWorkoutSessionExercise_WithoutSets_ShouldReturnBadRequest()
 {
@@ -956,7 +1320,7 @@ public async Task PatchWorkoutSessionExercise_ShouldReturnNotFound_ForOtherUsers
     Assert.Equal(set2Id, sets[1].Id);
     Assert.Equal(2, sets[1].Reps);
     Assert.Equal(2m, sets[1].Weight);
-} 
+}
 
 [Fact]
 public async Task PatchWorkoutSessionExercise_ShouldReturnNotFound_WhenExerciseDoesNotExistInSession()
@@ -1056,6 +1420,7 @@ public async Task PatchWorkoutSessionExercise_ShouldAssignSetNumbersBasedOnReque
     Assert.Equal(30, sets[2].Reps);
     Assert.Equal(70m, sets[2].Weight);
 }
+
 [Fact]
 public async Task PatchWorkoutSessionExercise_WithEmptySetId_ShouldReturnBadRequest()
 {
@@ -1111,6 +1476,7 @@ public async Task PatchWorkoutSessionExercise_WithEmptySetId_ShouldReturnBadRequ
     Assert.Equal(2, sets[1].Reps);
     Assert.Equal(2m, sets[1].Weight);
 }
+
 [Fact]
 public async Task PatchWorkoutSessionExercise_WithDuplicateSetIds_ShouldReturnBadRequest()
 {
@@ -1197,6 +1563,7 @@ public async Task PatchWorkoutSessionExercise_ShouldReturnNotFound_WhenSessionDo
     // Assert
     Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
 }
+
 [Fact]
 public async Task FinishWorkoutSession_ShouldReturnNotFound_ForOtherUsersSession()
 {
@@ -1344,7 +1711,7 @@ public async Task FinishWorkoutSession_ShouldNotChangeFinishedAt_WhenSessionAlre
     Assert.Equal(firstFinishedAt, updatedSession.FinishedAt);
 }
 
-    [Fact]
+[Fact]
     public async Task PatchWorkoutSessionExercise_ShouldReturnConflict_WhenSessionIsFinished()
     {
         //arrange
@@ -1390,7 +1757,7 @@ public async Task FinishWorkoutSession_ShouldNotChangeFinishedAt_WhenSessionAlre
         Assert.Equal(originalSets, actualSets);
     }
 
-    [Fact]
+[Fact]
 public async Task FinishWorkoutSession_ShouldReturnNotFound_WhenSessionDoesNotExist()
 {
     // Arrange
@@ -1410,132 +1777,6 @@ public async Task FinishWorkoutSession_ShouldReturnNotFound_WhenSessionDoesNotEx
 
     // Assert
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-}
-
-[Fact]
-public async Task GetWorkoutSessionSummary_ShouldReturnNotFound_WhenSessionDoesNotExist()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var nonExistingSessionId = Guid.NewGuid();
-
-    // Act
-    var response = await _client.GetAsync(
-        $"/api/workout-sessions/{nonExistingSessionId}/summary");
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-}
-
-[Fact]
-public async Task GetWorkoutSessionSummary_ShouldReturnNotFound_ForOtherUsersSession()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user1 = await UserHelper.CreateUserAsync(userManager);
-    var user2 = await UserHelper.CreateUserAsync(userManager);
-
-    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user1);
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user1, null, [exercise]);
-
-    session.FinishedAt = DateTime.UtcNow;
-    await db.SaveChangesAsync();
-
-    AuthHelper.AuthorizeClient(_client, user2, tokenService);
-
-    // Act
-    var response = await _client.GetAsync(
-        $"/api/workout-sessions/{session.Id}/summary");
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-}
-
-[Fact]
-public async Task GetWorkoutSessionSummary_ShouldReturnOk_WhenSessionExists()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user, null, [exercise]);
-
-    session.FinishedAt = DateTime.UtcNow;
-    await db.SaveChangesAsync();
-
-    var sessionExercise = Assert.Single(session.Exercises);
-
-    var expectedSets = sessionExercise.Sets
-        .OrderBy(x => x.SetNumber)
-        .Select(x => new
-        {
-            x.Id,
-            x.SetNumber,
-            x.Reps,
-            x.Weight
-        })
-        .ToList();
-
-    var expectedStartedAt = session.StartedAt;
-    var expectedFinishedAt = session.FinishedAt;
-    var expectedSessionExerciseId = sessionExercise.Id;
-    var expectedExerciseId = sessionExercise.ExerciseId;
-    var expectedExerciseName = sessionExercise.ExerciseNameSnapshot;
-    var expectedOrder = sessionExercise.Order;
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    // Act
-    var response = await _client.GetAsync(
-        $"/api/workout-sessions/{session.Id}");
-
-    // Assert
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-    var summary = await response.Content
-        .ReadFromJsonAsync<WorkoutSessionResponseDto>();
-
-    Assert.NotNull(summary);
-
-    Assert.Equal(expectedStartedAt, summary.StartedAt);
-    Assert.Equal(expectedFinishedAt, summary.FinishedAt);
-
-    var returnedExercise = Assert.Single(summary.Exercises);
-
-    Assert.Equal(expectedSessionExerciseId, returnedExercise.Id);
-    Assert.Equal(expectedExerciseId, returnedExercise.ExerciseId);
-    Assert.Equal(expectedExerciseName, returnedExercise.ExerciseName);
-    Assert.Equal(expectedOrder, returnedExercise.Order);
-
-    var actualSets = returnedExercise.Sets
-        .OrderBy(x => x.SetNumber)
-        .Select(x => new
-        {
-            Id = x.Id,
-            SetNumber = x.SetNumber,
-            Reps = x.Reps,
-            Weight = x.Weight
-        })
-        .ToList();
-
-    Assert.Equal(expectedSets, actualSets);
 }
 
 [Fact]
@@ -1614,7 +1855,6 @@ public async Task DeleteWorkoutSessionExercise_ShouldRemoveExerciseAndReorderRem
 
     Assert.False(deletedSetsExist);
 }
-
 
 [Fact]
 public async Task DeleteWorkoutSessionExercise_ShouldReturnNotFound_ForOtherUsersSession()
@@ -1854,7 +2094,6 @@ public async Task DeleteWorkoutSessionExercise_ShouldReturnConflict_WhenSessionI
     }
 }
 
-
 [Theory]
 [InlineData(true)]
 [InlineData(false)]
@@ -1913,366 +2152,4 @@ public async Task DeleteWorkoutSessionExercise_ShouldReturnBadRequest_WhenIdIsEm
     Assert.Equal(originalSets, actualSets);
 }
 
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnOk_WhenRequestIsValid()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-    var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user, null, [exercise1]);
-
-    var originalExerciseId = Assert.Single(session.Exercises).Id;
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var request = new AddExerciseToWorkoutSessionRequest(exercise2.Id);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{session.Id}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-    var dto = await response.Content
-        .ReadFromJsonAsync<WorkoutSessionExerciseResponseDto>();
-
-    Assert.NotNull(dto);
-    Assert.NotEqual(Guid.Empty, dto.Id);
-    Assert.Equal(exercise2.Id, dto.ExerciseId);
-    Assert.Equal(exercise2.Name, dto.ExerciseName);
-    Assert.Equal(2, dto.Order);
-
-    var responseSet = Assert.Single(dto.Sets);
-    Assert.NotEqual(Guid.Empty, responseSet.Id);
-    Assert.Equal(1, responseSet.SetNumber);
-    Assert.Null(responseSet.Reps);
-    Assert.Null(responseSet.Weight);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-            .ThenInclude(x => x.Sets)
-        .SingleAsync(x => x.Id == session.Id);
-
-    var exercises = sessionFromDb.Exercises
-        .OrderBy(x => x.Order)
-        .ToList();
-
-    Assert.Collection(
-        exercises,
-        first =>
-        {
-            Assert.Equal(originalExerciseId, first.Id);
-            Assert.Equal(exercise1.Id, first.ExerciseId);
-            Assert.Equal(1, first.Order);
-        },
-        second =>
-        {
-            Assert.Equal(dto.Id, second.Id);
-            Assert.Equal(exercise2.Id, second.ExerciseId);
-            Assert.Equal(exercise2.Name, second.ExerciseNameSnapshot);
-            Assert.Equal(2, second.Order);
-
-            var set = Assert.Single(second.Sets);
-            Assert.Equal(responseSet.Id, set.Id);
-            Assert.Equal(1, set.SetNumber);
-            Assert.Null(set.Reps);
-            Assert.Null(set.Weight);
-        }
-    );
-}
-
-[Theory]
-[InlineData(true)]
-[InlineData(false)]
-public async Task AddExerciseToWorkoutSession_ShouldReturnBadRequest_WhenIdIsEmpty(
-    bool emptySessionId)
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-    var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user, null, [exercise1]);
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var sessionId = emptySessionId ? Guid.Empty : session.Id;
-    var exerciseId = emptySessionId ? exercise2.Id : Guid.Empty;
-
-    var request = new AddExerciseToWorkoutSessionRequest(exerciseId);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{sessionId}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-        .SingleAsync(x => x.Id == session.Id);
-
-    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
-
-    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
-}
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_WhenSessionDoesNotExist()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var nonExistingSessionId = Guid.NewGuid();
-    var request = new AddExerciseToWorkoutSessionRequest(exercise.Id);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{nonExistingSessionId}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-
-    var sessionExerciseExists = await db.WorkoutSessionExercises
-        .AnyAsync(x => x.ExerciseId == exercise.Id);
-
-    Assert.False(sessionExerciseExists);
-}
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_ForOtherUsersSession()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user1 = await UserHelper.CreateUserAsync(userManager);
-    var user2 = await UserHelper.CreateUserAsync(userManager);
-
-    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user2);
-    var exerciseToAdd = await ExerciseHelper.CreateSystemExerciseAsync(db);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user2, null, [exercise1]);
-
-    var originalSessionExerciseId = Assert.Single(session.Exercises).Id;
-
-    AuthHelper.AuthorizeClient(_client, user1, tokenService);
-
-    var request = new AddExerciseToWorkoutSessionRequest(exerciseToAdd.Id);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{session.Id}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-        .SingleAsync(x => x.Id == session.Id);
-
-    Assert.Equal(user2.Id, sessionFromDb.UserId);
-
-    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
-    Assert.Equal(originalSessionExerciseId, remainingExercise.Id);
-    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
-}
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_ForOtherUsersExercise()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user1 = await UserHelper.CreateUserAsync(userManager);
-    var user2 = await UserHelper.CreateUserAsync(userManager);
-
-    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user1);
-    var otherUsersExercise = await ExerciseHelper.CreateUserExerciseAsync(db, user2);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user1, null, [exercise1]);
-
-    AuthHelper.AuthorizeClient(_client, user1, tokenService);
-
-    var request = new AddExerciseToWorkoutSessionRequest(otherUsersExercise.Id);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{session.Id}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-        .SingleAsync(x => x.Id == session.Id);
-
-    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
-    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
-}
-
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnConflict_WhenExerciseAlreadyExists()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user, null, [exercise]);
-
-    var originalExercise = Assert.Single(session.Exercises);
-    var originalExerciseId = originalExercise.Id;
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var request = new AddExerciseToWorkoutSessionRequest(exercise.Id);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{session.Id}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-        .SingleAsync(x => x.Id == session.Id);
-
-    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
-
-    Assert.Equal(originalExerciseId, remainingExercise.Id);
-    Assert.Equal(exercise.Id, remainingExercise.ExerciseId);
-    Assert.Equal(1, remainingExercise.Order);
-}
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnNotFound_WhenExerciseDoesNotExist()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-    var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user, null, [exercise]);
-
-    var originalExerciseId = Assert.Single(session.Exercises).Id;
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var request = new AddExerciseToWorkoutSessionRequest(Guid.NewGuid());
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{session.Id}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-        .SingleAsync(x => x.Id == session.Id);
-
-    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
-
-    Assert.Equal(originalExerciseId, remainingExercise.Id);
-    Assert.Equal(exercise.Id, remainingExercise.ExerciseId);
-}
-
-[Fact]
-public async Task AddExerciseToWorkoutSession_ShouldReturnConflict_WhenSessionIsFinished()
-{
-    // Arrange
-    using var scope = _factory.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
-
-    var user = await UserHelper.CreateUserAsync(userManager);
-
-    var exercise1 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-    var exercise2 = await ExerciseHelper.CreateUserExerciseAsync(db, user);
-
-    var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
-        db, user, null, [exercise1]);
-
-    var originalExerciseId = Assert.Single(session.Exercises).Id;
-
-    AuthHelper.AuthorizeClient(_client, user, tokenService);
-
-    var finishResponse = await _client.PatchAsync(
-        $"/api/workout-sessions/{session.Id}/finish", null);
-
-    Assert.Equal(HttpStatusCode.OK, finishResponse.StatusCode);
-
-    var request = new AddExerciseToWorkoutSessionRequest(exercise2.Id);
-
-    // Act
-    var response = await _client.PostAsJsonAsync(
-        $"/api/workout-sessions/{session.Id}/exercises", request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-
-    db.ChangeTracker.Clear();
-
-    var sessionFromDb = await db.WorkoutSessions
-        .Include(x => x.Exercises)
-        .SingleAsync(x => x.Id == session.Id);
-
-    Assert.NotNull(sessionFromDb.FinishedAt);
-
-    var remainingExercise = Assert.Single(sessionFromDb.Exercises);
-
-    Assert.Equal(originalExerciseId, remainingExercise.Id);
-    Assert.Equal(exercise1.Id, remainingExercise.ExerciseId);
-}
 }
