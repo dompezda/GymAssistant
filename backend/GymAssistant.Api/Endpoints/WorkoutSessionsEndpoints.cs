@@ -160,7 +160,9 @@ public static class WorkoutSessionsEndpoints
                             ))
                             .ToList()
                     ))
-                    .ToList()
+                    .ToList(),
+                session.StartedAt,
+                session.FinishedAt
             );
 
             return Results.Ok(response);
@@ -173,7 +175,6 @@ public static class WorkoutSessionsEndpoints
             AppDbContext db,
             ICurrentUser currentUser) =>
         {
-
             if(request.Sets == null || request.Sets.Length == 0)
                 return Results.BadRequest("Ćwiczenie musi zawierać przynajmniej jedną serię.");
             
@@ -192,6 +193,9 @@ public static class WorkoutSessionsEndpoints
 
             if(session == null)
                 return Results.NotFound("Nie znaleziono treningu.");
+            if(session.FinishedAt!=null)
+                return Results.Conflict("Nie można edytować zakończonej sesji");
+
             var exerciseFromDb = session.Exercises
                 .FirstOrDefault(x=>x.Id == sessionExerciseId);
             if(exerciseFromDb == null)
@@ -254,53 +258,6 @@ public static class WorkoutSessionsEndpoints
 
             return Results.Ok();
         });
-
-        group.MapGet("/{sessionId:guid}/summary", async (
-            Guid sessionId,
-            AppDbContext db,
-            ICurrentUser currentUser) =>
-        {
-    if (sessionId == Guid.Empty)
-        return Results.BadRequest("Id treningu nie może być puste.");
-
-    var session = await db.WorkoutSessions
-        .Where(x => x.UserId == currentUser.UserId)
-        .Include(x => x.Exercises)
-            .ThenInclude(x => x.Sets)
-        .FirstOrDefaultAsync(x => x.Id == sessionId);
-    if (session == null)
-        return Results.NotFound("Nie znaleziono treningu.");
-
-    var result = new WorkoutSessionSummaryResponseDto(
-        StartedAt: session.StartedAt,
-        FinishedAt: session.FinishedAt,
-        SessionExercises: session.Exercises
-        .OrderBy(x=>x.Order)
-        .Select(x =>
-        {
-            return new WorkoutSessionExerciseSummaryDto(
-                ExerciseId: x.ExerciseId,
-                ExerciseName: x.ExerciseNameSnapshot,
-                Sets: x.Sets
-                .OrderBy(x=>x.SetNumber)
-                .Select(y =>
-                {
-                    return new WorkoutSessionSetSummaryDto
-                    (
-                        id: y.Id,
-                        reps:y.Reps,
-                        setNumber: y.SetNumber,
-                        weight: y.Weight
-                    );
-                }).ToArray(),
-                SessionExerciseId:x.Id,
-                Order:x.Order
-            );
-        }).ToArray()
-    );
-
-    return Results.Ok(result);
-});
 
         group.MapDelete("/{sessionId:guid}/exercises/{sessionExerciseId:guid}",async (
             Guid sessionId,
@@ -366,6 +323,8 @@ public static class WorkoutSessionsEndpoints
 
         if (session == null)
             return Results.NotFound("Nie znaleziono treningu.");
+        if(session.FinishedAt!=null)
+            return Results.Conflict("Nie można edytować zakończonej sesji");
         if(session.Exercises.Any(x => x.ExerciseId == request.ExerciseId))
             return Results.Conflict("To ćwiczenie jest już dodane do treningu.");
         var exercise = await db.Exercises
@@ -434,24 +393,11 @@ public record AddExerciseToWorkoutSessionRequest(
     Guid ExerciseId
 );
 
-public record WorkoutSessionSummaryResponseDto(
- DateTime StartedAt,
- DateTime? FinishedAt,
- WorkoutSessionExerciseSummaryDto[] SessionExercises
-);
-
-public record WorkoutSessionExerciseSummaryDto(
-    Guid ExerciseId,
-    WorkoutSessionSetSummaryDto[] Sets,
-    Guid SessionExerciseId,
-    string ExerciseName,
-    int? Order
-);
 
 public record UpdateWorkoutSessionExerciseRequest (
-    WorkoutSessionSetSummaryDto[] Sets
+    UpdateWorkoutSessionSetRequest[] Sets
 );
-public record WorkoutSessionSetSummaryDto(
+public record UpdateWorkoutSessionSetRequest(
     Guid id,
     int setNumber,
     int? reps,
@@ -478,9 +424,11 @@ public record CreateWorkoutSessionSetRequest(
 public record CreateWorkoutSessionResponse(Guid Id);
 
 public record WorkoutSessionResponseDto(
-    Guid? Id,
+    Guid Id,
     Guid? WorkoutTemplateId,
-    List<WorkoutSessionExerciseResponseDto> Exercises
+    List<WorkoutSessionExerciseResponseDto> Exercises,
+    DateTime StartedAt,
+    DateTime? FinishedAt
 );
 
 public record WorkoutSessionExerciseResponseDto
