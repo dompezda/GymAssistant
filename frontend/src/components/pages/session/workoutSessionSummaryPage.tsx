@@ -4,12 +4,10 @@ import { fetchApi } from "../../../api/fetchApi";
 
 type WorkoutSession = {
   id: string;
-  title: string;
   workoutTemplateId: string | null;
-  userId: string;
-  sessionExercises: WorkoutSessionExercise[];
+  exercises: WorkoutSessionExercise[];
   startedAt: string;
-  finishedAt: string;
+  finishedAt: string | null;
 };
 
 type WorkoutSessionExercise = {
@@ -36,10 +34,7 @@ type ExerciseSummary = {
 };
 
 async function fetchSession(id: string): Promise<WorkoutSession> {
-  const response = await fetchApi(`/api/workout-sessions/${id}/summary`);
-
-  console.log(response);
-
+  const response = await fetchApi(`/api/workout-sessions/${id}`);
   if (!response.ok) {
     throw new Error("Błąd przy pobieraniu sesji.");
   }
@@ -70,11 +65,15 @@ export default function WorkoutSessionSummaryPage() {
     return <p>Ładowanie...</p>;
   }
 
-  const startTime = new Date(session.startedAt).getTime();
-  const endTime = new Date(session.finishedAt).getTime();
-  const duration = Math.floor((endTime - startTime) / 1000);
+  const duration = session.finishedAt
+  ? Math.floor(
+      (new Date(session.finishedAt).getTime() -
+        new Date(session.startedAt).getTime()) / 1000
+    )
+  : null;
 
-  const exercisesSummaries = session.sessionExercises.map(
+
+  const exercisesSummaries = session.exercises.map(
     (exer): ExerciseSummary => ({
       name: exer.exerciseName,
       totalReps: exer.sets.reduce(
@@ -114,7 +113,7 @@ export default function WorkoutSessionSummaryPage() {
           <div className="stat-list">
             <div className="stat-row">
               <span>Czas [s]:</span>
-              <strong>{duration}</strong>
+              <strong>{duration !== null ? duration : "Trening trwa"}</strong>
             </div>
 
             <div className="stat-row">

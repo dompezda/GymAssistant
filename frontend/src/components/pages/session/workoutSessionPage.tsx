@@ -6,9 +6,7 @@ import { fetchApi } from "../../../api/fetchApi";
 
 type WorkoutSession = {
   id: string;
-  //title?: string;
   workoutTemplateId: string | null;
-  userId: string;
   exercises: WorkoutSessionExercise[];
 };
 
@@ -167,9 +165,7 @@ if (exercises.length === 0 || !currentExercise) {
       console.log("Nie udało się zakończyć sesji");
       return;
     }
-
-    console.log("Sesja zakończona");
-    navigate(`/workout-sessions/${id}/summary`)
+    navigate(`/workout-sessions/${id}`)
   }
 
   function markExerciseDirty(sessionExerciseId: string) {
