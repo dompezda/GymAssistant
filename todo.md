@@ -10,24 +10,22 @@ System/private exercise ownership is now enforced: normal users create and edit 
 
 Backend integration testing is bootstrapped with xUnit and `WebApplicationFactory`. The test host replaces the normal SQL Server `AppDbContext` configuration with SQLite in-memory and creates the schema for the test host. Current exercise coverage verifies unauthenticated `401 Unauthorized`, two-user private-exercise isolation, visibility of the current user's private exercises together with system exercises, ownership and `IsSystem = false` when creating a private exercise, `400 Bad Request` for an empty exercise name, successful editing of the current user's private exercise including muscle-group changes, blocked edits of another user's or a system exercise with persisted data verified unchanged, muscle-group patch behavior without duplicate relations and with only missing relations added, system-exercise history filtered to the authenticated user's workout sessions, and `404 Not Found` when requesting history for another user's private exercise. Authenticated cases use real JWT bearer tokens generated for Identity users created by the test setup. Reusable `TestHelpers` now centralize common user creation, client authorization, private/system exercise setup (including muscle groups) and workout-template setup so individual tests stay focused on behavior. Workout-template integration tests now cover create validation and ownership, list/detail user isolation, order normalization and successful PATCH behavior. PATCH tests also cover empty title, empty exercises, another user's private exercise, duplicate exercises, non-positive planned sets, adding a system exercise, a missing template id, and blocked access to another user's template with persisted data verified unchanged.
 
-Workout-session integration tests now cover list/detail GET (including finished-session filtering, missing ids and user isolation) and POST creation (persisted ownership, exercise/sets, allowed system/private exercises, inaccessible templates/exercises, empty/duplicate exercises and negative reps/weight). A reusable `WorkoutSessionHelper` prepares sessions for tests. Duplicate exercise validation and negative set-value validation were added to the session POST endpoint. Both POST and PATCH now allow zero and null values for reps/weight.
-
-Workout-session set PATCH integration tests cover updates of existing sets, adding/removing sets, order normalization, validation (empty sets, negative values, empty/duplicate set ids), missing sessions/exercises and ownership isolation. Finish integration tests cover a successful finish, empty id, cross-user access and idempotency: calling finish again leaves `FinishedAt` unchanged. The finish endpoint currently returns `404 Not Found` for a missing or non-owned session; the existing cross-user finish test still expects `400 Bad Request` and must be aligned.
+Workout-session integration coverage now includes GET list/detail, owned and non-owned requests, session creation and validation, set PATCH (including finished-session blocking), finish success/idempotency, exercise POST (valid/invalid, duplicate and ownership cases) and DELETE (removal, cascade deletion, order renumbering, ownership and lifecycle rules). Details GET also returns `StartedAt` and `FinishedAt` and replaces the removed backend `/summary` endpoint; the React summary view still exists. The workout-session test file is organized by GET, POST, PATCH and DELETE. Final suite execution should be rerun locally after removal of stale summary tests.
 
 ## Remaining work
 
-- [ ] Fix `FinishWorkoutSession_ShouldReturnBadRequest_ForOtherUsersSession`: the endpoint now returns `404 Not Found` for a non-owned session, while the test expects `400 Bad Request`.
-- [ ] Add PATCH regression coverage for a finished session and for reusing a set id from another exercise.
-
-- [ ] Define the production-safe seed/admin strategy for creating and maintaining the system exercise catalog.
-- [ ] Expand integration-test coverage to authentication flows, remaining exercise validation cases, remaining template edge cases, workout-session summary/add/delete, remaining PATCH lifecycle edge cases and broader two-user ownership boundaries.
-- [ ] Add workout-session POST/PATCH regression tests explicitly covering zero and null reps/weight values.
-- [ ] Enforce finished-session immutability consistently (especially PATCH sets and POST add exercise). Repeated finish already preserves `FinishedAt`.
-- [ ] Add explicit test-data isolation/reset strategy as the integration-test suite grows.
-- [ ] Extend PATCH rejection assertions to verify persisted template exercises remain unchanged; keep the current rule rejecting duplicate exercises until the template data model supports duplicates.
+- [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
+- [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
+- [x] Add exercise POST/DELETE integration tests for the core success, validation, ordering and access-control cases.
+- [ ] Run the full test suite after test-file cleanup and confirm frontend build.
+- [ ] Decide whether duplicate exercises should remain forbidden within one session (currently rejected).
+- [ ] Review the edge case of reusing a set id from another workout-session exercise in PATCH.
+- [ ] Define the production-safe seed/admin strategy for system exercises.
+- [ ] Expand integration testing to authentication flows, remaining exercise/template edge cases and broader ownership boundaries.
+- [ ] Add explicit test-data isolation/reset strategy for the growing integration suite.
 - [ ] Clean up temporary authentication/debug behavior.
-- [ ] Decide the production access-token storage model instead of treating `localStorage` as final by default.
+- [ ] Decide the production access-token storage model instead of assuming `localStorage`.
 - [ ] Optionally harden explicit logout when the backend is unreachable.
-- [ ] Reset development/demo data before the production-ready release.
+- [ ] Reset development/demo data before production release.
 
 See [Authentication.md](Authentication.md) for the current authentication and authorization flow, [README.md](README.md) for the project status and [Api.md](Api.md) for the HTTP API.
