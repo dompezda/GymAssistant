@@ -59,10 +59,9 @@ The frontend uses `fetchApi` for protected domain requests so bearer-token attac
 | PATCH | `/api/workout-templates/{id}` | Required | Updates an owned workout template |
 | GET | `/api/workout-sessions` | Required | Returns the current user's finished workout sessions |
 | POST | `/api/workout-sessions` | Required | Starts a workout session owned by the current user |
-| GET | `/api/workout-sessions/{id}` | Required | Returns an owned workout session |
+| GET | `/api/workout-sessions/{id}` | Required | Returns owned session details including exercise sets, `startedAt` and nullable `finishedAt` |
 | PATCH | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Required | Updates sets for an exercise inside an owned session |
 | PATCH | `/api/workout-sessions/{sessionId}/finish` | Required | Finishes an owned workout session |
-| GET | `/api/workout-sessions/{sessionId}/summary` | Required | Returns summary data for an owned session |
 | POST | `/api/workout-sessions/{sessionId}/exercises` | Required | Adds an accessible exercise to an owned session |
 | DELETE | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Required | Removes an exercise from an owned active session |
 
@@ -570,7 +569,7 @@ The backend generates session, session-exercise and set ids and normalizes exerc
 
 ## GET `/api/workout-sessions/{id}`
 
-Returns exercises and sets only when the session belongs to the authenticated user.
+Returns exercises and sets together with `id`, `workoutTemplateId`, `startedAt` and nullable `finishedAt`, only when the session belongs to the authenticated user. The same details endpoint supplies active-session editing and the frontend summary view; there is no separate backend `/summary` endpoint.
 
 Exercise names are returned from `ExerciseNameSnapshot`, not the current `Exercise.Name` value.
 
@@ -604,7 +603,7 @@ Validation rejects:
 - empty set ids,
 - duplicate set ids.
 
-Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially from request array order, regardless of the supplied `setNumber` values. The endpoint returns `200 OK` on success, `400 Bad Request` for the validation failures above, and `404 Not Found` if the owned session or its requested exercise cannot be found. The current implementation does not yet prevent updating sets of a finished session.
+Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially from request array order, regardless of the supplied `setNumber` values. The endpoint returns `200 OK` on success, `400 Bad Request` for the validation failures above, and `404 Not Found` if the owned session or its requested exercise cannot be found. Updating a finished session is rejected with `409 Conflict`.
 
 ---
 
@@ -620,14 +619,6 @@ Returns `400 Bad Request` for an empty id and `404 Not Found` when the session c
 
 ---
 
-## GET `/api/workout-sessions/{sessionId}/summary`
-
-Returns summary data for an owned session, including `StartedAt`, `FinishedAt`, ordered session exercises, name snapshots and sets.
-
-Returns `404 Not Found` when the session cannot be resolved for the current user.
-
----
-
 ## POST `/api/workout-sessions/{sessionId}/exercises`
 
 Adds an exercise to an owned workout session.
@@ -640,7 +631,7 @@ OR
 Exercise.OwnerUserId == currentUser.UserId
 ```
 
-The endpoint rejects duplicate exercises in the same session. A new session exercise receives the next order value, an `ExerciseNameSnapshot` and one empty initial set.
+The endpoint rejects duplicate exercises in the same session (`409 Conflict`) and edits to finished sessions (`409 Conflict`). An empty session id or exercise id returns `400 Bad Request`; missing or non-owned sessions and missing/inaccessible exercises return `404 Not Found`. A new session exercise receives the next order value, an `ExerciseNameSnapshot` and one empty initial set. Success returns `200 OK` with the created `WorkoutSessionExerciseResponseDto`.
 
 ---
 
@@ -654,7 +645,7 @@ The endpoint rejects deletion when:
 - the session exercise does not exist,
 - the exercise is the last remaining exercise in the session.
 
-After deletion, remaining exercise order values are recalculated sequentially.
+An empty session id or session-exercise id returns `400 Bad Request`; a missing/non-owned session or missing session exercise returns `404 Not Found`; deleting from a finished session or deleting the last exercise returns `409 Conflict`. After successful deletion, remaining exercise order values are recalculated sequentially and associated sets are deleted.
 
 ### Response `204 No Content`
 
@@ -683,8 +674,7 @@ Registration uses the centralized API base URL but intentionally calls the publi
 - A production-safe seed/admin flow for creating and maintaining system exercises is still required.
 - Existing demo data may need to be reset before the production-ready release.
 - Access JWTs are stored in `localStorage`; the production storage model still needs an explicit security decision.
-- Authentication integration tests, some remaining workout-template edge cases and broader two-user data-isolation coverage are not implemented yet. Workout-template PATCH integration tests cover validation, system exercises, missing templates and ownership isolation. Workout-session integration tests cover GET/POST, set PATCH (updates, additions, removals, ordering, invalid inputs and ownership) and finish (success and idempotency). Summary/add/delete coverage and selected lifecycle edge cases remain.
-- Workout-session edit lifecycle is not fully enforced yet: set updates and adding an exercise currently do not reject a finished session. Repeated finish is already idempotent and preserves `FinishedAt`.
+- Authentication integration tests, some remaining workout-template edge cases and broader two-user data-isolation coverage are not implemented yet. Workout-template PATCH integration tests cover validation, system exercises, missing templates and ownership isolation. Workout-session integration tests cover GET details/list, session creation, adding/deleting exercises, set PATCH, lifecycle restrictions, ownership boundaries and finish idempotency. Further testing of set-id reuse across different exercises remains.
 - If explicit logout cannot reach the backend, frontend state is cleared locally but the server-side refresh token may remain valid until it expires or is later revoked.
 - Password reset, email confirmation, external providers, roles and broader account-management features are outside the current MVP.
 - Most validation is currently implemented directly inside endpoint handlers or ASP.NET Core Identity; FluentValidation is not integrated yet.
