@@ -54,15 +54,17 @@ Implemented:
 - exercise endpoint integration coverage for unauthenticated `401 Unauthorized`, two-user private-exercise visibility isolation, current-user plus system-exercise visibility, private-exercise ownership on create, empty-name `400 Bad Request` validation, successful editing of the current user's private exercise including muscle-group changes, blocked edits of another user's or a system exercise with persisted data verified unchanged, muscle-group patch behavior without duplicate relations and with only missing relations added, system-exercise history isolated to the authenticated user's workout sessions, and `404 Not Found` for another user's private exercise history; authenticated cases use real JWT bearer tokens.
 - workout-template integration coverage for ownership on create, required title/exercises, positive planned-set validation, blocking another user's private exercise, allowing system exercises, duplicate-exercise rejection, create-order normalization, list isolation between users, owned-template detail responses, `404 Not Found` for another user's template, successful PATCH replacement/update behavior, PATCH order normalization, blocked PATCH access to another user's template with persisted data verified unchanged, and PATCH validation for missing title, empty exercises, other users' private exercises, duplicate exercises and non-positive planned sets; PATCH with a system exercise and a missing template id are also covered.
 
-- workout-session integration coverage for GET list/detail, finished-session filtering, user isolation, missing session ids, POST creation and persistence (ownership, exercises, sets, ordering and name snapshots), empty exercises, other users' templates/exercises, allowed system/private exercises, duplicate exercises and negative reps/weight inputs.
-- workout-session POST validation rejects duplicate exercise ids and negative reps/weight values; zero and null are accepted, consistently with set-update PATCH validation.
-- workout-session set PATCH integration coverage for updating existing sets, adding/removing sets, request-order normalization, empty or duplicate set ids, empty set lists, negative values, missing sessions/exercises and cross-user isolation; rejected requests also verify unchanged persisted data.
-- workout-session finish integration coverage for successful completion, missing/empty ids, cross-user access and repeated finish without changing the original `FinishedAt` value.
+- workout-session integration coverage for owned GET list/detail, finished-session history filtering, user isolation, missing sessions, creation validation and persisted session/exercise/set data, including order and name snapshots.
+- workout-session set PATCH coverage for updating/adding/removing sets, order normalization, invalid requests, ownership checks, and rejection of edits after finishing a session.
+- workout-session finish coverage for successful finish, missing/empty ids, cross-user isolation and idempotency (preserved `FinishedAt`).
+- workout-session exercise POST coverage for successful addition with a new empty set, validation, duplicate rejection, ownership boundaries and finished-session immutability; DELETE coverage for removal and cascading set deletion, order renumbering, last-exercise protection, invalid ids and user isolation.
+- a single `GET /api/workout-sessions/{id}` now serves session details (including `StartedAt` and nullable `FinishedAt`) to active-session and summary frontend views. The redundant backend `/summary` endpoint and DTOs were removed; the React summary page remains.
+- workout-session integration tests are grouped by GET, POST, PATCH and DELETE in `WorkoutSessionsEndpointsTests.cs`.
 
 Still in progress / planned hardening:
 
 - final seed/admin strategy for creating and maintaining the system exercise catalog,
-- expand integration-test coverage to authentication flows, remaining exercise validation cases, workout-session summary/add/delete, remaining PATCH lifecycle and cross-exercise set-id edge cases, and broader two-user ownership boundaries,
+- expand integration-test coverage to authentication flows, remaining exercise validation cases, cross-exercise set-id reuse and broader two-user ownership boundaries,
 - add an explicit test-data isolation/reset strategy as the integration-test suite grows,
 - cleanup of temporary authentication/debug code,
 - explicit decision on production access-token storage instead of treating `localStorage` as final by default,
