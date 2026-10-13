@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
@@ -37,7 +37,12 @@ export default function WorkoutSessionPage() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const currentExercise = exercises[currentExerciseIndex];
   const [exerciseModalMode, setExerciseModalMode] = useState<ExerciseModalMode>("closed");
-
+  const [isExerciseMenuOpen,setIsExerciseMenuOpen] = useState<boolean>(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchEndY = useRef<number | null>(null);
+  
   useEffect(() => {
 
     if(!id) return;
@@ -111,7 +116,7 @@ if (exercises.length === 0 || !currentExercise) {
 
   function goToExercise(index: number): void {
     if (index < 0 || index >= exercises.length) return;
-
+    setIsExerciseMenuOpen(false)
     if(dirtyIds.includes(currentExercise.id))
     {
       patchExerciseData(currentExercise)
@@ -296,7 +301,7 @@ if (exercises.length === 0 || !currentExercise) {
     const confirmed = window.confirm(
     `Czy na pewno chcesz usunąć ćwiczenie "${currentExercise.exerciseName}" z tej sesji?`
       );
-
+    setIsExerciseMenuOpen(false);
     if (!confirmed) {
       return;
     }
@@ -327,34 +332,89 @@ if (exercises.length === 0 || !currentExercise) {
       setCurrentExerciseIndex(newIndex);
 
   }
+  function handleSwipeEnd() {
+    const startX = touchStartX.current;
+    const endX = touchEndX.current;
+    const startY = touchStartY.current;
+    const endY = touchEndY.current
+    if (endX == null || startX == null || startY == null || endY == null) {
+      return;
+    }
+
+    const diffX = endX - startX;
+    const diffY = endY - startY;
+    touchEndX.current = null;
+    touchStartX.current = null;
+    touchEndY.current = null;
+    touchStartY.current = null;
+    if(Math.abs(diffX)<Math.abs(diffY))
+      return;
+    if (diffX < -70)
+        goToExercise(currentExerciseIndex + 1);
+    else if (diffX > 70)
+        goToExercise(currentExerciseIndex - 1);
+
+  }
 
   return (
     <section className="page">
   <button className="btn btn-secondary" onClick={() => navigate("/")}>
     ← Wróć
   </button>
-
+<div className="touchArea" onTouchStart={(e)=>
+  {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }}
+  onTouchEnd={(e)=>{
+    touchEndX.current = e.changedTouches[0].clientX;
+    touchEndY.current = e.changedTouches[0].clientY;
+    handleSwipeEnd();
+  }}>
   <header className="workout-session-header">
-    <p>Ćwiczenie {currentExerciseIndex + 1} z {exercises.length}</p>
-    <h1>{currentExercise.exerciseName}</h1>
+      <p>Ćwiczenie {currentExerciseIndex + 1} z {exercises.length}</p>
+    
+    <div className="exercise-header-row">
+      <h1>{currentExercise.exerciseName}</h1>
+      <div>     
+      <button onClick={() => setIsExerciseMenuOpen(prev => !prev)}>...</button>     
+          {isExerciseMenuOpen && (
+        <div className="exercise-dropdown">
+          <button onClick={() => {deleteExercise(currentExercise.id)}}>Usuń ćwiczenie</button>
+        </div>
+      )}
+</div>
+    </div>
   </header>
 
 <article className="exercise-card">
 
-    <button className="btn btn-danger" disabled={exercises.length <= 1} onClick={() => deleteExercise(currentExercise.id)}>
-        - Usuń ćwiczenie
-    </button>
-    <div className="sets-list">
 
+    <div className="sets-list">
+      <div className="set-row">
+      <div className="set-field">
+        Seria
+      </div>
+            <div className="set-field">
+        Ciężar
+      </div>
+      <div className="set-field">
+        Powtórzenia
+      </div>
+      <div></div>
+      </div>
       {currentExercise.sets.map(set => (
         <div className="set-row" key={set.id}>
-          <div className="set-number">Seria {set.setNumber}</div>
+          
+          <div className="set-field">
+            {set.setNumber}
+          </div>
 
           <div className="set-field">
-            <label>Ciężar</label>
             <input
               value={set.weight ?? ""}
               placeholder="kg"
+              inputMode="decimal"
               onChange={(e) => {
                 const value = e.target.value === "" ? null : Number(e.target.value);
                 updateSetValue(set.id, "weight", value);
@@ -363,9 +423,9 @@ if (exercises.length === 0 || !currentExercise) {
           </div>
 
           <div className="set-field">
-            <label>Powtórzenia</label>
             <input
               value={set.reps ?? ""}
+              inputMode="numeric"
               placeholder="reps"
               onChange={(e) => {
                 const value = e.target.value === "" ? null : Number(e.target.value);
@@ -374,17 +434,16 @@ if (exercises.length === 0 || !currentExercise) {
             />
           </div>
           <div>
-            <button onClick={()=>deleteSet(set.id)} disabled={currentExercise.sets.length <= 1}> Usuń serie</button>
-            </div>
+            <button aria-label={`Usuń serię ${set.setNumber}`} onClick={()=>deleteSet(set.id)} disabled={currentExercise.sets.length <= 1}>🗑️</button>
+          </div>
         </div>
       ))}
     </div>
     <div>
       <button className="btn btn-primary" onClick={() => addSet()}> + Dodaj serie</button>
     </div>
-
   </article>
-
+</div>
   <nav className="exercise-navigation">
     <button onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0}>
       ← Poprzednie
@@ -420,6 +479,8 @@ if (exercises.length === 0 || !currentExercise) {
       setExerciseModalMode("closed");
     }}
     />
+
+
 
 </section>
   );

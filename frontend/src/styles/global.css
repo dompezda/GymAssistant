@@ -234,29 +234,17 @@ input[type="checkbox"] {
    Sets
    ========================= */
 
-.sets-row {
-  display: flex;
-  justify-content: center;
+.set-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) 44px;
+  gap: 8px;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
 }
 
 .sets-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.set-row {
   display: grid;
-  grid-template-columns: 90px 1fr 1fr;
-  gap: 12px;
-  align-items: end;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface-muted);
+  padding: 2px;
+  row-gap: 8px;
 }
 
 .set-number {
@@ -437,6 +425,40 @@ input[type="checkbox"] {
 .workout-session-header {
   margin-bottom: 20px;
 }
+.exercise-header-row {
+  display: flex;
+  align-items: center;
+  justify-content:center;
+  text-align: center;
+  position: relative;
+}
+.exercise-header-row button {
+  position: absolute;
+  right: 0;
+}
+.exercise-header-row h1 {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  padding: 0 40px;
+}
+
+.exercise-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 10;
+}
+
+.exercise-dropdown button
+{
+  white-space: nowrap;
+  font-size: 16px;
+  color: var(--color-accent);
+}
 
 .workout-session-progress {
   margin: 0 0 6px;
@@ -475,34 +497,7 @@ input[type="checkbox"] {
   border-radius: 12px;
   font-weight: 600;
 }
-
-/* =========================
-   Responsive
-   ========================= */
-
-@media (max-width: 560px) {
-  .workout-session-page {
-    padding: 16px 12px;
-  }
-
-  .exercise-card {
-    padding: 16px;
-  }
-
-  .set-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .set-number {
-    padding-bottom: 0;
-  }
-
-  .exercise-navigation {
-    flex-direction: column;
-  }
-
-  .form-error {
+ .form-error {
   padding: 10px 12px;
   border-radius: 10px;
   background: var(--color-danger-soft);
@@ -538,5 +533,4 @@ input[type="checkbox"] {
 
 .auth-switch a:hover {
   text-decoration: underline;
-}
 }
