@@ -61,6 +61,14 @@ Implemented:
 - a single `GET /api/workout-sessions/{id}` now serves session details (including `StartedAt` and nullable `FinishedAt`) to active-session and summary frontend views. The redundant backend `/summary` endpoint and DTOs were removed; the React summary page remains.
 - workout-session integration tests are grouped by GET, POST, PATCH and DELETE in `WorkoutSessionsEndpointsTests.cs`.
 
+## Workout session frontend (October 2026)
+
+The active workout session page has a compact, mobile-oriented set grid with four columns (set number, weight, repetitions and delete action), rather than vertically stacked input sections. Weight and repetition inputs request appropriate numeric mobile keyboards through `inputMode`. Exercise deletion is accessible from a small contextual dropdown in the exercise header, with confirmation before deletion.
+
+Touch navigation is implemented over the exercise heading and set-card area: a horizontal swipe exceeding 70 px navigates to the adjacent exercise, while predominantly vertical gestures are ignored. Navigation reuses `goToExercise()` so pending exercise edits follow the existing PATCH-before-navigation flow. Previous/next buttons remain available.
+
+This is an initial swipe implementation, not yet fully hardened. Touches on interactive controls are not filtered, cancelled/multitouch gestures need handling, and concurrent PATCH/navigation requests need protection. Validate behavior on a physical mobile device before treating this flow as complete.
+
 Still in progress / planned hardening:
 
 - final seed/admin strategy for creating and maintaining the system exercise catalog,

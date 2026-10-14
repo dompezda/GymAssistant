@@ -12,11 +12,19 @@ Backend integration testing is bootstrapped with xUnit and `WebApplicationFactor
 
 Workout-session integration coverage now includes GET list/detail, owned and non-owned requests, session creation and validation, set PATCH (including finished-session blocking), finish success/idempotency, exercise POST (valid/invalid, duplicate and ownership cases) and DELETE (removal, cascade deletion, order renumbering, ownership and lifecycle rules). Details GET also returns `StartedAt` and `FinishedAt` and replaces the removed backend `/summary` endpoint; the React summary view still exists. The workout-session test file is organized by GET, POST, PATCH and DELETE. Final suite execution should be rerun locally after removal of stale summary tests.
 
+Frontend update (13 October 2026): the active workout session now uses a compact four-column set layout, numeric mobile keyboards, a contextual exercise-delete dropdown and horizontal swipe between exercises. Swipe is limited to the exercise header/card area, ignores predominantly vertical movement and uses the existing save-on-navigation function. The initial implementation still needs interaction safeguards and verification on real devices.
+
 ## Remaining work
 
 - [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
 - [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
 - [x] Add exercise POST/DELETE integration tests for the core success, validation, ordering and access-control cases.
+- [x] Improve the active workout-session set layout and add a compact exercise-delete menu.
+- [x] Implement initial horizontal swipe navigation between workout-session exercises.
+- [ ] Ignore swipe gestures that originate on inputs, buttons and other interactive controls; handle touch cancellation and multitouch safely.
+- [ ] Prevent overlapping exercise PATCH requests / navigation races (including rapid swipe and button navigation); surface save failures clearly.
+- [ ] Move `markExerciseDirty()` calls outside `setSession()` state updater callbacks, and remove duplicate dirty marking.
+- [ ] Verify workout-session swipe, set edits, menu behavior and responsiveness on an actual mobile device (including narrow viewports).
 - [ ] Run the full test suite after test-file cleanup and confirm frontend build.
 - [ ] Decide whether duplicate exercises should remain forbidden within one session (currently rejected).
 - [ ] Review the edge case of reusing a set id from another workout-session exercise in PATCH.
