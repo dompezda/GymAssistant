@@ -5,12 +5,14 @@ build/
 .env.local
 *.log
 
+
 # .NET
 bin/
 obj/
 *.user
 *.suo
 *.rsuser
+**/TestResults/
 
 # IDE / OS
 .vscode/
