@@ -1,82 +1,94 @@
 # GymAssistant
 
-GymAssistant is a portfolio project for planning workouts, running workout sessions and reviewing training history.
+**A full-stack workout tracking application built with .NET 9 and React.**
+
+GymAssistant helps users organize exercises, prepare workout templates, track sets during a training session, and review completed workouts. It is a personal portfolio project and is actively being developed.
+
+> **Project status:** Work in progress. The core workout flows and authentication are implemented; the UI, automated test coverage, and production-readiness are still being improved. There is currently no public hosted demo.
+
+## Screenshots
+
+The screenshots show the current mobile layout (UI labels are in Polish).
+
+| Main menu | Exercise library | Workout template |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/main-menu.webp" alt="Main menu with shortcuts to exercises, templates, sessions and history" width="260"> | <img src="docs/screenshots/exercise-library.webp" alt="Exercise catalog with search and system exercise badges" width="260"> | <img src="docs/screenshots/workout-template.webp" alt="Workout template showing exercises and planned set counts" width="260"> |
+
+| Active workout | Edit exercise |
+| :---: | :---: |
+| <img src="docs/screenshots/active-workout.webp" alt="Recording weights and repetitions during a workout" width="300"> | <img src="docs/screenshots/edit-exercise.webp" alt="Editing a private exercise and its muscle groups" width="300"> |
+
+## Features
+
+- **Exercise library:** browse system exercises, search the catalog, and create or edit personal exercises with muscle-group assignments.
+- **Workout templates:** create reusable training plans and adjust the included exercises and planned sets.
+- **Workout sessions:** start a session from a template or build one from scratch; record sets, weights, and repetitions; add or remove exercises while the session is active.
+- **Training history:** finish workouts and review previous sessions and exercise history.
+- **User accounts:** register, log in, and access only your own templates, sessions, and private exercises. System exercises are shared and read-only.
 
 ## Tech stack
 
-- Backend: .NET 9, Minimal API, Entity Framework Core, SQL Server
-- Frontend: React, TypeScript, Vite
-- Authentication: ASP.NET Core Identity, JWT bearer access tokens and persisted refresh tokens
-- API documentation/testing: ASP.NET Core OpenAPI with Scalar in Development
-- Integration testing: xUnit, `WebApplicationFactory` and SQLite in-memory
+| Layer | Technologies |
+| --- | --- |
+| Backend | C#, .NET 9, ASP.NET Core Minimal APIs, Entity Framework Core |
+| Database | SQL Server |
+| Frontend | React, TypeScript, Vite |
+| Authentication | ASP.NET Core Identity, JWT access tokens, refresh-token rotation |
+| Testing | xUnit, `WebApplicationFactory`, SQLite in-memory integration tests |
+| API reference | OpenAPI and Scalar in Development |
 
-## Current authentication status
+## Technical highlights
 
-Implemented:
+- **Authentication and session recovery:** short-lived JWT access tokens, refresh tokens stored as hashes in the database, `HttpOnly` refresh cookies, token rotation/revocation, and a centralized `401 → refresh → retry` flow.
+- **Authorization:** user ownership enforced server-side for workout templates, sessions, and private exercises; system exercises remain accessible to all authenticated users.
+- **Session lifecycle:** backend rules prevent modifications to completed sessions and validate exercise/set operations.
+- **Integration testing:** real authenticated HTTP requests against a test host built with `WebApplicationFactory` and SQLite in-memory, including ownership and validation scenarios.
 
-- development user stored through ASP.NET Core Identity,
-- public email/password registration through `POST /api/auth/register`,
-- Identity-enforced unique email addresses and password policy,
-- registration creates an `ApplicationUser` with email used as both `Email` and the technical Identity `UserName`,
-- frontend `/register` page with email/password confirmation, backend validation error display, Login/Register navigation and automatic login after successful registration,
-- JWT access-token generation and validation,
-- `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` and protected `GET /api/auth/me`,
-- `ICurrentUser` abstraction for reading the authenticated user id from JWT claims,
-- frontend login, `AuthProvider`, `useAuth()` and protected routes,
-- access-token persistence in `localStorage`,
-- shared frontend `fetchApi` wrapper that attaches the bearer token to protected API requests,
-- centralized frontend API base URL through `VITE_API_URL` and `getApiUrl()`, with `fetchApi` receiving relative `/api/...` paths,
-- centralized `401 Unauthorized -> refresh -> retry once` handling,
-- concurrent refresh protection through a shared refresh promise and stale-request token comparison,
-- startup/F5 session recovery through `/api/auth/me` plus automatic refresh when necessary,
-- separate frontend auth error state so technical failures are not treated as logout,
-- `RefreshToken` persistence linked to `ApplicationUser` with cascade delete,
-- SHA-256 refresh-token hashes stored as `binary(32)` with a unique index,
-- cryptographically random refresh-token generation and hashing through `IRefreshTokenService`,
-- refresh-token creation during successful login,
-- refresh-token validation, rotation and revocation,
-- refresh-token lifetime configured through `RefreshTokenOptions` / `RefreshToken:LifetimeDays` with startup validation,
-- raw refresh token stored in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie while only its hash is stored in SQL Server,
-- server-side logout that revokes the active refresh token and deletes the cookie,
-- credential-enabled CORS with the allowed frontend origin read from `Frontend:Origin`,
-- development-only OpenAPI/Scalar API reference for manual endpoint testing,
-- authorization and user-data isolation for workout templates,
-- authorization and user-data isolation for workout sessions,
-- exercise visibility rules: system exercises are global and private exercises are scoped to their owner,
-- ordinary users can create and edit only their own private exercises; `IsSystem` is no longer accepted from create/edit requests,
-- database check constraint enforcing valid `IsSystem` / `OwnerUserId` combinations,
-- system exercises are marked with a `System` badge in the exercise picker and main exercise list,
-- system exercise details use a read-only frontend mode: the name and muscle groups cannot be changed and the edit action is not rendered,
-- exercise history filtered through the authenticated user's workout sessions,
-- protected muscle-group endpoint,
-- backend integration-test host based on `WebApplicationFactory` with the production SQL Server registration replaced by SQLite in-memory,
-- reusable integration-test helpers for Identity user creation, JWT client authorization, private/system exercise setup (including muscle groups) workout-template setup and workout-session setup,
-- exercise endpoint integration coverage for unauthenticated `401 Unauthorized`, two-user private-exercise visibility isolation, current-user plus system-exercise visibility, private-exercise ownership on create, empty-name `400 Bad Request` validation, successful editing of the current user's private exercise including muscle-group changes, blocked edits of another user's or a system exercise with persisted data verified unchanged, muscle-group patch behavior without duplicate relations and with only missing relations added, system-exercise history isolated to the authenticated user's workout sessions, and `404 Not Found` for another user's private exercise history; authenticated cases use real JWT bearer tokens.
-- workout-template integration coverage for ownership on create, required title/exercises, positive planned-set validation, blocking another user's private exercise, allowing system exercises, duplicate-exercise rejection, create-order normalization, list isolation between users, owned-template detail responses, `404 Not Found` for another user's template, successful PATCH replacement/update behavior, PATCH order normalization, blocked PATCH access to another user's template with persisted data verified unchanged, and PATCH validation for missing title, empty exercises, other users' private exercises, duplicate exercises and non-positive planned sets; PATCH with a system exercise and a missing template id are also covered.
+For implementation details, see [Authentication.md](Authentication.md) and [Api.md](Api.md).
 
-- workout-session integration coverage for owned GET list/detail, finished-session history filtering, user isolation, missing sessions, creation validation and persisted session/exercise/set data, including order and name snapshots.
-- workout-session set PATCH coverage for updating/adding/removing sets, order normalization, invalid requests, ownership checks, and rejection of edits after finishing a session.
-- workout-session finish coverage for successful finish, missing/empty ids, cross-user isolation and idempotency (preserved `FinishedAt`).
-- workout-session exercise POST coverage for successful addition with a new empty set, validation, duplicate rejection, ownership boundaries and finished-session immutability; DELETE coverage for removal and cascading set deletion, order renumbering, last-exercise protection, invalid ids and user isolation.
-- a single `GET /api/workout-sessions/{id}` now serves session details (including `StartedAt` and nullable `FinishedAt`) to active-session and summary frontend views. The redundant backend `/summary` endpoint and DTOs were removed; the React summary page remains.
-- workout-session integration tests are grouped by GET, POST, PATCH and DELETE in `WorkoutSessionsEndpointsTests.cs`.
+## Getting started (local development)
 
-## Workout session frontend (October 2026)
+**Prerequisites:** .NET 9 SDK, SQL Server, Node.js/npm, and the `dotnet-ef` tool (EF Core 9 compatible).
 
-The active workout session page has a compact, mobile-oriented set grid with four columns (set number, weight, repetitions and delete action), rather than vertically stacked input sections. Weight and repetition inputs request appropriate numeric mobile keyboards through `inputMode`. Exercise deletion is accessible from a small contextual dropdown in the exercise header, with confirmation before deletion.
+1. Clone this repository and configure a local SQL Server instance. Adjust `ConnectionStrings:DefaultConnection` as needed using local configuration or user secrets.
+2. Configure a strong JWT signing key and a development-user password in ASP.NET Core user secrets (do not commit actual credentials):
 
-Touch navigation is implemented over the exercise heading and set-card area: a horizontal swipe exceeding 70 px navigates to the adjacent exercise, while predominantly vertical gestures are ignored. Navigation reuses `goToExercise()` so pending exercise edits follow the existing PATCH-before-navigation flow. Previous/next buttons remain available.
+   ```powershell
+   dotnet user-secrets set "Jwt:SigningKey" "<a-random-secret-of-at-least-32-bytes>" --project backend/GymAssistant.Api/GymAssistant.Api.csproj
+   dotnet user-secrets set "DevelopmentUser:Password" "<strong-local-password>" --project backend/GymAssistant.Api/GymAssistant.Api.csproj
+   ```
 
-This is an initial swipe implementation, not yet fully hardened. Touches on interactive controls are not filtered, cancelled/multitouch gestures need handling, and concurrent PATCH/navigation requests need protection. Validate behavior on a physical mobile device before treating this flow as complete.
+3. Apply database migrations and start the API:
 
-Still in progress / planned hardening:
+   ```powershell
+   dotnet ef database update --project backend/GymAssistant.Api/GymAssistant.Api.csproj --startup-project backend/GymAssistant.Api/GymAssistant.Api.csproj
+   dotnet run --project backend/GymAssistant.Api/GymAssistant.Api.csproj --launch-profile http
+   ```
 
-- final seed/admin strategy for creating and maintaining the system exercise catalog,
-- expand integration-test coverage to authentication flows, remaining exercise validation cases, cross-exercise set-id reuse and broader two-user ownership boundaries,
-- add an explicit test-data isolation/reset strategy as the integration-test suite grows,
-- cleanup of temporary authentication/debug code,
-- explicit decision on production access-token storage instead of treating `localStorage` as final by default,
-- optional hardening for the edge case where explicit logout cannot reach the backend,
-- reset of development/demo data before the production-ready release.
+4. Create `frontend/.env.local` with the backend URL, then start the frontend:
 
-See [Authentication.md](Authentication.md) for the current authentication and authorization flow, [Api.md](Api.md) for the HTTP API and [todo.md](todo.md) for the implementation checklist.
+   ```dotenv
+   VITE_API_URL=http://localhost:5235
+   ```
+
+   ```powershell
+   cd frontend
+   npm ci
+   npm run dev
+   ```
+
+The development frontend is configured for `http://localhost:5173`. The API's HTTP port is defined by its launch profile; update `VITE_API_URL` if yours differs. Local HTTPS/cookie behavior may require using the HTTPS launch profile and matching origins.
+
+### Integration tests
+
+```powershell
+dotnet test backend/GymAssistant.sln
+```
+
+## Documentation and roadmap
+
+- [API reference](Api.md) — endpoints, request/response examples, and authorization rules.
+- [Authentication design](Authentication.md) — login, refresh, logout, token storage, and authorization flow.
+- [Development notes and outstanding tasks](todo.md) — current implementation checklist and known issues.
+
+**Known work in progress:** mobile gesture edge cases and navigation races, additional integration tests, and final review of production authentication configuration. This repository demonstrates the current implementation rather than a production-ready service.
