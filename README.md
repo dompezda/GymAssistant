@@ -42,6 +42,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 - **Authentication and session recovery:** short-lived JWT access tokens, refresh tokens stored as hashes in the database, `HttpOnly` refresh cookies, token rotation/revocation, and a centralized `401 → refresh → retry` flow.
 - **Authorization:** user ownership enforced server-side for workout templates, sessions, and private exercises; system exercises remain accessible to all authenticated users.
 - **Session lifecycle:** backend rules prevent modifications to completed sessions and validate exercise/set operations.
+- **Active workout save coordination:** a component-level in-flight guard prevents overlapping writes and temporarily disables controls; changed exercises are saved before switching, and the finish flow retains failed exercise writes for retry rather than silently discarding them.
 - **Integration testing:** real authenticated HTTP requests against a test host built with `WebApplicationFactory` and SQLite in-memory, including ownership and validation scenarios.
 
 For implementation details, see [Authentication.md](Authentication.md) and [Api.md](Api.md).
@@ -91,4 +92,4 @@ dotnet test backend/GymAssistant.sln
 - [Authentication design](Authentication.md) — login, refresh, logout, token storage, and authorization flow.
 - [Development notes and outstanding tasks](todo.md) — current implementation checklist and known issues.
 
-**Known work in progress:** mobile gesture edge cases and navigation races, additional integration tests, and final review of production authentication configuration. This repository demonstrates the current implementation rather than a production-ready service.
+**Known work in progress:** consistent user-visible API/save error feedback, guarding against unsaved changes when leaving the workout screen, mobile gesture edge cases, failure-path testing and additional integration tests, and final review of production authentication configuration. This repository demonstrates the current implementation rather than a production-ready service.
