@@ -42,6 +42,8 @@ export default function WorkoutSessionPage() {
   const touchEndX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchEndY = useRef<number | null>(null);
+  const isSavingRef = useRef<boolean>(false);
+  const [isSaving,setIsSaving] = useState<boolean>(false)
   
   useEffect(() => {
 
@@ -80,17 +82,16 @@ if (exercises.length === 0 || !currentExercise) {
   field: "weight" | "reps",
   value: number | null
 ) {
+  if (isSavingRef.current) return;
   if (!currentExercise) return;
-
   setDirtyIds(prev =>
     prev.includes(currentExercise.id)
       ? prev
       : [...prev, currentExercise.id]
   );
-
-  setSession(prev => {
+    setSession(prev => {
     if (!prev) return prev;
-    markExerciseDirty(currentExercise.id);
+    //markExerciseDirty(currentExercise.id);
     return {
       ...prev,
       exercises: prev.exercises.map(exercise => {
@@ -112,31 +113,43 @@ if (exercises.length === 0 || !currentExercise) {
       })
     };
   });
-}
-
-  function goToExercise(index: number): void {
-    if (index < 0 || index >= exercises.length) return;
-    setIsExerciseMenuOpen(false)
-    if(dirtyIds.includes(currentExercise.id))
-    {
-      patchExerciseData(currentExercise)
-        .then((x)=>
-          {
-            if(x.ok)
-            {
-              setCurrentExerciseIndex(index);
-              
-              setDirtyIds(dirtyIds.filter((prev) => currentExercise.id !==prev));    
-            };
-          })
-    }
-    else
-      setCurrentExerciseIndex(index);
   }
 
+  async function goToExercise(index: number): Promise<void> {
+    if (isSavingRef.current == true) return;
+    if (index < 0 || index >= exercises.length) return;
+    setIsExerciseMenuOpen(false)
+    isSavingRef.current = true;
+    setIsSaving(true);
+    try {
+      const res = await saveCurrentExerciseIfDirty();
+      if(res)
+        setCurrentExerciseIndex(index);
+    } catch (error) {
+      console.log(error);
+    }
+    finally
+    {
+      setIsSaving(false);
+      isSavingRef.current = false;
+    }
+  }
+
+  async function saveCurrentExerciseIfDirty(): Promise<boolean>
+  {
+    if(!dirtyIds.includes(currentExercise.id))
+      return true;
+    const res = await patchExerciseData(currentExercise)  
+    if(res.ok)
+    {
+      setDirtyIds(prev => prev.filter((elem) => currentExercise.id !==elem)); 
+      return true; 
+    }
+    return false;
+  }
   
   async function patchExerciseData (sessionExercise: WorkoutSessionExercise) : Promise<Response> {
-    return  fetchApi(`/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
+    return fetchApi(`/api/workout-sessions/${id}/exercises/${sessionExercise.id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json"
@@ -148,30 +161,55 @@ if (exercises.length === 0 || !currentExercise) {
   }
 
   async function finishSession() {
+
+    if (isSavingRef.current) return;
+
+    isSavingRef.current = true;
+    setIsSaving(true);
+    
     const dirtyExercises = exercises.filter(x => dirtyIds.includes(x.id));
+    try
+    {
+        const responses = await Promise.allSettled(
+        dirtyExercises.map(exercise => patchExerciseData(exercise))
+      );
 
-    const responses = await Promise.all(
-      dirtyExercises.map(exercise => patchExerciseData(exercise))
-    );
-
-    if (!responses.every(response => response.ok)) {
-      console.log("Nie udało się zapisać wszystkich ćwiczeń");
-      return;
-    }
-
-    const finishResponse = await fetchApi(`/api/workout-sessions/${id}/finish`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json"
+      const savedIds = dirtyExercises
+        .filter((exercise, index) => responses[index].status == "fulfilled" && responses[index].value.ok)
+        .map(exercise => exercise.id);
+      setDirtyIds(prev =>
+        prev.filter(id => !savedIds.includes(id))
+      );
+      if (!responses.every(response => response.status == "fulfilled" && response.value.ok)) {
+        console.log("Nie udało się zapisać wszystkich ćwiczeń.");
+        return;
       }
-    });
 
-    if (!finishResponse.ok) {
-      console.log("Nie udało się zakończyć sesji");
-      return;
+      const finishResponse = await fetchApi(`/api/workout-sessions/${id}/finish`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!finishResponse.ok) {
+        console.log("Nie udało się zakończyć sesji");
+        return;
+      }
+
+      console.log("Przed navigate", finishResponse.status);
+      navigate(`/workout-sessions/${id}/summary`);
     }
-    navigate(`/workout-sessions/${id}`)
-  }
+    catch (error)
+    {
+      console.log(error);
+    }
+    finally
+    {
+      setIsSaving(false);
+      isSavingRef.current=false;
+    }
+}
 
   function markExerciseDirty(sessionExerciseId: string) {
   setDirtyIds(prev =>
@@ -182,8 +220,8 @@ if (exercises.length === 0 || !currentExercise) {
 }
 
   function addSet(): void {
-
-
+    if(isSavingRef.current==true) return;
+    markExerciseDirty(currentExercise.id);
     setSession((prev)=> 
     {
       if(!prev)
@@ -202,7 +240,7 @@ if (exercises.length === 0 || !currentExercise) {
           weight: null,  
           reps : null,           
         }
-        markExerciseDirty(currentExercise.id);
+        //markExerciseDirty(currentExercise.id);
 
       return {
         ...exercise,
@@ -212,10 +250,18 @@ if (exercises.length === 0 || !currentExercise) {
           newSet
         ]
       }
-    })}})
+    })}
+    
+  })
   }
 
   function deleteSet(setId: string): void {
+    if (isSavingRef.current) return;
+    if (currentExercise.sets.length <= 1) return;
+    if (!currentExercise.sets.some(set => set.id === setId)) return;
+
+    markExerciseDirty(currentExercise.id);
+    
     setSession((prev)=>{
       if(!prev)
         return prev;
@@ -228,8 +274,6 @@ if (exercises.length === 0 || !currentExercise) {
 
           if(exercise.sets.length<=1)
             return exercise
-
-          markExerciseDirty(currentExercise.id);
           return {
             ...exercise,
             sets: exercise.sets.filter((set)=> set.id !==setId)
@@ -245,16 +289,23 @@ if (exercises.length === 0 || !currentExercise) {
   }
 
   async function addExerciseToCurrentSession(exerciseId:string) {
+    if(isSavingRef.current==true) return;
     if (!session) return;
 
     const existingIndex = session.exercises.findIndex(
       x => x.exerciseId === exerciseId
     );
     if (existingIndex !== -1) {
-      setCurrentExerciseIndex(existingIndex);
+      goToExercise(existingIndex);
       return;
     }
+    isSavingRef.current=true;
+    setIsSaving(true);
     const newExerciseIndex = session.exercises.length;
+    try
+    {
+    const saved = await saveCurrentExerciseIfDirty();
+    if (!saved) return;
     const response = await fetchApi(`/api/workout-sessions/${session.id}/exercises`, {
       method: "POST",
       headers: {
@@ -285,19 +336,28 @@ if (exercises.length === 0 || !currentExercise) {
           exercises: [...prev.exercises, newSessionExercise],
         };
       });
-      
-      if(session.exercises.length===1)
-        setCurrentExerciseIndex(0)
-      else  
-        setCurrentExerciseIndex(newExerciseIndex);
+
+      setCurrentExerciseIndex(newExerciseIndex);
+    }
+    catch(error)
+    {
+      console.log(error);
+    }
+    finally
+    {
+      isSavingRef.current=false;
+      setIsSaving(false);
+    }
   }
 
   async function deleteExercise(id: string): Promise<void> {
+    if(isSavingRef.current == true) return;
     if(!session) return;
     if(!id) return;
     if(!session.exercises.some((e)=>e.id==id)) return;
 
-    console.log(id);
+
+    try {
     const confirmed = window.confirm(
     `Czy na pewno chcesz usunąć ćwiczenie "${currentExercise.exerciseName}" z tej sesji?`
       );
@@ -305,7 +365,8 @@ if (exercises.length === 0 || !currentExercise) {
     if (!confirmed) {
       return;
     }
-
+    isSavingRef.current = true;
+    setIsSaving(true);
     const response = await fetchApi(`/api/workout-sessions/${session.id}/exercises/${id}`, {
       method: "DELETE",
       headers: {
@@ -315,9 +376,10 @@ if (exercises.length === 0 || !currentExercise) {
 
     if(!response.ok)
     {
-      console.log(`Błąd przy usuwaniu ${response.body}`);
+      console.error("Błąd przy usuwaniu:", response.status);
       return;
     }
+    setDirtyIds(prev => prev.filter(exerciseId => exerciseId !== id));
     const newExercises = session.exercises.filter((e)=>e.id!==id);
     const newIndex = Math.min(currentExerciseIndex, newExercises.length - 1)
     setSession((prev)=>{
@@ -330,7 +392,13 @@ if (exercises.length === 0 || !currentExercise) {
         };
       });
       setCurrentExerciseIndex(newIndex);
-
+    } catch (error) {
+        console.error(error);
+    } finally {
+        isSavingRef.current = false;
+        setIsSaving(false);
+    }
+    
   }
   function handleSwipeEnd() {
     const startX = touchStartX.current;
@@ -380,7 +448,7 @@ if (exercises.length === 0 || !currentExercise) {
       <button onClick={() => setIsExerciseMenuOpen(prev => !prev)}>...</button>     
           {isExerciseMenuOpen && (
         <div className="exercise-dropdown">
-          <button onClick={() => {deleteExercise(currentExercise.id)}}>Usuń ćwiczenie</button>
+          <button disabled={isSaving} onClick={() => {deleteExercise(currentExercise.id)}}>Usuń ćwiczenie</button>
         </div>
       )}
 </div>
@@ -415,6 +483,7 @@ if (exercises.length === 0 || !currentExercise) {
               value={set.weight ?? ""}
               placeholder="kg"
               inputMode="decimal"
+              disabled={isSaving}
               onChange={(e) => {
                 const value = e.target.value === "" ? null : Number(e.target.value);
                 updateSetValue(set.id, "weight", value);
@@ -426,6 +495,7 @@ if (exercises.length === 0 || !currentExercise) {
             <input
               value={set.reps ?? ""}
               inputMode="numeric"
+              disabled={isSaving}
               placeholder="reps"
               onChange={(e) => {
                 const value = e.target.value === "" ? null : Number(e.target.value);
@@ -434,29 +504,37 @@ if (exercises.length === 0 || !currentExercise) {
             />
           </div>
           <div>
-            <button aria-label={`Usuń serię ${set.setNumber}`} onClick={()=>deleteSet(set.id)} disabled={currentExercise.sets.length <= 1}>🗑️</button>
+            <button aria-label={`Usuń serię ${set.setNumber}`} onClick={
+              ()=>
+                {
+                  deleteSet(set.id);
+                }} 
+              disabled={currentExercise.sets.length <= 1 || isSaving}>🗑️</button>
           </div>
         </div>
       ))}
     </div>
     <div>
-      <button className="btn btn-primary" onClick={() => addSet()}> + Dodaj serie</button>
+      <button disabled={isSaving} className="btn btn-primary" onClick={() => 
+        {
+          addSet();
+        }}> + Dodaj serie</button>
     </div>
   </article>
 </div>
   <nav className="exercise-navigation">
-    <button onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0}>
+    <button onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0 || isSaving}>
       ← Poprzednie
     </button>
-    <button onClick={() => goToExercise(currentExerciseIndex + 1)} disabled={currentExerciseIndex === exercises.length - 1}>
+    <button onClick={() => goToExercise(currentExerciseIndex + 1)} disabled={currentExerciseIndex === exercises.length - 1 || isSaving}>
       Następne →
     </button>
   </nav>
   <div>
-    <button className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
+    <button disabled= {isSaving} className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
         + Dodaj ćwiczenie
     </button>
-  <button className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
+  <button disabled={isSaving} className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
     Zakończ trening
     </button>
     <ExercisePickerModal
