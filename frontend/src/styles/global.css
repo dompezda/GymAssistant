@@ -534,3 +534,12 @@ input[type="checkbox"] {
 .auth-switch a:hover {
   text-decoration: underline;
 }
+.refresh-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.refresh-row > .btn {
+  flex: 1;
+}

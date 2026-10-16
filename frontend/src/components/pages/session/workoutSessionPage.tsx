@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
+import { RefreshCw } from "lucide-react";
 
 type WorkoutSession = {
   id: string;
@@ -43,40 +44,96 @@ export default function WorkoutSessionPage() {
   const touchStartY = useRef<number | null>(null);
   const touchEndY = useRef<number | null>(null);
   const isSavingRef = useRef<boolean>(false);
-  const [isSaving,setIsSaving] = useState<boolean>(false)
-  
-  useEffect(() => {
+  const [isSaving,setIsSaving] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    if(!id) return;
-    console.log("Fetching workout session with ID:", id);
-    fetchApi(`/api/workout-sessions/${id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json"
+useEffect(() => {
+  loadSession();
+}, [id]);
+
+
+async function loadSession(): Promise<boolean> {
+  if(!id) return false;
+  try {
+    const res = await fetchApi(`/api/workout-sessions/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      if(!res.ok)
+      {
+        setErrorMessage("Błąd przy odczycie sesji z serwera. Spróbuj ponownie.")
+        return false;
       }
-    })
-      .then(async response => {
-  if (!response.ok) {
-    console.error(await response.text());
-    return;
+      const data = await res.json();
+      setSession(data);
+      setCurrentExerciseIndex(0);
+  } catch(error) {
+    console.error("Błąd pobieranie sesji",error);
+    setErrorMessage("Błąd połączenia z serwerem. Spróbuj ponownie.");
+    return false;
   }
+  return true;
+}
 
-      return response.json();
-        })      .then(data => {
-            setSession(data);
-            setCurrentExerciseIndex(0);
-          })
-          
+async function refreshSession(): Promise<void> {
+  if(!id) return;
+  if(isSavingRef.current == true) return;
+  if(dirtyIds.length>0)
+  {
+    const confirm = window.confirm("W sesji istnieją niezapisane w bazie dane. Przy odświeżeniu sesji zostaną utracone.")
+    if(!confirm) return;
+  }
+  setErrorMessage(null);
+  setIsSaving(true);
+  isSavingRef.current=true;
+  try {
+    const res = await loadSession();
+    if(!res)
+    {
+      return;
+    }
+    setDirtyIds([]);
+  }
+  finally
+  {
+      setIsSaving(false);
+      isSavingRef.current=false;
+  }
+}
 
-  }, [id]);
-
-  if (!session) {
-  return <p>Ładowanie sesji...</p>;
+if (!session) {
+  return (
+    <section className="page">
+      {errorMessage ? (
+        <>
+          <p>{errorMessage}</p>
+          <button onClick={refreshSession} disabled={isSaving}>
+            Spróbuj ponownie
+          </button>
+        </>
+      ) : (
+        <p>Ładowanie sesji...</p>
+      )}
+    </section>
+  );
 }
 
 if (exercises.length === 0 || !currentExercise) {
-  return <p>Brak ćwiczeń w tej sesji.</p>;
+  return (
+    <section className="page">
+      <p>Brak ćwiczeń w tej sesji.</p>
+      <button onClick={refreshSession} disabled={isSaving}>
+        Odśwież sesję
+      </button>
+      <button onClick={() => navigate("/")}>
+        ← Wróć
+      </button>
+    </section>
+  );
 }
+
   function updateSetValue(
   setId: string,
   field: "weight" | "reps",
@@ -91,7 +148,6 @@ if (exercises.length === 0 || !currentExercise) {
   );
     setSession(prev => {
     if (!prev) return prev;
-    //markExerciseDirty(currentExercise.id);
     return {
       ...prev,
       exercises: prev.exercises.map(exercise => {
@@ -116,8 +172,10 @@ if (exercises.length === 0 || !currentExercise) {
   }
 
   async function goToExercise(index: number): Promise<void> {
+
     if (isSavingRef.current == true) return;
     if (index < 0 || index >= exercises.length) return;
+    setErrorMessage(null);
     setIsExerciseMenuOpen(false)
     isSavingRef.current = true;
     setIsSaving(true);
@@ -125,8 +183,12 @@ if (exercises.length === 0 || !currentExercise) {
       const res = await saveCurrentExerciseIfDirty();
       if(res)
         setCurrentExerciseIndex(index);
-    } catch (error) {
-      console.log(error);
+      else
+      {
+        setErrorMessage("Brak połączenia z serwerem. Sprawdź połączenie i spróbuj ponownie.");
+      }
+    } catch {
+      setErrorMessage("Nie udało się zapisać ćwiczenia. Spróbuj ponownie.");
     }
     finally
     {
@@ -163,7 +225,7 @@ if (exercises.length === 0 || !currentExercise) {
   async function finishSession() {
 
     if (isSavingRef.current) return;
-
+    setErrorMessage(null);
     isSavingRef.current = true;
     setIsSaving(true);
     
@@ -177,11 +239,12 @@ if (exercises.length === 0 || !currentExercise) {
       const savedIds = dirtyExercises
         .filter((exercise, index) => responses[index].status == "fulfilled" && responses[index].value.ok)
         .map(exercise => exercise.id);
+
       setDirtyIds(prev =>
         prev.filter(id => !savedIds.includes(id))
       );
       if (!responses.every(response => response.status == "fulfilled" && response.value.ok)) {
-        console.log("Nie udało się zapisać wszystkich ćwiczeń.");
+        setErrorMessage("Nie udało się zapisać wszystkich ćwiczeń.");
         return;
       }
 
@@ -193,16 +256,14 @@ if (exercises.length === 0 || !currentExercise) {
       });
 
       if (!finishResponse.ok) {
-        console.log("Nie udało się zakończyć sesji");
+        setErrorMessage("Nie udało się zakończyć sesji");
         return;
       }
-
-      console.log("Przed navigate", finishResponse.status);
       navigate(`/workout-sessions/${id}/summary`);
     }
-    catch (error)
-    {
-      console.log(error);
+      catch (error) {
+      console.error("Finish session failed:", error);
+      setErrorMessage("Wystąpił nieoczekiwany błąd. Spróbuj ponownie.");
     }
     finally
     {
@@ -299,13 +360,18 @@ if (exercises.length === 0 || !currentExercise) {
       goToExercise(existingIndex);
       return;
     }
+    setErrorMessage(null);
     isSavingRef.current=true;
     setIsSaving(true);
     const newExerciseIndex = session.exercises.length;
     try
     {
     const saved = await saveCurrentExerciseIfDirty();
-    if (!saved) return;
+    if (!saved)
+    {
+      setErrorMessage("Nie udało się zapisać aktualnego ćwiczenia.");
+      return;
+    } 
     const response = await fetchApi(`/api/workout-sessions/${session.id}/exercises`, {
       method: "POST",
       headers: {
@@ -316,8 +382,9 @@ if (exercises.length === 0 || !currentExercise) {
       })
     });
     if (!response.ok) {
+      setErrorMessage("Nie udało się dodać ćwiczenia.")
       const error = await response.text();
-      console.error(error);
+      console.error(`Nie udało się dodać ćwiczenia. ${error}`);
       return;
     }
     const data = await response.json();
@@ -339,9 +406,9 @@ if (exercises.length === 0 || !currentExercise) {
 
       setCurrentExerciseIndex(newExerciseIndex);
     }
-    catch(error)
-    {
-      console.log(error);
+    catch (error) {
+      console.error("Błąd podczas dodawania ćwiczenia:", error);
+      setErrorMessage("Wystąpił nieoczekiwany błąd. Spróbuj ponownie.");
     }
     finally
     {
@@ -355,9 +422,6 @@ if (exercises.length === 0 || !currentExercise) {
     if(!session) return;
     if(!id) return;
     if(!session.exercises.some((e)=>e.id==id)) return;
-
-
-    try {
     const confirmed = window.confirm(
     `Czy na pewno chcesz usunąć ćwiczenie "${currentExercise.exerciseName}" z tej sesji?`
       );
@@ -365,8 +429,10 @@ if (exercises.length === 0 || !currentExercise) {
     if (!confirmed) {
       return;
     }
+    setErrorMessage(null);
     isSavingRef.current = true;
     setIsSaving(true);
+    try {
     const response = await fetchApi(`/api/workout-sessions/${session.id}/exercises/${id}`, {
       method: "DELETE",
       headers: {
@@ -376,6 +442,7 @@ if (exercises.length === 0 || !currentExercise) {
 
     if(!response.ok)
     {
+      setErrorMessage("Nie udało się usunąć ćwiczenia. Spróbuj ponownie.");
       console.error("Błąd przy usuwaniu:", response.status);
       return;
     }
@@ -394,6 +461,7 @@ if (exercises.length === 0 || !currentExercise) {
       setCurrentExerciseIndex(newIndex);
     } catch (error) {
         console.error(error);
+        setErrorMessage("Wystąpił nieoczekiwany błąd. Spróbuj ponownie.");
     } finally {
         isSavingRef.current = false;
         setIsSaving(false);
@@ -426,9 +494,18 @@ if (exercises.length === 0 || !currentExercise) {
 
   return (
     <section className="page">
-  <button className="btn btn-secondary" onClick={() => navigate("/")}>
-    ← Wróć
-  </button>
+      <div className="refresh-row">
+        <button className="btn btn-secondary" onClick={() => navigate("/")}>
+            ← Wróć
+        </button>
+        <button  type="button" aria-label="Odśwież dane sesji" title="Odśwież dane sesji"
+        onClick={refreshSession}
+        disabled={isSaving}
+      >
+        <RefreshCw size={18} />
+      </button>
+      </div>
+
 <div className="touchArea" onTouchStart={(e)=>
   {
     touchStartX.current = e.touches[0].clientX;
@@ -449,9 +526,9 @@ if (exercises.length === 0 || !currentExercise) {
           {isExerciseMenuOpen && (
         <div className="exercise-dropdown">
           <button disabled={isSaving} onClick={() => {deleteExercise(currentExercise.id)}}>Usuń ćwiczenie</button>
-        </div>
+        </div>     
       )}
-</div>
+    </div>
     </div>
   </header>
 
@@ -522,7 +599,9 @@ if (exercises.length === 0 || !currentExercise) {
     </div>
   </article>
 </div>
+  <div>{errorMessage}</div>
   <nav className="exercise-navigation">
+    
     <button onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0 || isSaving}>
       ← Poprzednie
     </button>
