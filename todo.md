@@ -16,29 +16,57 @@ Frontend update (13 October 2026): the active workout session uses a compact fou
 
 Frontend update (15 October 2026): active-workout write operations and exercise navigation now share a component-local `isSavingRef` guard with `isSaving` used to disable interactive controls. `saveCurrentExerciseIfDirty()` saves an edited exercise before switching to another exercise or adding a new one. Finishing uses `Promise.allSettled()` to remove successful exercise IDs from `dirtyIds`, retain failed ones for retry, and avoid calling `/finish` until the exercise writes succeed. After a successful finish, React navigates to `/workout-sessions/:id/summary`, which uses the existing session-details GET. Manual DevTools throttling (200 kb/s, 5000 ms latency) confirmed disabled UI during PATCH/DELETE and no duplicate PATCH on repeated navigation clicks; explicit failure-path tests and the full build/test suite are still pending.
 
-## Remaining work
+## Roadmap
 
+### Must-have — before first public release (v1.0)
+
+#### Error handling and data safety
+- [ ] Show consistent, user-visible API/save/finish errors instead of relying on `console.log` / `console.error`; agree on a backend error response contract.
+- [ ] Verify failed PATCH/POST/DELETE flows: release the save lock, preserve unsaved edits, allow retry and avoid unintended navigation.
+- [ ] Protect unsaved workout edits when leaving the page or reloading it.
+- [ ] Review the PATCH edge case where a set ID belongs to another workout-session exercise.
+
+#### UI/UX consistency
+- [ ] Unify buttons, forms, modals, spacing and feedback patterns across screens.
+- [ ] Make loading, saving and disabled states consistent.
+- [ ] Ignore swipes starting on inputs, buttons and other interactive controls; handle touch cancellation and multitouch.
+- [ ] Verify swipe, set editing, exercise menu and responsive layout on a physical mobile device and narrow viewports.
+
+#### Authentication and release quality
+- [ ] Add authentication integration tests: register, login, logout, refresh rotation, expired/revoked token rejection and unauthorized access.
+- [ ] Run the complete backend test suite after test cleanup and verify the frontend production build.
+- [ ] Clean up temporary authentication/debug behavior and review access-token storage (`localStorage` is not a production decision).
+- [ ] Define a production-safe strategy to seed/manage system exercises.
+- [ ] Reset development/demo data before the public release.
+
+#### Azure deployment
+- [ ] Deploy .NET API, React frontend and production SQL database on Azure.
+- [ ] Configure production secrets, HTTPS, CORS, refresh-token cookies, migrations and environment variables.
+- [ ] Smoke-test the full register → login → workout → finish → history flow in the deployed environment.
+- [ ] Add the public demo URL and deployment notes to README.
+
+### Nice-to-have — after v1.0 (v1.1)
+- [ ] Improve exercise history: show previous sessions, dates, sets, weights and repetitions clearly (the exercise-history API and initial UI already exist).
+- [ ] Show the last recorded sets for the same exercise on the active workout card; optionally allow copying previous values.
+- [ ] Add GitHub Actions CI (build + tests) and later automated Azure deployment (CD).
+- [ ] Extend integration coverage for remaining exercise/template and ownership edge cases.
+- [ ] Introduce explicit test-data isolation/reset for the growing integration suite.
+- [ ] Add frontend tests/E2E for the main workout flow.
+- [ ] Optionally improve logout behavior when the backend cannot be reached.
+- [ ] Decide whether duplicate exercises should remain forbidden within a single workout session (currently rejected).
+
+### Future — larger product features (v2.0+)
+- [ ] Trainer mode: trainer/trainee roles, assigning workout plans and reviewing trainee sessions.
+- [ ] Workout plan sharing: private/public sharing and importing/copying plans.
+- [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
+
+### Completed milestones
 - [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
 - [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
 - [x] Add exercise POST/DELETE integration tests for the core success, validation, ordering and access-control cases.
 - [x] Improve the active workout-session set layout and add a compact exercise-delete menu.
 - [x] Implement initial horizontal swipe navigation between workout-session exercises.
-- [ ] Ignore swipe gestures that originate on inputs, buttons and other interactive controls; handle touch cancellation and multitouch safely.
 - [x] Prevent overlapping active-workout write operations and rapid exercise-navigation requests using `isSavingRef`; disable relevant controls with `isSaving`.
-- [ ] Provide visible save/finish/API error messages instead of relying on `console.log`/`console.error`; decide on a consistent frontend presentation and backend error contract.
-- [ ] Test failed PATCH/POST/DELETE scenarios (lock release, retry, preservation of unsaved edits, and no unintended navigation).
-- [ ] Prevent silent loss of active-session edits when leaving the workout page or reloading it.
 - [x] Keep `markExerciseDirty()` calls outside `setSession()` updater callbacks and avoid duplicate dirty marking.
-- [ ] Verify workout-session swipe, set edits, menu behavior and responsiveness on an actual mobile device (including narrow viewports).
-- [ ] Run the full test suite after test-file cleanup and confirm frontend build.
-- [ ] Decide whether duplicate exercises should remain forbidden within one session (currently rejected).
-- [ ] Review the edge case of reusing a set id from another workout-session exercise in PATCH.
-- [ ] Define the production-safe seed/admin strategy for system exercises.
-- [ ] Expand integration testing to authentication flows, remaining exercise/template edge cases and broader ownership boundaries.
-- [ ] Add explicit test-data isolation/reset strategy for the growing integration suite.
-- [ ] Clean up temporary authentication/debug behavior.
-- [ ] Decide the production access-token storage model instead of assuming `localStorage`.
-- [ ] Optionally harden explicit logout when the backend is unreachable.
-- [ ] Reset development/demo data before production release.
 
-See [Authentication.md](Authentication.md) for the current authentication and authorization flow, [README.md](README.md) for the project status and [Api.md](Api.md) for the HTTP API.
+See [Authentication.md](Authentication.md) for the authentication and authorization design, [README.md](README.md) for project status and [Api.md](Api.md) for the HTTP API.
