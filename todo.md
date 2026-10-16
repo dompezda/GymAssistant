@@ -16,13 +16,15 @@ Frontend update (13 October 2026): the active workout session uses a compact fou
 
 Frontend update (15 October 2026): active-workout write operations and exercise navigation now share a component-local `isSavingRef` guard with `isSaving` used to disable interactive controls. `saveCurrentExerciseIfDirty()` saves an edited exercise before switching to another exercise or adding a new one. Finishing uses `Promise.allSettled()` to remove successful exercise IDs from `dirtyIds`, retain failed ones for retry, and avoid calling `/finish` until the exercise writes succeed. After a successful finish, React navigates to `/workout-sessions/:id/summary`, which uses the existing session-details GET. Manual DevTools throttling (200 kb/s, 5000 ms latency) confirmed disabled UI during PATCH/DELETE and no duplicate PATCH on repeated navigation clicks; explicit failure-path tests and the full build/test suite are still pending.
 
+Frontend update (16 October 2026): the active workout screen now displays errors for failed exercise PATCH/POST/DELETE, finish operations and session GET requests instead of reporting failures only in the console. Failed writes do not advance exercise navigation or finish the workout, and unsuccessful exercise saves remain marked dirty for retry. A manual session refresh action reloads backend state, asks for confirmation before discarding locally edited sets, and clears dirty IDs only after a successful GET. Initial loading failures offer retry, and empty-session fallback UI offers refresh/navigation. This is a manual recovery path, not offline caching or automatic conflict resolution; failure and production-build verification remain part of release QA.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
 
 #### Error handling and data safety
-- [ ] Show consistent, user-visible API/save/finish errors instead of relying on `console.log` / `console.error`; agree on a backend error response contract.
-- [ ] Verify failed PATCH/POST/DELETE flows: release the save lock, preserve unsaved edits, allow retry and avoid unintended navigation.
+- [ ] Standardize user-visible API error presentation across the app and agree on a backend error response contract (active workout GET/PATCH/POST/DELETE/finish feedback is implemented).
+- [ ] Complete failure-path verification for PATCH/POST/DELETE/finish and session refresh, including network failures and HTTP errors; active-workout guards and retry behavior are implemented.
 - [ ] Protect unsaved workout edits when leaving the page or reloading it.
 - [ ] Review the PATCH edge case where a set ID belongs to another workout-session exercise.
 
@@ -61,6 +63,7 @@ Frontend update (15 October 2026): active-workout write operations and exercise 
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Add active-workout request error messages, manual backend session refresh with unsaved-change confirmation, and GET retry/empty-session fallback UI.
 - [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
 - [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
 - [x] Add exercise POST/DELETE integration tests for the core success, validation, ordering and access-control cases.
