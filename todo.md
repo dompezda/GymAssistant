@@ -18,6 +18,8 @@ Frontend update (15 October 2026): active-workout write operations and exercise 
 
 Frontend update (16 October 2026): the active workout screen now displays errors for failed exercise PATCH/POST/DELETE, finish operations and session GET requests instead of reporting failures only in the console. Failed writes do not advance exercise navigation or finish the workout, and unsuccessful exercise saves remain marked dirty for retry. A manual session refresh action reloads backend state, asks for confirmation before discarding locally edited sets, and clears dirty IDs only after a successful GET. Initial loading failures offer retry, and empty-session fallback UI offers refresh/navigation. This is a manual recovery path, not offline caching or automatic conflict resolution; failure and production-build verification remain part of release QA.
 
+Frontend update (28 October 2026): exercise create/edit/read-only modals received UI spacing and alignment improvements, consistent action-button layout, and optional history navigation from the shared `ExerciseForm`. Create/edit modals lock background vertical scrolling while open, restoring the previous value in effect cleanup. The shared form now uses `isSavingRef` to prevent rapid duplicate submits and `isSaving` to disable save, close and history buttons during submission. Manual mobile checks covered the modal and scroll behavior; automated frontend tests and robust network-error handling remain outstanding. Note: the modal CSS currently uses `max-width: 90dvh` rather than a height limit, so modal height/scroll behavior should be corrected and rechecked.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -63,6 +65,7 @@ Frontend update (16 October 2026): the active workout screen now displays errors
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Improve exercise create/edit modal layout, action consistency, background scroll locking and duplicate-submit prevention.
 - [x] Add active-workout request error messages, manual backend session refresh with unsaved-change confirmation, and GET retry/empty-session fallback UI.
 - [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
 - [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
