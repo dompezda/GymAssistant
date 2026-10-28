@@ -317,7 +317,8 @@ input[type="checkbox"] {
 
 .modal {
   width: 100%;
-  max-width: 90dvh;
+  max-width: 480px;
+  max-height: 90dvh;
   padding: 20px;
   border-radius: 20px;
   background: var(--color-surface);
