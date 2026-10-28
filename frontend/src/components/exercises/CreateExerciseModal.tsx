@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import ExerciseForm from "./ExerciseForm"
 import { fetchApi } from "../../api/fetchApi";
 
@@ -50,6 +50,19 @@ async function createExercise(exercise : ExerciseFormValues){
   console.log("Created exercise with ID:", result.id);
   onCreated(result);
 }
+
+useEffect(()=>{
+  if(!isOpen) return;
+
+  const prev = document.body.style.overflowY;
+  document.body.style.overflowY = "hidden";
+
+  return ()=>
+  {
+    document.body.style.overflowY = prev;
+  }
+  
+},[isOpen])
 
 if(!isOpen)
   return null;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ExerciseForm from "./ExerciseForm";
 import { useNavigate } from "react-router-dom";
 import { fetchApi } from "../../api/fetchApi";
@@ -57,17 +57,36 @@ export default function EditExerciseModal({
         onUpdated();
     }
 
+    useEffect(()=>{
+      if(!isOpen) return;
+    
+      const prev = document.body.style.overflowY;
+      document.body.style.overflowY = "hidden";
+    
+      return ()=>
+      {
+        document.body.style.overflowY = prev;
+      }
+      
+    },[isOpen])
+    
+
     if(!isOpen)
         return null;
 
+    async function checkHistory()
+    {
+        navigate(`/exercises/${exercise.id}/history`)
+    };
     return(
     <section>
 <div className="modal-backdrop">
     <div className="modal">
         <ExerciseForm
-            title={exercise.isSystem ? "Podgląd ćwiczenia systemowego" :"Edytuj ćwiczenie"}
+            title={exercise.isSystem ? "Podgląd ćwiczenia" :"Edytuj ćwiczenie"}
             buttonValue="Edytuj"
             initialValues={initialValue}
+            onHistoryClick={checkHistory}
             onClose = {onClose}
             readOnly = {exercise.isSystem}
             onSubmit={async (exerciseValues : ExerciseFormValues)=>{
@@ -75,12 +94,8 @@ export default function EditExerciseModal({
             
             }}
         />
-        <button className="btn btn-secondary" onClick={()=>navigate(`/exercises/${exercise.id}/history`)}>
-            Historia ćwiczenia
-        </button>
         <div>{error}</div>
         </div>
-
         </div>
     </section>
 )

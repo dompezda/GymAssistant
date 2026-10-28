@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import { fetchApi } from "../../api/fetchApi";
 
 
@@ -14,6 +14,7 @@ type MuscleGroupOption = {
 type ExerciseFormProps = {
   onClose: () => void;
   onSubmit: (values: ExerciseFormValues) => void | Promise<void>;
+  onHistoryClick?:()=>void;
   title: string;
   buttonValue: string;
   initialValues?: ExerciseFormValues;
@@ -23,6 +24,7 @@ type ExerciseFormProps = {
 export default function ExerciseForm({
   onClose,
   onSubmit,
+  onHistoryClick,
   title,
   buttonValue,
   initialValues,
@@ -39,7 +41,10 @@ export default function ExerciseForm({
   const [name, setName] = useState(values.name);
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<number[]>(values.muscleGroups);
   const [error, setError] = useState<string | null>(null);
+  const isSavingRef = useRef<boolean>(false);
+  const [isSaving,setIsSaving] = useState<boolean>(false);
   useEffect(() => {
+    
     async function loadMuscleGroups() {
       const response = await fetchApi("/api/muscle-groups");
       const data = await response.json();
@@ -59,7 +64,12 @@ export default function ExerciseForm({
 
 
   async function handleSubmit(event: React.FormEvent) {
+  
   event.preventDefault();
+  if(isSavingRef.current == true)
+    return;
+
+  
   setError(null);
 
   if (!name.trim()) {
@@ -71,14 +81,23 @@ export default function ExerciseForm({
     setError("Wybierz przynajmniej jedną grupę mięśniową.");
     return;
   }
-  const result: ExerciseFormValues ={
+
+  isSavingRef.current = true;
+  setIsSaving(true);
+  
+  try {
+      const result: ExerciseFormValues ={
     name: name.trim(),
     muscleGroups: selectedMuscleGroups
   };
+
   await onSubmit(result);
+    
+  } finally {
+    isSavingRef.current = false;
+    setIsSaving(false);    
+  }
 }
-
-
 
 return(
 <div>
@@ -87,7 +106,7 @@ return(
         {readOnly && <span className="system-badge">System</span>}
       </div>
 
-      <form className="stack" onSubmit={handleSubmit}>
+      <form className="stack exercise-form" onSubmit={handleSubmit}>
         {error && <p className="error">{error}</p>}
 
         <label>
@@ -117,14 +136,26 @@ return(
     </label>
   ))}
 </div>
+      <div className="button-stack">
         {!readOnly &&
-          <button className="btn btn-primary" type="submit" >
+          <button className="btn btn-primary" type="submit" disabled={isSaving} >
             {buttonValue}
           </button>
         }
-        <button className="btn btn-secondary" type="button" onClick={onClose}>
+        <button className="btn btn-secondary" type="button" onClick={onClose} disabled={isSaving}>
           Zamknij
         </button>
+          {onHistoryClick && (
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={onHistoryClick}
+              disabled={isSaving}
+            >
+              Historia ćwiczenia
+            </button>
+          )}
+        </div>
       </form>
     </div>
 )}

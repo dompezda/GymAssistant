@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import '../../styles/global.css';
 import useAuth from '../../auth/useAuth';
 
 export default function MainMenu() {
