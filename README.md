@@ -22,8 +22,8 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 
 - **Exercise library:** browse system exercises, search the catalog, and create or edit personal exercises with muscle-group assignments.
 - **Workout templates:** create reusable training plans and adjust the included exercises and planned sets.
-- **Workout sessions:** start a session from a template or build one from scratch; record sets, weights, and repetitions; add or remove exercises while the session is active.
-- **Training history:** finish workouts and review previous sessions and exercise history.
+- **Workout sessions:** start from a template or build a session from scratch; record sets, weights and repetitions; resume an unfinished workout or discard it before starting another; add or remove exercises while the session is active.
+- **Training history:** review completed workouts and exercise history; active and discarded sessions are excluded.
 - **User accounts:** register, log in, and access only your own templates, sessions, and private exercises. System exercises are shared and read-only.
 
 ## Tech stack
@@ -41,7 +41,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 
 - **Authentication and session recovery:** short-lived JWT access tokens, refresh tokens stored as hashes in the database, `HttpOnly` refresh cookies, token rotation/revocation, and a centralized `401 → refresh → retry` flow.
 - **Authorization:** user ownership enforced server-side for workout templates, sessions, and private exercises; system exercises remain accessible to all authenticated users.
-- **Session lifecycle:** backend rules prevent modifications to completed sessions and validate exercise/set operations.
+- **Session lifecycle:** `FinishedAt` and `DiscardedAt` distinguish completed, abandoned and active workouts. The API exposes active-session lookup and idempotent discard, prevents a second active session, and blocks modifications to completed or discarded workouts.
 - **Active workout save coordination and recovery:** a component-level in-flight guard prevents overlapping writes and temporarily disables controls; changed exercises are saved before switching, and the finish flow retains failed exercise writes for retry. Failed session operations show user-visible messages, and manual refresh reloads server data with a confirmation before discarding unsaved local edits.
 - **Integration testing:** real authenticated HTTP requests against a test host built with `WebApplicationFactory` and SQLite in-memory, including ownership and validation scenarios.
 

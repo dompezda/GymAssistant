@@ -20,6 +20,8 @@ Frontend update (16 October 2026): the active workout screen now displays errors
 
 Frontend update (28 October 2026): exercise create/edit/read-only modals received UI spacing and alignment improvements, consistent action-button layout, and optional history navigation from the shared `ExerciseForm`. Create/edit modals lock background vertical scrolling while open, restoring the previous value in effect cleanup. The shared form now uses `isSavingRef` to prevent rapid duplicate submits and `isSaving` to disable save, close and history buttons during submission. Manual mobile checks covered the modal and scroll behavior; automated frontend tests and robust network-error handling remain outstanding. Note: the modal CSS currently uses `max-width: 90dvh` rather than a height limit, so modal height/scroll behavior should be corrected and rechecked.
 
+Frontend/backend update (3 November 2026): workout sessions now have nullable `DiscardedAt`, with a database migration and mutually exclusive active/finished/discarded lifecycle checks in the API. The start-workout page checks `GET /api/workout-sessions/active`, allows resuming the existing workout, and confirms discard through `POST /api/workout-sessions/{sessionId}/discard`; the backend rejects creating another active session (`409`) and blocks editing/finishing discarded sessions. Completed workout lists and exercise history exclude discarded and active sessions. Integration tests cover active lookup, discard ownership/idempotency, blocked writes and creating after discard. The new exercise-history test still needs a corrected assertion: it sets up one finished workout but currently expects an empty history. Full test/build execution and manual end-to-end verification remain pending. A filtered unique SQL Server index may later be needed to enforce one active session against concurrent POST requests.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -29,6 +31,7 @@ Frontend update (28 October 2026): exercise create/edit/read-only modals receive
 - [ ] Complete failure-path verification for PATCH/POST/DELETE/finish and session refresh, including network failures and HTTP errors; active-workout guards and retry behavior are implemented.
 - [ ] Protect unsaved workout edits when leaving the page or reloading it.
 - [ ] Review the PATCH edge case where a set ID belongs to another workout-session exercise.
+- [ ] Consider a SQL Server filtered unique index for one active workout per user to protect against concurrent creation requests.
 
 #### UI/UX consistency
 - [ ] Unify buttons, forms, modals, spacing and feedback patterns across screens.
@@ -38,7 +41,7 @@ Frontend update (28 October 2026): exercise create/edit/read-only modals receive
 
 #### Authentication and release quality
 - [ ] Add authentication integration tests: register, login, logout, refresh rotation, expired/revoked token rejection and unauthorized access.
-- [ ] Run the complete backend test suite after test cleanup and verify the frontend production build.
+- [ ] Correct the exercise-history integration test to assert that only the finished workout is returned, then run the complete backend test suite and verify the frontend production build.
 - [ ] Clean up temporary authentication/debug behavior and review access-token storage (`localStorage` is not a production decision).
 - [ ] Define a production-safe strategy to seed/manage system exercises.
 - [ ] Reset development/demo data before the public release.
@@ -65,6 +68,8 @@ Frontend update (28 October 2026): exercise create/edit/read-only modals receive
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Add active workout resume/discard flow, nullable `DiscardedAt` migration, active-session creation guard and lifecycle restrictions.
+- [x] Filter completed-workout lists and exercise history to finished, non-discarded sessions and add lifecycle integration scenarios (one new history assertion still needs correction).
 - [x] Improve exercise create/edit modal layout, action consistency, background scroll locking and duplicate-submit prevention.
 - [x] Add active-workout request error messages, manual backend session refresh with unsaved-change confirmation, and GET retry/empty-session fallback UI.
 - [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
