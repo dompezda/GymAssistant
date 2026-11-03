@@ -589,7 +589,8 @@ public class ExercisesEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var res = await response.Content.ReadFromJsonAsync<ExerciseHistoryResponse>();
         Assert.NotNull(res);
-        Assert.Empty(res.Workouts); // Should not return the unfinished workout
+        var returnedWorkout = Assert.Single(res.Workouts);
+        Assert.Equal(workout3.Id, returnedWorkout.Id);
     }
 
 
