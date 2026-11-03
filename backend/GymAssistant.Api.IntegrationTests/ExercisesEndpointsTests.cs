@@ -524,6 +524,59 @@ public class ExercisesEndpointsTests
             DiscardedAt = null
         };
         db.WorkoutSessions.Add(workout);
+        
+
+         var workout2 = new WorkoutSession
+        {
+            User = user,
+            WorkoutTemplate = null,
+            Exercises = new List<WorkoutSessionExercise>
+            {
+                new WorkoutSessionExercise
+                {
+                    Exercise = exercise,
+                    Order = 1,
+                    Sets = new List<WorkoutSessionSet>
+                    {
+                        new WorkoutSessionSet
+                        {
+                            Reps = 5,
+                            SetNumber = 1,
+                            Weight = 8
+                        }
+                    }
+                }
+            },
+            FinishedAt = null, // Not finished
+            DiscardedAt  = DateTime.UtcNow 
+        };
+        db.WorkoutSessions.Add(workout2);
+
+         var workout3 = new WorkoutSession
+        {
+            User = user,
+            WorkoutTemplate = null,
+            Exercises = new List<WorkoutSessionExercise>
+            {
+                new WorkoutSessionExercise
+                {
+                    Exercise = exercise,
+                    Order = 1,
+                    Sets = new List<WorkoutSessionSet>
+                    {
+                        new WorkoutSessionSet
+                        {
+                            Reps = 5,
+                            SetNumber = 1,
+                            Weight = 8
+                        }
+                    }
+                }
+            },
+            FinishedAt = DateTime.UtcNow, 
+            DiscardedAt = null
+        };
+        db.WorkoutSessions.Add(workout3);
         await db.SaveChangesAsync();
 
         AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
