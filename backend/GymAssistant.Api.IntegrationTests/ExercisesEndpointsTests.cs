@@ -485,5 +485,58 @@ public class ExercisesEndpointsTests
         //assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+    [Fact]
+    public async Task GetExerciseHistory_ShouldNotReturnWorkoutsThatAreNotFinishedOrDiscarded()
+    {
+        //arrange
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateSystemExerciseAsync(
+            db,
+            [MuscleGroup.Back, MuscleGroup.Biceps]);
+
+        var workout = new WorkoutSession
+        {
+            User = user,
+            WorkoutTemplate = null,
+            Exercises = new List<WorkoutSessionExercise>
+            {
+                new WorkoutSessionExercise
+                {
+                    Exercise = exercise,
+                    Order = 1,
+                    Sets = new List<WorkoutSessionSet>
+                    {
+                        new WorkoutSessionSet
+                        {
+                            Reps = 5,
+                            SetNumber = 1,
+                            Weight = 8
+                        }
+                    }
+                }
+            },
+            FinishedAt = null, // Not finished
+            DiscardedAt = null
+        };
+        db.WorkoutSessions.Add(workout);
+        await db.SaveChangesAsync();
+
+        AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
+
+        //act
+        db.ChangeTracker.Clear();
+        var response = await _client.GetAsync($"/api/exercises/{exercise.Id}/history");
+
+        //assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var res = await response.Content.ReadFromJsonAsync<ExerciseHistoryResponse>();
+        Assert.NotNull(res);
+        Assert.Empty(res.Workouts); // Should not return the unfinished workout
+    }
+
 
 }

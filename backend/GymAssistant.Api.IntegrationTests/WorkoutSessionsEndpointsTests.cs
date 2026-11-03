@@ -2456,4 +2456,119 @@ public async Task CreateWorkoutSession_WhenUserHasActiveSession_ShouldReturnConf
         Assert.Null(sessionFromDb.FinishedAt);
         Assert.Null(sessionFromDb.DiscardedAt);
     }
+
+    [Fact]
+    public async Task DiscardedWorkoutSession_ShouldNotBeReturnedAsActiveSession()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+        var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+            db, user, null, [exercise]);
+        AuthHelper.AuthorizeClient(_client, user, tokenService);
+        var discardResponse1 = await _client.PostAsync($"/api/workout-sessions/{session.Id}/discard", null);
+        Assert.Equal(HttpStatusCode.NoContent, discardResponse1.StatusCode);
+        db.ChangeTracker.Clear();
+        
+        var res = await _client.GetAsync("/api/workout-sessions/active");
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+}
+
+[Fact]
+public async Task AfterDiscardingWorkoutSession_ShouldNotBeAbleToFinishIt()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+        var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+            db, user, null, [exercise]);
+        AuthHelper.AuthorizeClient(_client, user, tokenService);
+        var discardResponse1 = await _client.PostAsync($"/api/workout-sessions/{session.Id}/discard", null);
+        Assert.Equal(HttpStatusCode.NoContent, discardResponse1.StatusCode);
+        db.ChangeTracker.Clear();
+        
+        var finishResponse = await _client.PatchAsync($"/api/workout-sessions/{session.Id}/finish", null);
+        Assert.Equal(HttpStatusCode.Conflict, finishResponse.StatusCode);
+}
+
+[Fact]
+public async Task AfterDiscardingWorkoutSession_ShouldNotBeAbleToUpdateExercises()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+        var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+            db, user, null, [exercise]);
+        AuthHelper.AuthorizeClient(_client, user, tokenService);
+        var discardResponse1 = await _client.PostAsync($"/api/workout-sessions/{session.Id}/discard", null);
+        Assert.Equal(HttpStatusCode.NoContent, discardResponse1.StatusCode);
+        db.ChangeTracker.Clear();
+        
+        var requestBody = new UpdateWorkoutSessionExerciseRequest
+        (
+            [
+             new UpdateWorkoutSessionSetRequest
+             (
+                session.Exercises[0].Sets[0].Id,1,12,12.0m
+             )
+            ]
+        );
+        var res = await _client.PatchAsJsonAsync($"/api/workout-sessions/{session.Id}/exercises/{session.Exercises[0].Id}",requestBody);
+        Assert.Equal(HttpStatusCode.Conflict,res.StatusCode);
+}
+[Fact]
+public async Task AfterDiscardWorkoutSession_ShouldBeAbleToCreateNewWorkoutSession()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<IAccessTokenService>();
+
+        var user = await UserHelper.CreateUserAsync(userManager);
+        var exercise = await ExerciseHelper.CreateUserExerciseAsync(db, user);
+
+        var session = await WorkoutSessionHelper.CreateWorkoutSessionAsync(
+            db, user, null, [exercise]);
+        AuthHelper.AuthorizeClient(_client, user, tokenService);
+        var discardResponse1 = await _client.PostAsync($"/api/workout-sessions/{session.Id}/discard", null);
+        Assert.Equal(HttpStatusCode.NoContent, discardResponse1.StatusCode);
+        db.ChangeTracker.Clear();
+        
+        var request = new CreateWorkoutSessionRequest(
+            null,
+            new List<CreateWorkoutSessionExerciseRequest>
+            {
+                new CreateWorkoutSessionExerciseRequest(
+                    exercise.Id,
+                    new List<CreateWorkoutSessionSetRequest>
+                    {
+                        new CreateWorkoutSessionSetRequest(
+                            1,
+                            10m,
+                            8
+                        )
+                    },
+                    Guid.NewGuid()
+                )
+            }
+        );
+
+        var res = await _client.PostAsJsonAsync("/api/workout-sessions", request);
+        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
+    }
 }
