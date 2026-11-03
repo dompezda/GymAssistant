@@ -41,7 +41,7 @@ Frontend/backend update (3 November 2026): workout sessions now have nullable `D
 
 #### Authentication and release quality
 - [ ] Add authentication integration tests: register, login, logout, refresh rotation, expired/revoked token rejection and unauthorized access.
-- [ ] Correct the exercise-history integration test to assert that only the finished workout is returned, then run the complete backend test suite and verify the frontend production build.
+- [ ] Verify the frontend production build (`npm run build`) and manually smoke-test resume/discard/new workout flow. Backend suite: 100 passed, 0 failed, 0 skipped (local run reported 3 November 2026); the exercise-history assertion was corrected.
 - [ ] Clean up temporary authentication/debug behavior and review access-token storage (`localStorage` is not a production decision).
 - [ ] Define a production-safe strategy to seed/manage system exercises.
 - [ ] Reset development/demo data before the public release.
