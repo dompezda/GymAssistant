@@ -445,7 +445,8 @@ public class ExercisesEndpointsTests
         await db.SaveChangesAsync();
 
         AuthHelper.AuthorizeClient(_client, user, scope.ServiceProvider.GetRequiredService<IAccessTokenService>());
-
+        var finish = await _client.PatchAsync($"/api/workout-sessions/{workout.Id}/finish", null);
+        Assert.Equal(HttpStatusCode.OK, finish.StatusCode);
         //act
         db.ChangeTracker.Clear();
         var response = await _client.GetAsync($"/api/exercises/{exercise.Id}/history");
