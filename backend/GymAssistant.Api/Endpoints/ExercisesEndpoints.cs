@@ -146,7 +146,10 @@ public static class ExercisesEndpoints {
         return Results.NotFound($"Nie znaleziono ćwiczenia o id {exerciseId}.");
 
       var workouts = await db.WorkoutSessions
-      .Where(x=>x.UserId==currentUser.UserId)
+      .Where(x =>
+          x.UserId == currentUser.UserId &&
+          x.FinishedAt != null &&
+          x.DiscardedAt == null)
       .Include(x=>x.Exercises)
       .ThenInclude(y=>y.Sets)
       .Where(x=>x.Exercises.Any(x=>x.ExerciseId==exercise.Id)).ToListAsync();
