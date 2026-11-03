@@ -11,6 +11,8 @@ public class WorkoutSession
     public ApplicationUser User { get; set; } = null!;
     public DateTime StartedAt  { get; set; } = DateTime.UtcNow;
     public DateTime? FinishedAt { get; set; }
+
+    public DateTime? DiscardedAt { get; set; }
     public string? Notes { get; set; }
 
     public List<WorkoutSessionExercise> Exercises { get; set; } = [];

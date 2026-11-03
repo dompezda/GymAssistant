@@ -18,7 +18,7 @@ public static class WorkoutSessionsEndpoints
             ICurrentUser currentUser)=>
         {
             var sessions = await db.WorkoutSessions
-            .Where(x=>x.FinishedAt != null && x.UserId == currentUser.UserId)
+            .Where(x=>x.FinishedAt != null && x.UserId == currentUser.UserId && x.DiscardedAt == null)
             .OrderByDescending(x=>x.StartedAt)
             .Select(session => new WorkoutSessionListItemResponse(
                     session.Id,
@@ -42,6 +42,7 @@ public static class WorkoutSessionsEndpoints
             AppDbContext db,
             ICurrentUser currentUser) =>
         {
+            
             if (request.Exercises.Count == 0)
             {
                 return Results.BadRequest("Trening musi zawierać przynajmniej jedno ćwiczenie.");
@@ -53,6 +54,10 @@ public static class WorkoutSessionsEndpoints
             if(request.Exercises.Any(x=>x.Sets.Any(y=>y.Weight<0)))
             { 
                 return Results.BadRequest("Ciężar musi być większy lub równy 0.");
+            }
+            if(await db.WorkoutSessions.AnyAsync(x=>x.UserId == currentUser.UserId && x.FinishedAt == null && x.DiscardedAt == null))
+            {
+                return Results.Conflict("Nie można rozpocząć nowego treningu, gdy istnieje aktywna sesja treningowa.");
             }
 
             if (request.WorkoutTemplateId != null)
@@ -195,6 +200,9 @@ public static class WorkoutSessionsEndpoints
                 return Results.NotFound("Nie znaleziono treningu.");
             if(session.FinishedAt!=null)
                 return Results.Conflict("Nie można edytować zakończonej sesji");
+            if(session.DiscardedAt!=null)
+                return Results.Conflict("Nie można edytować porzuconej sesji");
+
 
             var exerciseFromDb = session.Exercises
                 .FirstOrDefault(x=>x.Id == sessionExerciseId);
@@ -251,6 +259,8 @@ public static class WorkoutSessionsEndpoints
                 .FirstOrDefaultAsync(x=>x.Id == sessionId);
             if(session== null)
                 return Results.NotFound("Nie znaleziono treningu.");
+            if(session.DiscardedAt != null)
+                return Results.Conflict("Nie można zakończyć porzuconej sesji.");
             if(session.FinishedAt!=null)
                 return Results.Ok();
             session.FinishedAt = DateTime.UtcNow;
@@ -282,6 +292,8 @@ public static class WorkoutSessionsEndpoints
     if(session.FinishedAt!=null)
         return Results.Conflict("Nie można usuwać ćwiczeń z zakończonego treningu.");
 
+    if(session.DiscardedAt!=null)
+        return Results.Conflict("Nie można usuwać ćwiczeń z porzuconego treningu.");
     var exercise = session.Exercises
         .FirstOrDefault(x=>x.Id==sessionExerciseId);
 
@@ -306,6 +318,51 @@ public static class WorkoutSessionsEndpoints
     return Results.NoContent();
 });
     
+    group.MapGet("/active", async (
+        AppDbContext db,
+        ICurrentUser currentUser) =>
+    {
+        var session = await db.WorkoutSessions
+            .Where(x => x.UserId == currentUser.UserId && x.DiscardedAt == null && x.FinishedAt == null)
+            .FirstOrDefaultAsync();
+
+        if (session == null)
+        {
+            return Results.NoContent();
+        }
+        return Results.Ok(session.Id);
+    });
+
+    group.MapPost("/{sessionId:guid}/discard", async (
+        Guid sessionId,
+        AppDbContext db,
+        ICurrentUser currentUser) =>
+    {
+        if(sessionId == Guid.Empty)
+            return Results.BadRequest("Id treningu nie może być puste.");
+        var session = await db.WorkoutSessions
+            .Where(x => x.UserId == currentUser.UserId && x.Id == sessionId)
+            .FirstOrDefaultAsync();
+
+        if (session == null)
+        {
+            return Results.NotFound("Nie znaleziono treningu.");
+        }
+        if(session.FinishedAt != null)
+        {
+            return Results.Conflict("Nie można odrzucić zakończonej sesji.");
+        }
+        if(session.DiscardedAt != null)
+        {
+             return Results.NoContent();
+        }
+        session.DiscardedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Results.NoContent();
+    });
+
+
     group.MapPost("/{sessionId:guid}/exercises", async (
         Guid sessionId,
         AddExerciseToWorkoutSessionRequest request,
@@ -325,6 +382,8 @@ public static class WorkoutSessionsEndpoints
             return Results.NotFound("Nie znaleziono treningu.");
         if(session.FinishedAt!=null)
             return Results.Conflict("Nie można edytować zakończonej sesji");
+        if(session.DiscardedAt!=null)
+            return Results.Conflict("Nie można edytować porzuconej sesji");
         if(session.Exercises.Any(x => x.ExerciseId == request.ExerciseId))
             return Results.Conflict("To ćwiczenie jest już dodane do treningu.");
         var exercise = await db.Exercises

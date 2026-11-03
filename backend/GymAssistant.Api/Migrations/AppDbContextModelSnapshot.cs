@@ -170,6 +170,9 @@ namespace GymAssistant.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("DiscardedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime2");
 
