@@ -33,7 +33,7 @@ Current data rules:
 - ordinary users can create and edit only their own private exercises,
 - `IsSystem` is not accepted from normal exercise create/edit requests,
 - SQL Server enforces valid system/private ownership combinations through `CK_Exercises_SystemOwnership`,
-- exercise history is filtered through workout sessions owned by the authenticated user.
+- exercise history includes only the authenticated user's finished, non-discarded workout sessions.
 
 The frontend uses `fetchApi` for protected domain requests so bearer-token attachment, refresh and one-time retry are centralized.
 
@@ -57,8 +57,10 @@ The frontend uses `fetchApi` for protected domain requests so bearer-token attac
 | POST | `/api/workout-templates` | Required | Creates a workout template owned by the current user |
 | GET | `/api/workout-templates/{id}` | Required | Returns an owned workout template |
 | PATCH | `/api/workout-templates/{id}` | Required | Updates an owned workout template |
-| GET | `/api/workout-sessions` | Required | Returns the current user's finished workout sessions |
-| POST | `/api/workout-sessions` | Required | Starts a workout session owned by the current user |
+| GET | `/api/workout-sessions` | Required | Returns the current user's finished, non-discarded workout sessions |
+| POST | `/api/workout-sessions` | Required | Starts a workout session when no other active session exists |
+| GET | `/api/workout-sessions/active` | Required | Returns the current active workout id or `204 No Content` |
+| POST | `/api/workout-sessions/{sessionId}/discard` | Required | Marks an owned, unfinished workout as discarded |
 | GET | `/api/workout-sessions/{id}` | Required | Returns owned session details including exercise sets, `startedAt` and nullable `finishedAt` |
 | PATCH | `/api/workout-sessions/{sessionId}/exercises/{sessionExerciseId}` | Required | Updates sets for an exercise inside an owned session |
 | PATCH | `/api/workout-sessions/{sessionId}/finish` | Required | Finishes an owned workout session |
@@ -323,6 +325,8 @@ The endpoint first verifies that the exercise is system-wide or owned by the aut
 
 ```txt
 WorkoutSession.UserId == currentUser.UserId
+WorkoutSession.FinishedAt != null
+WorkoutSession.DiscardedAt == null
 ```
 
 This means a shared system exercise can be visible to multiple users while each user sees only their own training history.
@@ -503,7 +507,7 @@ Each `WorkoutSessionExercise` stores `ExerciseNameSnapshot` so historical workou
 
 Returns the authenticated user's finished sessions ordered by start date descending.
 
-Only records with `FinishedAt != null` are returned.
+Only records with `FinishedAt != null && DiscardedAt == null` are returned.
 
 ### Response `200 OK`
 
@@ -555,7 +559,7 @@ If `workoutTemplateId` is provided, the template must belong to the authenticate
 }
 ```
 
-The backend generates session, session-exercise and set ids and normalizes exercise/set order. `ExerciseNameSnapshot` is copied from the selected exercise. Validation failures return `400 Bad Request`, including a non-owned template and inaccessible exercises.
+The backend generates session, session-exercise and set ids and normalizes exercise/set order. `ExerciseNameSnapshot` is copied from the selected exercise. Validation failures return `400 Bad Request`, including a non-owned template and inaccessible exercises. When the user already has a session with `FinishedAt == null && DiscardedAt == null`, the endpoint returns `409 Conflict` instead of creating another active session.
 
 ### Response `201 Created`
 
@@ -564,6 +568,31 @@ The backend generates session, session-exercise and set ids and normalizes exerc
   "id": "ecfd3a0e-06d8-4e4b-97f6-9dfe5e28ad79"
 }
 ```
+
+---
+
+## GET `/api/workout-sessions/active`
+
+Returns the id of the authenticated user's session satisfying `FinishedAt == null && DiscardedAt == null`.
+
+- `200 OK` — JSON GUID identifying the active workout.
+- `204 No Content` — no active workout exists.
+- `401 Unauthorized` — no valid access token.
+
+The React start-workout page checks this endpoint before offering the choice of a template or empty workout. When an active session exists, the user can resume it or choose to discard it.
+
+---
+
+## POST `/api/workout-sessions/{sessionId}/discard`
+
+Sets `DiscardedAt = DateTime.UtcNow` on an owned, unfinished session, preserving the record and its exercise data.
+
+- `204 No Content` — discarded successfully, or the session was already discarded. A repeated discard does not replace the original timestamp.
+- `400 Bad Request` — empty session id.
+- `404 Not Found` — missing or non-owned session.
+- `409 Conflict` — the session was already finished.
+
+Discarded sessions are excluded from the active lookup, the completed-workout list and exercise history; exercise modifications and finishing are rejected.
 
 ---
 
@@ -603,7 +632,7 @@ Validation rejects:
 - empty set ids,
 - duplicate set ids.
 
-Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially from request array order, regardless of the supplied `setNumber` values. The endpoint returns `200 OK` on success, `400 Bad Request` for the validation failures above, and `404 Not Found` if the owned session or its requested exercise cannot be found. Updating a finished session is rejected with `409 Conflict`.
+Sets missing from the request are removed, existing sets are updated and new set ids are added. `SetNumber` is recalculated sequentially from request array order, regardless of the supplied `setNumber` values. The endpoint returns `200 OK` on success, `400 Bad Request` for the validation failures above, and `404 Not Found` if the owned session or its requested exercise cannot be found. Updating a finished or discarded session is rejected with `409 Conflict`.
 
 ---
 
@@ -615,7 +644,7 @@ Finds the session using both `sessionId` and `currentUser.UserId` and sets:
 FinishedAt = DateTime.UtcNow
 ```
 
-Returns `400 Bad Request` for an empty id and `404 Not Found` when the session cannot be found by the current user (including a session owned by someone else). A successful finish returns `200 OK`. Repeated calls are idempotent: if `FinishedAt` is already set, the endpoint returns `200 OK` without saving or overwriting the original completion time.
+Returns `400 Bad Request` for an empty id and `404 Not Found` when the session cannot be found by the current user (including a session owned by someone else). A successful finish returns `200 OK`. Repeated calls are idempotent: if `FinishedAt` is already set, the endpoint returns `200 OK` without saving or overwriting the original completion time. Discarded sessions cannot be finished (`409 Conflict`).
 
 ---
 
@@ -631,7 +660,7 @@ OR
 Exercise.OwnerUserId == currentUser.UserId
 ```
 
-The endpoint rejects duplicate exercises in the same session (`409 Conflict`) and edits to finished sessions (`409 Conflict`). An empty session id or exercise id returns `400 Bad Request`; missing or non-owned sessions and missing/inaccessible exercises return `404 Not Found`. A new session exercise receives the next order value, an `ExerciseNameSnapshot` and one empty initial set. Success returns `200 OK` with the created `WorkoutSessionExerciseResponseDto`.
+The endpoint rejects duplicate exercises in the same session (`409 Conflict`) and edits to finished or discarded sessions (`409 Conflict`). An empty session id or exercise id returns `400 Bad Request`; missing or non-owned sessions and missing/inaccessible exercises return `404 Not Found`. A new session exercise receives the next order value, an `ExerciseNameSnapshot` and one empty initial set. Success returns `200 OK` with the created `WorkoutSessionExerciseResponseDto`.
 
 ---
 
@@ -641,11 +670,11 @@ Removes an exercise from an owned workout session.
 
 The endpoint rejects deletion when:
 
-- the session has already been finished,
+- the session has already been finished or discarded,
 - the session exercise does not exist,
 - the exercise is the last remaining exercise in the session.
 
-An empty session id or session-exercise id returns `400 Bad Request`; a missing/non-owned session or missing session exercise returns `404 Not Found`; deleting from a finished session or deleting the last exercise returns `409 Conflict`. After successful deletion, remaining exercise order values are recalculated sequentially and associated sets are deleted.
+An empty session id or session-exercise id returns `400 Bad Request`; a missing/non-owned session or missing session exercise returns `404 Not Found`; deleting from a finished/discarded session or deleting the last exercise returns `409 Conflict`. After successful deletion, remaining exercise order values are recalculated sequentially and associated sets are deleted.
 
 ### Response `204 No Content`
 
