@@ -19,7 +19,7 @@ type EditExerciseModalProps =
 {
     isOpen : boolean;
     onClose : ()=> void;
-    onUpdated : () => void;
+    onUpdated : () => void | Promise<void>;
     exercise : Exercise
 }
 
@@ -54,7 +54,7 @@ export default function EditExerciseModal({
         }
         const result = await response.json();
         console.log("Edited exercise with ID:", result);
-        onUpdated();
+        await onUpdated();
     }
 
     useEffect(()=>{

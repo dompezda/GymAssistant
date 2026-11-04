@@ -13,7 +13,7 @@ type Exercise = {
 type CreateExerciseModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (exercise: Exercise) => void;
+  onCreated: (exercise: Exercise) => void | Promise<void>;
 };
 
 type ExerciseFormValues = {
@@ -48,7 +48,7 @@ async function createExercise(exercise : ExerciseFormValues){
   }
   const result: Exercise = await response.json();
   console.log("Created exercise with ID:", result.id);
-  onCreated(result);
+  await onCreated(result);
 }
 
 useEffect(()=>{
