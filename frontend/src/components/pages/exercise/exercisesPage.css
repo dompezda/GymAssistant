@@ -1,0 +1,53 @@
+.exercises-page .back-button {
+  width: auto;
+  align-self: flex-start;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.exercises-page .card {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+
+.exercises-page .exercise-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: nowrap;
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-style: normal;
+  color: var(--color-text);
+  text-align: left;
+
+}
+
+.exercises-page .exercise-title > span:first-child {
+    min-width: 0;
+}
+
+.exercises-page .system-badge {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.exercises-page .exercise-muscles {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.exercises-page .exercise-meta
+{
+  background: var(--color-accent-soft);
+  padding: 4px 7px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+}

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import EditExerciseModal from "../../exercises/EditExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
+import "./exercisesPage.css";
+
 type Exercise = {
   id: string;
   name: string;
@@ -78,6 +80,7 @@ useEffect(() => {
         {visibleExercises.map((exercise) => (
           <article key={exercise.id} className="card" onClick={() =>setSelectedExercise(exercise)}
            >
+
             <h2 className="exercise-title">
               <span>{exercise.name}</span>
 
@@ -85,9 +88,15 @@ useEffect(() => {
                 <span className="system-badge">System</span>
               )}
             </h2>
-            {exercise.muscleGroupLabels?.length > 0 && (
-              <div className="exercise-meta">{exercise.muscleGroupLabels.join(" · ")}</div>
-            )}
+            <div className="exercise-muscles">
+              {exercise.muscleGroupLabels?.length > 0 && (
+                exercise.muscleGroupLabels.map((label) => (
+                  <span className="exercise-meta" key={label}>
+                    {label}
+                  </span>
+                ))
+              )}
+            </div>
             
           </article>
         ))}

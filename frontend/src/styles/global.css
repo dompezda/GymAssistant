@@ -380,13 +380,6 @@ input[type="checkbox"] {
   font-weight: 600;
 }
 
-.exercise-title {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
 .exercise-meta {
   font-size: 0.95rem;
@@ -413,26 +406,6 @@ input[type="checkbox"] {
 
 .form-title h2 {
   margin: 0;
-}
-
-/* =========================
-   Exercises page
-   ========================= */
-
-.exercises-page .back-button {
-  width: auto;
-  align-self: flex-start;
-  padding: 8px 10px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-}
-
-.exercises-page .card {
-  margin: 0;
-  padding: 16px 18px;
-  border-radius: 8px;
-  cursor: pointer;
 }
 
 /* =========================
