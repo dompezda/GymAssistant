@@ -101,14 +101,14 @@ export default function ExerciseForm({
 
 return(
 <div>
-      <div className="form-title">
-        <h2>{title}</h2>
+      <div className="modal-header">
+        <h2 className="modal-title">{title}</h2>
         {readOnly && <span className="system-badge">System</span>}
       </div>
 
-      <form className="stack exercise-form" onSubmit={handleSubmit}>
+      <form className="modal-body" onSubmit={handleSubmit}>
         {error && <p className="error">{error}</p>}
-
+      <div className="modal-component">
         <label>
           Nazwa ćwiczenia
           <input
@@ -120,22 +120,24 @@ return(
             disabled = {readOnly}
           />
         </label>
-
-        <p>Grupy mięśniowe:</p>
-
-        <div className="checkbox-grid">
-  {muscleGroups.map((group) => (
-    <label key={group.value} className="checkbox-item">
-      <input
-        type="checkbox"
-        checked={selectedMuscleGroups.includes(group.value)}
-        onChange={() => toggleMuscleGroup(group.value)}
-        disabled = {readOnly}
-      />
-      {group.label}
-    </label>
-  ))}
 </div>
+ <div className="modal-component">
+        <p>Grupy mięśniowe:</p>
+        <div className="checkbox-grid">
+          {muscleGroups.map((group) => (
+          <label key={group.value} className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={selectedMuscleGroups.includes(group.value)}
+              onChange={() => toggleMuscleGroup(group.value)}
+              disabled = {readOnly}
+            />
+            {group.label}
+          </label>
+  ))}
+  </div>
+</div>
+
       <div className="button-stack">
         {!readOnly &&
           <button className="btn btn-primary" type="submit" disabled={isSaving} >

@@ -59,13 +59,16 @@ useEffect(() => {
 
   return (
     <section className="page stack exercises-page">
-      <button className="btn btn-secondary back-button" onClick={() => navigate("/")}>
-        ← Wróć
-      </button>
+      <div className="page-header">
+        <button className="btn back-button" onClick={() => navigate("/")}>
+          ← Wróć
+        </button>
+      
 
-      <header>
-        <h1>Ćwiczenia</h1>
-      </header>
+        <header>
+          <h1 className="page-title">Ćwiczenia</h1>
+        </header>
+      </div>
       <button className="btn btn-primary" onClick={() => setIsCreateExerciseModalOpen(true)}>
         + Dodaj ćwiczenie
       </button>

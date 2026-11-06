@@ -50,10 +50,9 @@ export default function RegisterPage() {
 
         
     <>
-    <div className="page auth-page">
-    <div className="card auth-card">
+    <div className="auth-page">
         <div className="stack">
-            <h1>Rejestracja</h1>
+            <h1 className="page-title">Rejestracja</h1>
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" />
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Hasło" />
             <input value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="Powtórz hasło" />
@@ -69,7 +68,6 @@ export default function RegisterPage() {
                 Masz już konto? <Link to="/login">Zaloguj się</Link>
             </div>
         </div>
-    </div>
 </div>
     
     

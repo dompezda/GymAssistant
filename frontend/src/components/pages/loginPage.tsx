@@ -28,8 +28,8 @@ export default function LoginPage() {
 
     return (
 
-        <div className="loginPage">
-            <h1>Logowanie</h1>
+        <div className="auth-page">
+            <h1 className="page-title">Logowanie</h1>
             <div className="modal-body">
                 <input
                     type="text"

@@ -83,7 +83,7 @@ export default function EditExerciseModal({
 <div className="modal-backdrop">
     <div className="modal">
         <ExerciseForm
-            title={exercise.isSystem ? "Podgląd ćwiczenia" :"Edytuj ćwiczenie"}
+            title={exercise.isSystem ? "Podgląd ćwiczenia" :"Edycja ćwiczenia"}
             buttonValue="Edytuj"
             initialValues={initialValue}
             onHistoryClick={checkHistory}

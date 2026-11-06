@@ -72,7 +72,7 @@ if(!isOpen)
       <div className="modal-backdrop">
     <div className="modal">
     <ExerciseForm
-    title = "Utwórz nowe ćwiczenie"
+    title = "Nowe ćwiczenie"
     buttonValue = "Dodaj ćwiczenie"
     onClose = {onClose}
     onSubmit={async (exercise : ExerciseFormValues)=>{
