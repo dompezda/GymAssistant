@@ -1,0 +1,37 @@
+.templates-page .card {
+  text-align: left;
+  margin: 0;
+  padding: 12px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.templates-page .template-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.templates-page h2.card-title
+{
+ font-size: 1.25rem;
+ font-weight: bold;
+ text-align: left;
+ font-style: normal;
+ margin: 0 0 8px;
+}
+.templates-page .card-text {
+  font-size: 1rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.templates-page .template-description {
+  max-height: 150px;
+  overflow: hidden;
+}
+
+.templates-page .template-description.expanded {
+  max-height: none;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { fetchApi } from "../../../api/fetchApi";
+import "./workoutTemplatesPage.css";
 
 type WorkoutTemplateResponseDto = {
   id: string;
@@ -22,6 +23,7 @@ export default function WorkoutTemplatePage() {
 
   const [template, setTemplate] = useState<WorkoutTemplateResponseDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -51,14 +53,19 @@ export default function WorkoutTemplatePage() {
 
 
     return (
-    <section className="page">
-      <button className="btn btn-secondary" onClick={() => navigate("/workout-templates")}>
-        ← Wróć
-      </button>
+    <section className="page stack templates-page">
+      <div className="page-header">
+        <button className="btn back-button" onClick={() => navigate("/workout-templates")}>
+          ← Wróć
+        </button>
 
-      <h1>{template.title}</h1>
+        <h1 className="page-title">{template.title}</h1>
+      </div>
 
-      {template.notes && <p>{template.notes}</p>}
+      {template.notes && <p
+        onClick={() => setIsDescriptionExpanded(prev => !prev)}
+        className={`template-description ${isDescriptionExpanded ? "expanded" : ""}`}
+      >{template.notes}</p>}
       <button className="btn btn-primary" onClick={() => navigate(`/workout-templates/${template.id}/edit`)}>
         Edytuj
       </button>

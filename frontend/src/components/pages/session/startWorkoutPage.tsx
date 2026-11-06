@@ -117,7 +117,7 @@ async function getActiveSession() : Promise<void> {
        <section className="page main-menu">
         <p>Znaleziono aktywną sesję treningową. Czy chcesz ją kontynuować?</p>
         {discardError && <p className="error">{discardError}</p>}
-          <button className="btn btn-secondary" disabled={discard} onClick={() => navigate(`/workout-sessions/${sessionId}`)}>Kontynuuj</button>
+          <button className="btn btn-primary" disabled={discard} onClick={() => navigate(`/workout-sessions/${sessionId}`)}>Kontynuuj</button>
           <button className="btn btn-secondary" onClick={() => discardSession()} disabled={discard}>
             Porzuć trening i rozpocznij nowy
           </button>
