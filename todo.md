@@ -24,6 +24,8 @@ Frontend/backend update (3 November 2026): workout sessions now have nullable `D
 
 Frontend UI update (6 November 2026): login and registration now use a shared `.auth-page` layout; the main menu prioritizes the start-workout action; the exercise library uses shared `.page-header`, `.page-title` and `.back-button` styles. Exercise create/edit/read-only dialogs now share `.modal-header`, `.modal-title`, `.modal-body` and `.modal-component` styling; the muscle-group checkbox grid and action spacing were refined. Manual responsive checks verified modal scrolling at 375 × 400 and 375 × 600 viewports. This completes a UI pass for the exercise section, not the app-wide consistency task; other views still require review.
 
+Frontend UI update (7 November 2026): workout-template list/detail screens received responsive layout adjustments, and the template detail description is clamped to four lines until expanded. The workout-template edit screen now uses a height-constrained flex layout with independently scrollable form content and an always-visible Save action. It renders only exercises selected for the template, uses the existing `ExercisePickerModal` to select library exercises and `CreateExerciseModal` to create and immediately add a new one, and coordinates modal visibility through a single `ActiveModal` union state. Each selected exercise has explicit remove and planned-set controls (minimum one set); picker selection checks for duplicate exercise IDs. No new backend endpoint or integration test was added for this UI refactor. Remaining work: bring template creation to the same selection flow; improve the picker for large libraries (search/filtering and eventual favorites), loading/error states and unnecessary closed-modal fetches; guard repeated template PATCH submissions and verify narrow-screen/mobile keyboard behavior.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -37,6 +39,8 @@ Frontend UI update (6 November 2026): login and registration now use a shared `.
 
 #### UI/UX consistency
 - [ ] Unify buttons, forms, modals, spacing and feedback patterns across screens.
+- [ ] Bring template creation onto the shared exercise picker flow; improve exercise picker search/filtering and selected-item visibility for large catalogs.
+- [ ] Add template-editor save-in-flight protection and user-visible request/network error handling; validate mobile scrolling and keyboard behavior.
 - [ ] Make loading, saving and disabled states consistent.
 - [ ] Ignore swipes starting on inputs, buttons and other interactive controls; handle touch cancellation and multitouch.
 - [ ] Verify swipe, set editing, exercise menu and responsive layout on a physical mobile device and narrow viewports.
@@ -70,6 +74,7 @@ Frontend UI update (6 November 2026): login and registration now use a shared `.
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Refactor workout-template editing to show selected exercises only, add the exercise picker/create flow, and keep the save action visible with a scrollable form (7 November 2026).
 - [x] Add active workout resume/discard flow, nullable `DiscardedAt` migration, active-session creation guard and lifecycle restrictions.
 - [x] Filter completed-workout lists and exercise history to finished, non-discarded sessions, add lifecycle integration scenarios, and correct the exercise-history assertion.
 - [x] Improve exercise create/edit modal layout, action consistency, background scroll locking and duplicate-submit prevention.
