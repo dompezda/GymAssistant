@@ -1,3 +1,8 @@
+.templates-page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
 .templates-page .card {
   text-align: left;
   margin: 0;
@@ -28,10 +33,42 @@
 }
 
 .templates-page .template-description {
-  max-height: 150px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
   overflow: hidden;
 }
 
 .templates-page .template-description.expanded {
-  max-height: none;
+  -webkit-line-clamp: unset;
 }
+
+.templates-page .template-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.templates-page .template-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.templates-page .template-form-actions {
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.templates-page .template-form .template-exercises
+{
+  display: flex;
+  flex-direction: column;
+  gap:12px;
+}
+

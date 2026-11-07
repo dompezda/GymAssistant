@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
+import "./workoutTemplatesPage.css";
 type Template={
   id: string;
   title: string;
@@ -162,15 +163,17 @@ const visibleExercises = exercises.filter((exercise) =>
   }
 
 return(
-    <section className="page">
-        <div className="stack">
+    <section className="page stack templates-page">
+      <div className="page-header">
     <button
-        className="btn btn-secondary"
-        onClick={() => navigate("/workout-templates")}
-      >
+        className="btn back-button"
+        onClick={() => navigate("/workout-templates")}>
         ← Wróć
       </button>
-      <form className="stack" onSubmit={handleSubmit}>
+      </div>
+      
+      <form className="template-form" onSubmit={handleSubmit}>
+        <div className="template-form-content">
         {error && <p className="error">{error}</p>}
             <div>
                 <label>
@@ -196,21 +199,20 @@ return(
 
             </div>
             <div>
-              <button type="button" className="btn btn-primary" onClick={() => setIsCreateExerciseModalOpen(true)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setIsCreateExerciseModalOpen(true)}>
                 + Dodaj ćwiczenie
               </button>
             </div>
-            <div>
+            <div >
               <input type="text" placeholder="Szukaj ćwiczenia..." value={searchText} onChange={(e) => setSearchText(e.target.value)} />
             </div>
-            <div>
-
+            <div className="template-exercises">
                 {visibleExercises.map((exercise) => {
                     const selected = selectedExercises.find(
                         selected => selected.exerciseId === exercise.id
                     );
                     return (
-                        <div onClick={() => handleExerciseClick(exercise)} className={`card ${selected ? "card-selected" : ""}`} key={exercise.id}>{exercise.name} 
+                <div onClick={() => handleExerciseClick(exercise)} className={`card ${selected ? "card-selected" : ""}`} key={exercise.id}>{exercise.name} 
                     {exercise.muscleGroupLabels.length > 0 && (
                     <p>{exercise.muscleGroupLabels.join(", ")}</p>
                     )}
@@ -240,14 +242,18 @@ return(
                     </button>
                   </div>
                 )}                
-            </div>
+              </div>
                     )})}
-        <button type="submit" className="btn btn-primary">
-          Zapisz plan
-        </button>  
             </div>
-            </form>
         </div>
+        <div className="template-form-actions">
+          <button type="submit" className="btn btn-primary">
+            Zapisz plan
+          </button>  
+        </div>   
+      </form>
+           
+        
 
         <CreateExerciseModal
         isOpen={isCreateExerciseModalOpen}
