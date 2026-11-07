@@ -3,19 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
 import "./workoutTemplatesPage.css";
+import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 type Template={
   id: string;
   title: string;
   notes: string | null;
   exercises: SelectedExercise[];
 }
-type Exercise = {
-  id: string;
-  name: string;
-  muscleGroups: number[];
-  muscleGroupLabels: string[];
-  isSystem: boolean;
-};
 type SelectedExercise = {
   exerciseId: string;
   exerciseName: string;
@@ -23,30 +17,16 @@ type SelectedExercise = {
   order: number;
 };
 
-
+type ActiveModal = "none" | "picker" | "create";
 export default function WorkoutTemplateEdit() {
 const navigate = useNavigate();
 const { id } = useParams<{ id: string }>();
-//const [template, setTemplate] = useState<Template | null>(null);
-const [exercises, setExercises] = useState<Exercise[]>([]);
 const [title, setTitle] = useState<string>("");
 const [notes, setNotes] = useState<string | null>(null);
 const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
-const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false);
-const [searchText, setSearchText] = useState("");
 const [error, setError] = useState<string | null>(null);
-async function fetchExercises(): Promise<Exercise[]> {
-    const response = await fetchApi("/api/exercises");
+const [activeModal,setActiveModal] = useState<ActiveModal>("none");
 
-      if (!response.ok) {
-        const error = await response.text();
-        console.error(error);
-        return [];
-      }
-
-      const data = await response.json();
-      return data;
-  }
 async function fetchTemplate(templateId: string): Promise<Template | null> {
     const response = await fetchApi(`/api/workout-templates/${templateId}`);
     if(!response.ok) {
@@ -64,13 +44,6 @@ useEffect(()=>
 
   let ignore = false;
 
-  async function loadInitialExercises() {
-    const data = await fetchExercises();
-
-    if (!ignore) {
-      setExercises(data);
-    }
-  }
 
   async function loadTemplate() {
     if(!id) return;
@@ -83,7 +56,7 @@ useEffect(()=>
     }
   }
 
-  loadInitialExercises();
+
   loadTemplate();
   return () => {
     ignore = true;
@@ -100,27 +73,6 @@ useEffect(()=>
     );
   }
 
-    function handleExerciseClick(exercise: Exercise): void {
-        if(selectedExercises.some((x) => x.exerciseId === exercise.id)) {
-            setSelectedExercises((current) =>
-                current.filter((x) => x.exerciseId !== exercise.id)
-            );
-        }
-        else {
-            setSelectedExercises((current) => [
-                ...current,
-                {
-                    exerciseId: exercise.id,
-                    exerciseName: exercise.name,
-                    plannedSets: 3,
-                    order: current.length + 1,
-                },
-            ]);
-        }
-    }
-const visibleExercises = exercises.filter((exercise) =>
-    exercise.name.toLowerCase().includes(searchText.trim().toLowerCase())
-  );
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -162,6 +114,12 @@ const visibleExercises = exercises.filter((exercise) =>
     navigate("/workout-templates");
   }
 
+  function removeExercise(exerciseId: string): void {
+  setSelectedExercises(current =>
+    current.filter(x => x.exerciseId !== exerciseId)
+  );
+}
+
 return(
     <section className="page stack templates-page">
       <div className="page-header">
@@ -199,49 +157,50 @@ return(
 
             </div>
             <div>
-              <button type="button" className="btn btn-secondary" onClick={() => setIsCreateExerciseModalOpen(true)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setActiveModal("picker")}>
                 + Dodaj ćwiczenie
               </button>
             </div>
-            <div >
-              <input type="text" placeholder="Szukaj ćwiczenia..." value={searchText} onChange={(e) => setSearchText(e.target.value)} />
-            </div>
             <div className="template-exercises">
-                {visibleExercises.map((exercise) => {
-                    const selected = selectedExercises.find(
-                        selected => selected.exerciseId === exercise.id
-                    );
+                {selectedExercises.map((selectedExercise) => {
                     return (
-                <div onClick={() => handleExerciseClick(exercise)} className={`card ${selected ? "card-selected" : ""}`} key={exercise.id}>{exercise.name} 
-                    {exercise.muscleGroupLabels.length > 0 && (
-                    <p>{exercise.muscleGroupLabels.join(", ")}</p>
-                    )}
-                    
-                    {selected && (   
-                  <div className="sets-row">
+                <div className="card" key={selectedExercise.exerciseId}>
+                  <div className="card-row">
+                  <div className="exercise-name">{selectedExercise.exerciseName}</div>                     
                     <button
                       type="button"
+                      className="btn-remove"
+                      aria-label={`Usuń ${selectedExercise.exerciseName} z planu`}
+                      onClick={() => removeExercise(selectedExercise.exerciseId)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="card-row">
+                    <button
+                      type="button"
+                      className="btn-set-control"
+                      disabled={selectedExercise.plannedSets <= 1}
                       onClick={(e) => {
                         e.stopPropagation();
-                        changeSets(selected.exerciseId, -1);
+                        changeSets(selectedExercise.exerciseId, -1);
                       }}
                     >
                       -
                     </button>
-
-                    <span>Serie: {selected.plannedSets}</span>
-
+                    <span>Serie: {selectedExercise.plannedSets}</span>
                     <button
                       type="button"
+                      className="btn-set-control"
                       onClick={(e) => {
                         e.stopPropagation();
-                        changeSets(selected.exerciseId, 1);
+                        changeSets(selectedExercise.exerciseId, 1);
                       }}
                     >
                       +
                     </button>
                   </div>
-                )}                
+                               
               </div>
                     )})}
             </div>
@@ -253,26 +212,46 @@ return(
         </div>   
       </form>
            
-        
+        <ExercisePickerModal
+         isOpen={activeModal=="picker"}
+         onClose={()=>setActiveModal("none")}
+         onSelect={(exercise)=>
+         {
+           setSelectedExercises(current => {
+              if (current.some(x => x.exerciseId === exercise.id)) {
+                return current;
+              }
+
+              return [
+                ...current,
+                {
+                  exerciseId: exercise.id,
+                  exerciseName: exercise.name,
+                  plannedSets: 3,
+                  order: current.length + 1,
+                },
+              ];
+            });
+         }}
+         onCreateNew={()=>{
+          setActiveModal("create")
+         }}
+        />
 
         <CreateExerciseModal
-        isOpen={isCreateExerciseModalOpen}
-        onClose={() => setIsCreateExerciseModalOpen(false)}
-        onCreated={async (exercise) => {
-          setIsCreateExerciseModalOpen(false);
-          
-          const data = await fetchExercises();
-          setExercises(data);
-          
+        isOpen={activeModal=="create"}
+        onClose={() => setActiveModal("none")}
+        onCreated={(exercise) => {
           setSelectedExercises((current) => [
                 ...current,
                 {
                     exerciseId: exercise.id,
                     exerciseName: exercise.name,
-                    plannedSets: 3,
+                    plannedSets: 3, 
                     order: current.length + 1,
                 },
             ]);
+            setActiveModal("none");
         }}
         
       />

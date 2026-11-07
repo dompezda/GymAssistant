@@ -4,11 +4,13 @@
   flex-direction: column;
 }
 .templates-page .card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   text-align: left;
   margin: 0;
   padding: 12px 18px;
   border-radius: 8px;
-  cursor: pointer;
 }
 .templates-page .template-card {
   display: block;
@@ -71,4 +73,45 @@
   flex-direction: column;
   gap:12px;
 }
+.templates-page .card-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 
+.templates-page .exercise-name {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+  margin: 0;
+}
+
+.templates-page .btn-remove
+{
+    width: 40px;
+  height: 40px;
+  padding: 0;
+
+    border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.templates-page .btn-set-control {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.templates-page .btn-set-control:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
