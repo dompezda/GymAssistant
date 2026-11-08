@@ -8,6 +8,7 @@ export default function WorkoutTemplateBasicsPage() {
 
   async function HandleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!title.trim()) return;
       navigate("/workout-templates/exercises", {
         state: {
             title,
@@ -48,7 +49,7 @@ export default function WorkoutTemplateBasicsPage() {
           </label>
         </div>
 
-        <button type="submit" className="btn btn-primary" onClick={() => navigate("/workout-templates/exercises")}>
+        <button type="submit" className="btn btn-primary">
           Dalej
         </button>
       </form>

@@ -1,7 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
+import ExercisePickerModal from "../../exercises/ExercisePickerModal";
+import "./workoutTemplatesPage.css";
+type SelectedExercise = {
+  exerciseId: string;
+  exerciseName: string;
+  plannedSets: number;
+};
+
+
+
 type Exercise = {
   id: string;
   name: string;
@@ -9,81 +19,33 @@ type Exercise = {
   muscleGroupLabels: string[];
   isSystem: boolean;
 };
-type SelectedExercise = {
-  exerciseId: string;
-  plannedSets: number;
-  order: number;
-};
+
+type ActiveModal = "none" | "picker" | "create";
+
 
 export default function WorkoutTemplateExercisesPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false);
   const state = location.state as { title?: string; notes?: string } | null;
-  const [searchText, setSearchText] = useState("");
-  const [selectedExercises, setSelectedExercises] = useState<
-    SelectedExercise[]
-  >([]);
-
-  async function fetchExercises(): Promise<Exercise[]> {
-    const response = await fetchApi("/api/exercises");
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error(error);
-        return [];
-      }
-
-      const data = await response.json();
-      return data;
-  }
-
+  const [activeModal,setActiveModal] = useState<ActiveModal>("none");
+  const [addedExercises, setAddedExercises] = useState<SelectedExercise[]>([]);
+  const [isSaving,setIsSaving] = useState<boolean>(false);
+  const isSavingRef = useRef(false);
+  const [error,setError] = useState<string>();
   useEffect(() => {
     if (!state?.title) {
       navigate("/workout-templates/create");
       return;
     }
-  let ignore = false;
 
-  async function loadInitialExercises() {
-    const data = await fetchExercises();
-
-    if (!ignore) {
-      setExercises(data);
-    }
-  }
-
-  loadInitialExercises();
-
-  return () => {
-    ignore = true;
-  };
 },[state?.title, navigate]);
 
   if (!state?.title) {
     return null;
   }
 
-  const visibleExercises = exercises.filter((exercise) =>
-    exercise.name.toLowerCase().includes(searchText.trim().toLowerCase())
-  );
-
-  function getSelectedExercise(exerciseId: string) {
-    return selectedExercises.find((x) => x.exerciseId === exerciseId);
-  }
-  function addExercise(exerciseId: string) {
-    setSelectedExercises((current) => [
-      ...current,
-      {
-        exerciseId,
-        plannedSets: 3,
-        order: current.length + 1,
-      },
-    ]);
-  }
   function changeSets(exerciseId: string, delta: number) {
-    setSelectedExercises((current) =>
+    setAddedExercises((current) =>
       current.map((x) =>
         x.exerciseId === exerciseId
           ? { ...x, plannedSets: Math.max(1, x.plannedSets + delta) }
@@ -93,21 +55,34 @@ export default function WorkoutTemplateExercisesPage() {
   }
 
   function removeExercise(exerciseId: string) {
-    setSelectedExercises((current) =>
+    setAddedExercises((current) =>
       current.filter((x) => x.exerciseId !== exerciseId)
     );
   }
+  function addExercise(exercise:Exercise) :SelectedExercise
+  {
+
+    return {
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      plannedSets:3,
+    }
+  }
   async function handleSubmit(event: React.FormEvent) {
+    
     event.preventDefault();
-
+    if (isSavingRef.current == true) return;
+    setError(undefined);
     if (!state?.title) return;
-
-    if (selectedExercises.length === 0) {
-      alert("Dodaj przynajmniej jedno ćwiczenie.");
+    if (addedExercises.length === 0) {
+      setError("Dodaj przynajmniej jedno ćwiczenie.");
       return;
     }
-
-    const response = await fetchApi("/api/workout-templates",
+    try
+    {
+      isSavingRef.current=true;
+      setIsSaving(true);
+      const response = await fetchApi("/api/workout-templates",
       {
         method: "POST",
         headers: {
@@ -116,116 +91,146 @@ export default function WorkoutTemplateExercisesPage() {
         body: JSON.stringify({
           title: state.title,
           notes: state.notes,
-          exercises: selectedExercises.map((x) => ({
+          exercises: addedExercises.map((x,index) => ({
             exerciseId: x.exerciseId,
             plannedSets: x.plannedSets,
-            order: x.order,
+            order: index+1,
           })),
         }),
       }
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(error);
+      setError("Nie udało się zapisać planu. Spróbuj ponownie.");
       return;
     }
 
     navigate("/workout-templates");
+  
+    }
+    catch
+    {
+      setError("Nie udało się zapisać planu. Spróbuj ponownie.");
+    }
+    finally
+    {
+      isSavingRef.current = false;
+      setIsSaving(false);
+    }
   }
 
+  function handleAddExercise(exercise: Exercise) {
+  setAddedExercises(current => {
+    if (current.some(x => x.exerciseId === exercise.id)) {
+      return current;
+    }
+
+    return [...current, addExercise(exercise)];
+  });
+
+  setActiveModal("none");
+}
+
   return (
-    <section className="page">
-      <form onSubmit={handleSubmit} className="stack">
+    <section className="page stack templates-page">
+      <form onSubmit={handleSubmit} className="template-form">
+        <div className="page-header">
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn back-button"
+          disabled={isSaving}
           onClick={() => navigate("/workout-templates/create")}
         >
           ← Wróć
         </button>
-
-        <h1>{state.title}</h1>
-        {state.notes && <p>{state.notes}</p>}
-
+          <h1 className="page-title">Wybierz ćwiczenia</h1>
+          <p className="template-name">Plan: {state.title}</p>
+          {error && <p className="error" role="alert">{error}</p>}
+        </div>
+        <div className="template-form-content">
         <button
           type="button"
-          className="btn btn-primary"
-          onClick={() => setIsCreateExerciseModalOpen(true)}
+          disabled={isSaving}
+          className="btn btn-secondary"
+          onClick={() => setActiveModal("picker")}
         >
-          Utwórz nowe ćwiczenie
+          + Dodaj ćwiczenie
         </button>
-        <input
-          type="text"
-          placeholder="Szukaj ćwiczenia..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
-
-        <div className="stack">
-          {visibleExercises.map((exercise) => {
-            const selected = getSelectedExercise(exercise.id);
-
+        <div className="template-exercises">
+          {addedExercises.map((exercise) => {
             return (
-              <article
-                key={exercise.id}
-                className={`card ${selected ? "card-selected" : ""}`}
-                onClick={() =>
-                  selected
-                    ? removeExercise(exercise.id)
-                    : addExercise(exercise.id)
-                }
+              <div className="card"
+                key={exercise.exerciseId}
               >
-                <h2>{exercise.name}</h2>
 
-                {exercise.muscleGroupLabels.length > 0 && (
-                  <p>{exercise.muscleGroupLabels.join(", ")}</p>
-                )}
+                <div className="card-row">
+                  <div className="exercise-name">{exercise.exerciseName}</div>
+                   <button
+                      disabled={isSaving}
+                      type="button"
+                      className="btn-remove"
+                      aria-label={`Usuń ${exercise.exerciseName} z planu`}
+                      onClick={() => removeExercise(exercise.exerciseId)}
+                    >
+                      ✕
+                    </button>
+                </div>
+                
 
-                {selected && (
-                  <div className="sets-row">
+                
+                  <div className="card-row">
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        changeSets(exercise.id, -1);
+                      className="btn-set-control"
+                      
+                      disabled={exercise.plannedSets <= 1 || isSaving}  
+                      onClick={()=>{
+                        changeSets(exercise.exerciseId, -1);
                       }}
                     >
                       -
                     </button>
 
-                    <span>Serie: {selected.plannedSets}</span>
+                    <span>Serie: {exercise.plannedSets}</span>
 
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        changeSets(exercise.id, 1);
+                      className="btn-set-control"
+                      disabled={isSaving}
+                      onClick={() => {
+                        changeSets(exercise.exerciseId, 1);
                       }}
                     >
                       +
                     </button>
                   </div>
-                )}
-              </article>
+                
+              </div>
             );
           })}
         </div>
-
-        <button type="submit" className="btn btn-primary">
+        </div>
+        <div className="template-form-actions">
+        <button type="submit" className="btn btn-primary" disabled={isSaving}>
           Zapisz plan
         </button>
+        </div>
       </form>
 
-      <CreateExerciseModal
-        isOpen={isCreateExerciseModalOpen}
-        onClose={() => setIsCreateExerciseModalOpen(false)}
-        onCreated={async (createdExercise) => {
-          const data = await fetchExercises();
-          setExercises(data);
-          addExercise(createdExercise.id);
-          setIsCreateExerciseModalOpen(false);
-        }}
+        <ExercisePickerModal
+         isOpen={activeModal=="picker"}
+         onClose={()=>setActiveModal("none")}
+         onSelect={handleAddExercise}
+         onCreateNew={()=>{
+          setActiveModal("create")
+         }}
+        />
+
+        <CreateExerciseModal
+        isOpen={activeModal=="create"}
+        onClose={() => setActiveModal("none")}
+        onCreated={handleAddExercise}
+        
       />
     </section>
   );
