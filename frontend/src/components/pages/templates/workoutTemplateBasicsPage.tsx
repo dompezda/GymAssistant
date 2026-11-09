@@ -1,21 +1,38 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
+
+type SelectedExercise = {
+  exerciseId: string;
+  exerciseName: string;
+  plannedSets: number;
+};
 
 export default function WorkoutTemplateBasicsPage() {
+
+  const location = useLocation();
+
+  const state = location.state as {
+    title?: string;
+    notes?: string;
+    addedExercises?: SelectedExercise[];
+  } | null;
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
+  const [title, setTitle] = useState(state?.title ?? "");
+  const [notes, setNotes] = useState(state?.notes ?? "");
+  
 
   async function HandleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim()) return;
       navigate("/workout-templates/exercises", {
         state: {
-            title,
+            title: title.trim(),
             notes,
+            addedExercises: state?.addedExercises ?? [],
         },
     });
-  }
+  } 
 
   return (
     <section className="page">

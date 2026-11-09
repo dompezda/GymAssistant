@@ -26,9 +26,12 @@ type ActiveModal = "none" | "picker" | "create";
 export default function WorkoutTemplateExercisesPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { title?: string; notes?: string } | null;
+  const state = location.state as { title?: string; notes?: string, addedExercises?:SelectedExercise[] } | null;
   const [activeModal,setActiveModal] = useState<ActiveModal>("none");
-  const [addedExercises, setAddedExercises] = useState<SelectedExercise[]>([]);
+  const [addedExercises, setAddedExercises] =
+  useState<SelectedExercise[]>(
+    state?.addedExercises ?? []
+  );
   const [isSaving,setIsSaving] = useState<boolean>(false);
   const isSavingRef = useRef(false);
   const [error,setError] = useState<string>();
@@ -139,7 +142,15 @@ export default function WorkoutTemplateExercisesPage() {
           type="button"
           className="btn back-button"
           disabled={isSaving}
-          onClick={() => navigate("/workout-templates/create")}
+          onClick={() =>
+            navigate("/workout-templates/create", {
+              state: {
+                title: state.title,
+                notes: state.notes,
+                addedExercises
+              },
+            })
+          }
         >
           ← Wróć
         </button>
