@@ -14,7 +14,7 @@ In the Development environment, the backend also maps the OpenAPI document and a
 
 ## Authorization model
 
-`POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh` and `POST /api/auth/logout` do not require a valid access JWT. Refresh and logout use the `refreshToken` HttpOnly cookie when available. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
+`POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` do not require a valid access JWT. Refresh and logout use the `refreshToken` HttpOnly cookie when available. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
 
 Protected requests use:
 
@@ -47,6 +47,8 @@ The frontend uses `fetchApi` for protected domain requests so bearer-token attac
 | POST | `/api/auth/login` | Public | Authenticates a user, returns a JWT access token and creates the refresh-token cookie |
 | POST | `/api/auth/refresh` | Refresh cookie | Validates and rotates the refresh token, then returns a new JWT access token |
 | POST | `/api/auth/logout` | Refresh cookie optional | Revokes the active refresh token when present and deletes the refresh cookie |
+| POST | `/api/auth/forgot-password` | Public | Sends a password-reset link for a registered email (local Mailpit SMTP in Development) |
+| POST | `/api/auth/reset-password` | Public | Resets an Identity password using a user ID and reset token |
 | GET | `/api/auth/me` | Required | Returns the currently authenticated user |
 | GET | `/api/exercises` | Required | Returns system exercises plus the current user's private exercises |
 | POST | `/api/exercises` | Required | Creates a private exercise owned by the current user |
@@ -147,6 +149,42 @@ Successful response:
 Successful login also creates a refresh token using the configured lifetime. Only its SHA-256 hash is persisted in SQL Server; the raw token is returned only through the `refreshToken` cookie configured as `HttpOnly`, `Secure` and `SameSite=Strict`.
 
 The login response intentionally does not reveal whether an email exists.
+
+---
+
+## POST `/api/auth/forgot-password`
+
+Requests an Identity password-reset link.
+
+```json
+{ "email": "user@example.com" }
+```
+
+- `200 OK` — same confirmation message whether the account exists or not; an email is sent only for an existing account.
+- `400 Bad Request` — email is empty/whitespace.
+- SMTP failures are not currently mapped to a stable error response.
+
+The backend generates a token with `GeneratePasswordResetTokenAsync`, builds a link using configured `Frontend:Origin` and URL-encoded `userId`/`token`, then calls `IEmailSender`. In Development, MailKit sends to Mailpit at `localhost:1025`; view messages at `http://localhost:8025`. Mailpit does not deliver real email.
+
+---
+
+## POST `/api/auth/reset-password`
+
+Uses a token from the email link to set a new Identity password.
+
+```json
+{
+  "userId": "6e40dbd4-6f8f-43bc-9522-a041fbe9138d",
+  "token": "<password-reset-token>",
+  "password": "Example123!"
+}
+```
+
+- `200 OK` — successful reset.
+- `400 Bad Request` — missing data, unknown user, invalid token, or password validation failure.
+- When Identity rejects the reset, the current implementation returns an array of `{ "code": "...", "description": "..." }` errors. Unknown users and missing inputs currently return plain-text error messages instead; response unification remains open.
+
+`ResetPasswordAsync` performs token verification and Identity password-policy validation. The password is sent in the HTTPS request body in production; it must never be included in the reset URL.
 
 ---
 
