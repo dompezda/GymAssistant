@@ -50,6 +50,9 @@ export default function LoginPage() {
                 <div className="auth-switch">
                     Nie masz konta? <Link to="/register">Zarejestruj się</Link>
                 </div>
+                <div className="auth-switch">
+                    Nie masz konta? <Link to="/forgot-password">Zapomniałeś hasła?</Link>
+                </div>
             </div>
         </div>
     )

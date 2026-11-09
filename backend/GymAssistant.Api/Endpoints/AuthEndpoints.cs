@@ -145,6 +145,55 @@ public static class AuthEndpoints
             return Results.Ok(new LoginResponse(accessToken.AccessToken, accessToken.ExpiresAtUtc));
             });
 
+
+        group.MapPost("/forgot-password",async(
+        ForgotPasswordRequest request,
+        IEmailSender emailSender,
+        IConfiguration configuration,
+        UserManager<ApplicationUser> userManager
+        ) =>
+        {
+            if(string.IsNullOrWhiteSpace(request.Email))
+                return Results.BadRequest("Podanie adresu Email jest wymagane");
+            
+            
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if(user !=null)
+            {
+                var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                var url = configuration["Frontend:Origin"];
+                var resetLink =
+                    $"{url}/reset-password?userId={Uri.EscapeDataString(user.Id.ToString())}&token={Uri.EscapeDataString(token)}";
+                await emailSender.SendPasswordResetEmailAsync(user.Email!,resetLink);
+            }
+            return Results.Ok("Wysłano powiadomienie email, jeśli konto istnieje");        
+        });
+
+        group.MapPost("/reset-password", async (
+            ResetPasswordRequest request,
+            UserManager<ApplicationUser> userManager
+        ) =>
+        {
+            if(string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.UserId) || string.IsNullOrWhiteSpace(request.Token))
+                return Results.BadRequest("UserId, token i hasło są wymagane.");
+            var user = await userManager.FindByIdAsync(request.UserId);
+            if(user == null)
+                return Results.BadRequest("Nieprawidłowy lub wygasły link resetowania hasła.");
+
+            var res = await userManager.ResetPasswordAsync(user,request.Token,request.Password);
+            if (!res.Succeeded)
+            {
+                return Results.BadRequest(res.Errors.Select(e => new
+                {
+                    e.Code,
+                    e.Description
+                }));
+            }
+
+            return Results.Ok();
+        });
+
+
         group.MapPost("/register", async (
             RegisterRequest request,
             UserManager<ApplicationUser> userManager) =>
@@ -195,6 +244,17 @@ public static class AuthEndpoints
 
 }
 
+
+public record ForgotPasswordRequest
+(
+    string Email
+);
+
+public record ResetPasswordRequest(
+    string UserId,
+    string Token,
+    string Password
+);
 
 public record RegisterRequest
 (

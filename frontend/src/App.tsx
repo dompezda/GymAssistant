@@ -21,6 +21,8 @@ import LoginPage from "./components/pages/loginPage";
 import AuthProvider from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/protectedRoute";
 import RegisterPage from "./components/pages/registerPage";
+import ForgotPasswordPage from "./components/pages/ForgotPasswordPage";
+import NewPasswordPage from "./components/pages/NewPasswordPage";
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
             <Route path="/" element={<Navigate to="/main-menu" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<NewPasswordPage/>} />
 
           <Route element={<ProtectedRoute />}>
           

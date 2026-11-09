@@ -45,7 +45,8 @@ builder.Services
         options.Password.RequiredLength = 8;
     })
     .AddErrorDescriber<PolishIdentityErrorDescriber>()
-    .AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
 
 var jwtSection = builder.Configuration
     .GetRequiredSection(JwtOptions.SectionName);
@@ -112,6 +113,10 @@ builder.Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+builder.Services.Configure<SmtpOptions>(
+    builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<IEmailSender, EmailSender>();
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<
@@ -122,9 +127,12 @@ builder.Services.AddSingleton<
     IRefreshTokenService,
     RefreshTokenService>();
 
+
+
 var app = builder.Build();
 
 app.UseCors("Frontend");
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
