@@ -7,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 public class GymAssistantWebApplicationFactory : WebApplicationFactory<Program>
 {
 
@@ -19,8 +21,16 @@ public class GymAssistantWebApplicationFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender, FakeEmailSender>();
+        });
         builder.ConfigureServices((services) =>
         {
+
+            
            var dbContextDescriptor = services.SingleOrDefault(
                 x => x.ServiceType ==
                     typeof(IDbContextOptionsConfiguration<AppDbContext>));

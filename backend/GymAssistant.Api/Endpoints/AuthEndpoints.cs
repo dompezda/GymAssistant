@@ -171,6 +171,7 @@ public static class AuthEndpoints
 
         group.MapPost("/reset-password", async (
             ResetPasswordRequest request,
+            AppDbContext db,
             UserManager<ApplicationUser> userManager
         ) =>
         {
@@ -189,7 +190,18 @@ public static class AuthEndpoints
                     e.Description
                 }));
             }
+            var tokens = await db.RefreshTokens
+                .Where(x => x.UserId == user.Id && x.RevokedAtUtc == null)
+                .ToListAsync();
 
+            var now = DateTime.UtcNow;
+
+            foreach (var token in tokens)
+            {
+                token.RevokedAtUtc = now;
+            }
+
+            await db.SaveChangesAsync();
             return Results.Ok();
         });
 
