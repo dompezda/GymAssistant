@@ -10,7 +10,7 @@ Implemented authentication currently includes:
 - email/password login through ASP.NET Core Identity,
 - unique email enforcement and a configured Identity password policy,
 - JWT bearer access tokens,
-- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` and protected `GET /api/auth/me`,
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` and protected `GET /api/auth/me`,
 - `ICurrentUser` for backend user resolution,
 - frontend `/register` and `/login` flows, `AuthProvider`, `useAuth()`, protected routes and centralized bearer-token handling,
 - automatic login after successful frontend registration,
@@ -29,7 +29,7 @@ Implemented authentication currently includes:
 - system/private exercise ownership enforced by both API rules and a database check constraint,
 - backend integration-test infrastructure based on `WebApplicationFactory` and SQLite in-memory, including unauthenticated exercise access and two-user private-exercise visibility coverage.
 
-Password reset, email confirmation, external providers and roles remain outside the current MVP scope.
+Password reset is now implemented and manually verified locally (9 November 2026). Email confirmation, external providers and roles remain outside the current MVP scope.
 
 ## Registration flow
 
@@ -75,6 +75,19 @@ The frontend `/register` page validates that all fields are present and that pas
 After a successful registration, the frontend calls the existing `login(email, password)` function from `AuthProvider` and navigates to `/main-menu`. The registration endpoint itself does not create JWT or refresh tokens; token creation remains centralized in the normal login flow.
 
 The login and registration pages provide navigation links between `/login` and `/register`.
+
+## Password reset (local implementation, 9 November 2026)
+
+Both password-reset endpoints are public and implemented in `AuthEndpoints`.
+
+- `POST /api/auth/forgot-password` requires an email. It looks up the Identity user, generates a reset token using `GeneratePasswordResetTokenAsync` only for an existing user, constructs a frontend URL from `Frontend:Origin` with URL-encoded `userId` and `token`, then calls `IEmailSender.SendPasswordResetEmailAsync`. It returns the same `200 OK` message for existing and unknown emails to reduce account enumeration.
+- `POST /api/auth/reset-password` accepts `UserId`, `Token` and `Password`; it calls `UserManager.ResetPasswordAsync` and returns `200 OK` on success. Missing fields and invalid requests return `400 Bad Request`. At present, failed Identity results are returned as arrays of `{code, description}`, including token errors; this needs a deliberate production error contract.
+- The frontend exposes public `/forgot-password` and `/reset-password` routes. The latter reads the token and user ID from query parameters, checks the password confirmation and submits the new password. The requirements list reflects the configured Identity password policy; API password-policy error descriptions are not yet presented individually in the reset UI.
+- `IEmailSender` is implemented by `EmailSender` using MailKit/MimeKit. Its `SmtpOptions` are bound from `Smtp` configuration. Development uses Mailpit (SMTP `localhost:1025`, inbox UI `http://localhost:8025`) with the test sender `noreply@gymassistant.local`. No real recipient inbox is required locally.
+- `AddDefaultTokenProviders()` enables Identity password-reset tokens. The token is not a JWT access token.
+- The full happy-path flow was verified manually on 9 November 2026: request email, read Mailpit message, follow link and submit new password. Automated Auth integration tests have not yet been added.
+
+**Not yet production-ready:** SMTP TLS/authentication and a real delivery provider, handling and logging delivery failures without leaking account existence, rate limiting/abuse protection, consistent non-enumerating error handling, avoiding reset-token exposure to logs/referrers, guarding duplicate form submits, and integration tests. `EmailSender` currently explicitly uses `SecureSocketOptions.None`; the `UseSsl` option is defined but not used.
 
 ## Login flow
 
@@ -276,7 +289,7 @@ The current `IClassFixture<GymAssistantWebApplicationFactory>` setup keeps the S
 ## Remaining MVP / hardening work
 
 - define the final seed/admin strategy for the system exercise catalog,
-- expand integration-test coverage to authentication flows and additional two-user ownership boundaries,
+- add integration tests for register/login/refresh/logout and password reset (including invalid/expired/reused tokens, password-policy errors, unknown emails and a fake IEmailSender), plus additional two-user ownership boundaries,
 - add an explicit integration-test data reset/isolation strategy as the suite grows,
 - remove temporary auth/debug behavior,
 - decide whether the access token should remain in `localStorage` for the production version,

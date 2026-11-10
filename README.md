@@ -24,7 +24,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 - **Workout templates:** create reusable training plans and adjust the included exercises and planned sets.
 - **Workout sessions:** start from a template or build a session from scratch; record sets, weights and repetitions; resume an unfinished workout or discard it before starting another; add or remove exercises while the session is active.
 - **Training history:** review completed workouts and exercise history; active and discarded sessions are excluded.
-- **User accounts:** register, log in, and access only your own templates, sessions, and private exercises. System exercises are shared and read-only.
+- **User accounts:** register, log in, reset a forgotten password using an email link (currently tested via local Mailpit), and access only your own templates, sessions, and private exercises. System exercises are shared and read-only.
 
 ## Tech stack
 
@@ -33,7 +33,8 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 | Backend | C#, .NET 9, ASP.NET Core Minimal APIs, Entity Framework Core |
 | Database | SQL Server |
 | Frontend | React, TypeScript, Vite |
-| Authentication | ASP.NET Core Identity, JWT access tokens, refresh-token rotation |
+| Authentication | ASP.NET Core Identity, JWT access tokens, refresh-token rotation, reset tokens |
+| Development email | MailKit SMTP + Mailpit (local testing only) |
 | Testing | xUnit, `WebApplicationFactory`, SQLite in-memory integration tests |
 | API reference | OpenAPI and Scalar in Development |
 
@@ -79,6 +80,18 @@ For implementation details, see [Authentication.md](Authentication.md) and [Api.
    ```
 
 The development frontend is configured for `http://localhost:5173`. The API's HTTP port is defined by its launch profile; update `VITE_API_URL` if yours differs. Local HTTPS/cookie behavior may require using the HTTPS launch profile and matching origins.
+
+### Local password-reset email
+
+Password reset uses MailKit SMTP, with Mailpit as the local test inbox. With Docker Desktop running, start Mailpit:
+
+```powershell
+docker run -d --name mailpit -p 127.0.0.1:8025:8025 -p 127.0.0.1:1025:1025 axllent/mailpit
+```
+
+The API's `appsettings.Development.json` configures `Smtp:Host=localhost`, `Smtp:Port=1025` and a local-only sender address. Browse `http://localhost:8025` to see reset messages. Use an email that belongs to an Identity user in the local database; Mailpit captures that message even if no real mailbox exists.
+
+The reset URL points to the frontend origin configured by `Frontend:Origin`. Production delivery is **not yet configured**: a real SMTP provider, secure transport, credentials via secrets/environment and abuse protection are required before public release. Do not commit real SMTP passwords or tokens.
 
 ### Integration tests
 

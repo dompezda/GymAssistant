@@ -26,6 +26,8 @@ Frontend UI update (6 November 2026): login and registration now use a shared `.
 
 Frontend UI update (7 November 2026): workout-template list/detail screens received responsive layout adjustments, and the template detail description is clamped to four lines until expanded. The workout-template edit screen now uses a height-constrained flex layout with independently scrollable form content and an always-visible Save action. It renders only exercises selected for the template, uses the existing `ExercisePickerModal` to select library exercises and `CreateExerciseModal` to create and immediately add a new one, and coordinates modal visibility through a single `ActiveModal` union state. Each selected exercise has explicit remove and planned-set controls (minimum one set); picker selection checks for duplicate exercise IDs. No new backend endpoint or integration test was added for this UI refactor. Remaining work: bring template creation to the same selection flow; improve the picker for large libraries (search/filtering and eventual favorites), loading/error states and unnecessary closed-modal fetches; guard repeated template PATCH submissions and verify narrow-screen/mobile keyboard behavior.
 
+Authentication update (9 November 2026): implemented public `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` using ASP.NET Core Identity token providers, `IEmailSender` / MailKit SMTP, `SmtpOptions` and development Mailpit. React now includes `/forgot-password` and `/reset-password` pages, email links and password requirements. The happy path was manually verified end-to-end; negative cases and automated tests remain open. Mailpit is local-only, not a production mail provider.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -46,7 +48,9 @@ Frontend UI update (7 November 2026): workout-template list/detail screens recei
 - [ ] Verify swipe, set editing, exercise menu and responsive layout on a physical mobile device and narrow viewports.
 
 #### Authentication and release quality
-- [ ] Add authentication integration tests: register, login, logout, refresh rotation, expired/revoked token rejection and unauthorized access.
+- [ ] Add authentication integration tests: register, login, logout, refresh rotation, expired/revoked token rejection and unauthorized access; include forgot/reset password (success, nonexistent email, bad/expired/reused token, password policy, missing fields) with a fake IEmailSender.
+- [ ] Prepare production email delivery: real SMTP provider, credentials stored outside source control, TLS/STARTTLS, delivery-failure behavior, rate limits and logging that does not expose tokens.
+- [ ] Standardize password-reset error responses; distinguish password-policy failures from invalid tokens and show actionable feedback in React. Prevent duplicate password-reset submissions.
 - [ ] Verify the frontend production build (`npm run build`) and manually smoke-test resume/discard/new workout flow. Backend suite: 100 passed, 0 failed, 0 skipped (local run reported 3 November 2026); the exercise-history assertion was corrected.
 - [ ] Clean up temporary authentication/debug behavior and review access-token storage (`localStorage` is not a production decision).
 - [ ] Define a production-safe strategy to seed/manage system exercises.
@@ -74,6 +78,7 @@ Frontend UI update (7 November 2026): workout-template list/detail screens recei
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Implement local password-reset flow with MailKit, Identity token generation/verification, Mailpit and two React pages; manually verify successful reset (9 November 2026). Production email and automated tests remain open.
 - [x] Refactor workout-template editing to show selected exercises only, add the exercise picker/create flow, and keep the save action visible with a scrollable form (7 November 2026).
 - [x] Add active workout resume/discard flow, nullable `DiscardedAt` migration, active-session creation guard and lifecycle restrictions.
 - [x] Filter completed-workout lists and exercise history to finished, non-discarded sessions, add lifecycle integration scenarios, and correct the exercise-history assertion.
