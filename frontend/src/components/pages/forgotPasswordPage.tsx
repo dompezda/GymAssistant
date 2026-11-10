@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getApiUrl } from "../../config/apiConfig";
 
@@ -7,14 +7,23 @@ export default function ForgotPasswordPage()
     const [email,setEmail] = useState("");
     const [error,setError] = useState("");
     const [info,setInfo] = useState<string>();
+    const [isSubmitting,setIsSubmitting] = useState<boolean>(false);
+    const isSubmittingRef = useRef<boolean>(false);
     const apiUrl = getApiUrl();
-    async function handleReset(): Promise<void> {
+    async function handleReset(
+    event: React.FormEvent<HTMLFormElement>
+        ): Promise<void> {
+            event.preventDefault();
+        if(isSubmittingRef.current==true) return;
          setError("");
+         setInfo(undefined);
         if(!email){
             setError("Uzupełnij pole email");
             return;
         }
-         try { 
+        isSubmittingRef.current = true; 
+        setIsSubmitting(true);
+         try {          
             const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
                 method: "POST",
                 headers: {
@@ -35,15 +44,18 @@ export default function ForgotPasswordPage()
         } catch {
             setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
         }
+        finally
+        {
+            setIsSubmitting(false);
+            isSubmittingRef.current=false;
+        }
     }
 
     return (
         <div className="auth-page">
           <div className="stack">
             <h1 className="page-title">Reset hasła</h1>
-          </div>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" />
-            {error && (
+          {error && (
                 <div className="form-error">
                     {error}
                 </div>
@@ -53,10 +65,15 @@ export default function ForgotPasswordPage()
                     {info}
                 </div>
             )}
-            <button className="btn btn-primary" onClick={handleReset}>
+          <form onSubmit={handleReset}>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" />
+            
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
                 Zresetuj hasło
             </button>
-
+            </form>
+            </div>
+            
         <div className="auth-switch">
             Masz już konto? <Link to="/login">Zaloguj się</Link>
         </div>

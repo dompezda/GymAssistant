@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { getApiUrl } from "../../config/apiConfig";
 
@@ -8,12 +8,18 @@ export default function NewPasswordPage()
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error,setError] = useState("");
     const [searchParams] = useSearchParams();
-    
+    const [isSetting,setIsSetting] = useState<boolean>(false);
+    const isSettingRef = useRef<boolean>(false);
     const apiUrl = getApiUrl();
     const navigate = useNavigate();
 
 
-    async function handleReset(): Promise<void> {
+    async function handleReset(
+    event: React.FormEvent<HTMLFormElement>
+): Promise<void> {
+    event.preventDefault();
+
+    if(isSettingRef.current) return;
         setError("");
         if(!password || !confirmPassword)
         {
@@ -32,6 +38,9 @@ export default function NewPasswordPage()
             setError("Niepoprawny request");
             return;
         }
+
+        isSettingRef.current=true;
+        setIsSetting(true);
         try
         {
             const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
@@ -55,15 +64,20 @@ export default function NewPasswordPage()
         } catch {
             setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
         }
+        finally
+        {
+            setIsSetting(false);
+            isSettingRef.current=false;
+        }
     }
 
     return(
     <div className="auth-page">
-        <div className="stack">
+        <form onSubmit={handleReset} className="stack">
             <h1 className="page-title">Zmiana hasła</h1>
 
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Hasło" />
-            <input value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="Powtórz hasło" />
+            <input required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Hasło" />
+            <input required autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="Powtórz hasło" />
             {error && (
                 <div className="form-error">
                     {error}
@@ -78,13 +92,17 @@ export default function NewPasswordPage()
                     <li>Co najmniej jeden znak specjalny</li>
                 </ul>
             </div>
-            <button className="btn btn-primary" onClick={handleReset}>
-                Ustaw nowe hasło
+            <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSetting}
+            >
+                {isSetting ? "Zapisywanie..." : "Ustaw nowe hasło"}
             </button>
             <div className="auth-switch">
                 Masz już konto? <Link to="/login">Zaloguj się</Link>
             </div>
-        </div>
+        </form>
 </div>
     )
 }
