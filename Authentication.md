@@ -29,7 +29,7 @@ Implemented authentication currently includes:
 - system/private exercise ownership enforced by both API rules and a database check constraint,
 - backend integration-test infrastructure based on `WebApplicationFactory` and SQLite in-memory, including unauthenticated exercise access and two-user private-exercise visibility coverage.
 
-Password reset is now implemented and manually verified locally (9 November 2026). Email confirmation, external providers and roles remain outside the current MVP scope.
+Password reset is implemented, manually verified locally (9 November 2026), and partially covered by integration tests (10 November 2026). Email confirmation, external providers and roles remain outside the current MVP scope.
 
 ## Registration flow
 
@@ -85,9 +85,9 @@ Both password-reset endpoints are public and implemented in `AuthEndpoints`.
 - The frontend exposes public `/forgot-password` and `/reset-password` routes. The latter reads the token and user ID from query parameters, checks the password confirmation and submits the new password. The requirements list reflects the configured Identity password policy; API password-policy error descriptions are not yet presented individually in the reset UI.
 - `IEmailSender` is implemented by `EmailSender` using MailKit/MimeKit. Its `SmtpOptions` are bound from `Smtp` configuration. Development uses Mailpit (SMTP `localhost:1025`, inbox UI `http://localhost:8025`) with the test sender `noreply@gymassistant.local`. No real recipient inbox is required locally.
 - `AddDefaultTokenProviders()` enables Identity password-reset tokens. The token is not a JWT access token.
-- The full happy-path flow was verified manually on 9 November 2026: request email, read Mailpit message, follow link and submit new password. Automated Auth integration tests have not yet been added.
+- The full happy-path flow was verified manually on 9 November 2026: request email, read Mailpit message, follow link and submit new password. Auth integration tests were added on 10 November 2026 using a `FakeEmailSender`; they cover registration, login, forgot-password responses and email generation, password reset success, reused/invalid tokens and revocation of active refresh tokens. Additional expired-token and refresh/logout edge-case tests remain to be added.
 
-**Not yet production-ready:** SMTP TLS/authentication and a real delivery provider, handling and logging delivery failures without leaking account existence, rate limiting/abuse protection, consistent non-enumerating error handling, avoiding reset-token exposure to logs/referrers, guarding duplicate form submits, and integration tests. `EmailSender` currently explicitly uses `SecureSocketOptions.None`; the `UseSsl` option is defined but not used.
+**Not yet production-ready:** SMTP TLS/authentication and a real delivery provider, handling and logging delivery failures without leaking account existence, rate limiting/abuse protection, consistent non-enumerating error handling, avoiding reset-token exposure to logs/referrers, and additional integration tests. Frontend password-reset forms now guard duplicate submissions. `EmailSender` currently explicitly uses `SecureSocketOptions.None`; the `UseSsl` option is defined but not used.
 
 ## Login flow
 
@@ -282,14 +282,14 @@ Current exercise integration coverage verifies unauthenticated access, two-user 
 
 Workout-template integration coverage verifies ownership on create, required title/exercises, positive planned-set validation, rejection of another user's private exercise, support for system exercises, duplicate-exercise rejection, exercise-order normalization, user-isolated template listing and `404 Not Found` for another user's template.
 
-Authenticated domain tests deliberately create Identity users and issue real access JWTs through `IAccessTokenService` instead of depending on the login endpoint. Authentication endpoint integration coverage is still planned separately.
+Authenticated domain tests deliberately create Identity users and issue real access JWTs through `IAccessTokenService` instead of depending on the login endpoint. Authentication endpoint integration coverage now includes register/login and forgot/reset-password cases in `AuthEndpointsTests` with a `FakeEmailSender`; refresh/logout coverage and selected negative cases remain outstanding.
 
 The current `IClassFixture<GymAssistantWebApplicationFactory>` setup keeps the SQLite database alive across tests using the same factory. As the suite grows, test-data reset/isolation must be made explicit so tests do not become order-dependent or leak state into one another.
 
 ## Remaining MVP / hardening work
 
 - define the final seed/admin strategy for the system exercise catalog,
-- add integration tests for register/login/refresh/logout and password reset (including invalid/expired/reused tokens, password-policy errors, unknown emails and a fake IEmailSender), plus additional two-user ownership boundaries,
+- extend existing auth endpoint integration tests with refresh/logout, expired-token and additional password-policy/missing-field scenarios, plus additional two-user ownership boundaries,
 - add an explicit integration-test data reset/isolation strategy as the suite grows,
 - remove temporary auth/debug behavior,
 - decide whether the access token should remain in `localStorage` for the production version,
