@@ -4,7 +4,7 @@
 
 GymAssistant helps users organize exercises, prepare workout templates, track sets during a training session, and review completed workouts. It is a personal portfolio project and is actively being developed.
 
-> **Project status:** Work in progress. The core workout flows and authentication are implemented; the UI, automated test coverage, and production-readiness are still being improved. There is currently no public hosted demo.
+> **Project status:** Developer v1.0 final QA. Core workout and authentication flows are implemented, with a recent mobile UI pass and auth integration tests. Frontend production build, remaining smoke tests and production deployment/hardening are not yet confirmed. There is currently no public hosted demo.
 
 ## Screenshots
 
@@ -20,7 +20,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 
 ## Features
 
-- **Exercise library:** browse system exercises, search the catalog, and create or edit personal exercises with muscle-group assignments.
+- **Exercise library:** browse system exercises, search exercises in the catalog and picker, and create or edit personal exercises with muscle-group assignments.
 - **Workout templates:** create reusable training plans and adjust the included exercises and planned sets.
 - **Workout sessions:** start from a template or build a session from scratch; record sets, weights and repetitions; resume an unfinished workout or discard it before starting another; add or remove exercises while the session is active.
 - **Training history:** review completed workouts and exercise history; active and discarded sessions are excluded.
