@@ -4,11 +4,15 @@ export default function SettingsPage() {
 
   const navigate = useNavigate();
   return (
-    <section className="page">
-      <button className="btn btn-secondary" onClick={() => navigate("/")}>
-        ← Wróć
-      </button>
-      <h1>Ustawienia</h1>
+    <section className="page stack templates-page">
+      <div className="page-header">
+          <button className="btn back-button" onClick={() => navigate("/")}>
+            ← Wróć
+          </button>
+          <header>
+            <h1 className="page-title">Ustawienia</h1>
+          </header>
+       </div>
       <p>Tutaj będą ustawienia aplikacji.</p>
     </section>
   );

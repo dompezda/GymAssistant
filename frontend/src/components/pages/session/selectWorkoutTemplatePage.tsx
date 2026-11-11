@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { fetchApi } from "../../../api/fetchApi";
 
 type Template = {
@@ -29,30 +29,27 @@ export default function SelectWorkoutTemplatePage() {
   }, []);
 
   return (
-    <section className="page">
-      <button
-        className="btn btn-secondary"
-        onClick={() => navigate("/workout-sessions/start")}
-      >
-        ← Wróć
-      </button>
-
-      <h1>Wybierz plan treningowy</h1>
-      <p>Wybierz plan, z którego chcesz rozpocząć sesję.</p>
-
+     <section className="page stack templates-page">
+      <div className="page-header">
+          <button className="btn back-button" onClick={() => navigate("/")}>
+            ← Wróć
+          </button>
+          <header>
+            <h1 className="page-title">Wybierz plan</h1>
+          </header>
+       </div>
       <div className="stack">
+        <p>Wybierz plan, z którego chcesz rozpocząć sesję.</p>
         {templates.map((template) => (
-          <article
+          <Link
             key={template.id}
             className="card"
-            onClick={() =>
-              navigate(`/workout-sessions/setup/from-template/${template.id}`)
-            }
+            to={`/workout-sessions/setup/from-template/${template.id}`}
           >
-            <h2>{template.title}</h2>
+            <h2 className="card-title">{template.title}</h2>
 
-            {template.notes && <p>{template.notes}</p>}
-          </article>
+            {template.notes && <p className="card-text">{template.notes}</p>}
+          </Link>
         ))}
       </div>
     </section>

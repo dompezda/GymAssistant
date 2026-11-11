@@ -493,19 +493,43 @@ if (exercises.length === 0 || !currentExercise) {
   }
 
   return (
-    <section className="page">
-      <div className="refresh-row">
-        <button className="btn btn-secondary" onClick={() => navigate("/")}>
+    <section className="page workout-session-page">
+       <div className="page-header">  
+        <button className="btn back-button" onClick={() => navigate("/")}>
             ← Wróć
         </button>
-        <button  type="button" aria-label="Odśwież dane sesji" title="Odśwież dane sesji"
-        onClick={refreshSession}
-        disabled={isSaving}
-      >
-        <RefreshCw size={18} />
-      </button>
       </div>
 
+  <div className="workout-session-header">
+  <div className="workout-session-toolbar">
+    <p>Ćwiczenie {currentExerciseIndex + 1} z {exercises.length}</p>
+
+    <button
+      type="button"
+      className="btn-refresh"
+      aria-label="Odśwież dane sesji"
+      title="Odśwież dane sesji"
+      onClick={refreshSession}
+      disabled={isSaving}
+    >
+      <RefreshCw size={18} />
+    </button>
+  </div>
+      
+    
+    <div className="exercise-header-row">
+      <h2>{currentExercise.exerciseName}</h2>
+      <div>     
+      <button onClick={() => setIsExerciseMenuOpen(prev => !prev)}>...</button>     
+          {isExerciseMenuOpen && (
+        <div className="exercise-dropdown">
+          <button disabled={isSaving} onClick={() => {deleteExercise(currentExercise.id)}}>Usuń ćwiczenie</button>
+        </div>     
+      )}
+    </div>
+    </div>
+  </div>
+    <div className="workout-session-content">
 <div className="touchArea" onTouchStart={(e)=>
   {
     touchStartX.current = e.touches[0].clientX;
@@ -516,21 +540,7 @@ if (exercises.length === 0 || !currentExercise) {
     touchEndY.current = e.changedTouches[0].clientY;
     handleSwipeEnd();
   }}>
-  <header className="workout-session-header">
-      <p>Ćwiczenie {currentExerciseIndex + 1} z {exercises.length}</p>
-    
-    <div className="exercise-header-row">
-      <h1>{currentExercise.exerciseName}</h1>
-      <div>     
-      <button onClick={() => setIsExerciseMenuOpen(prev => !prev)}>...</button>     
-          {isExerciseMenuOpen && (
-        <div className="exercise-dropdown">
-          <button disabled={isSaving} onClick={() => {deleteExercise(currentExercise.id)}}>Usuń ćwiczenie</button>
-        </div>     
-      )}
-    </div>
-    </div>
-  </header>
+  
 
 <article className="exercise-card">
 
@@ -598,24 +608,34 @@ if (exercises.length === 0 || !currentExercise) {
         }}> + Dodaj serie</button>
     </div>
   </article>
+    </div>
+
 </div>
-  <div>{errorMessage}</div>
+  {errorMessage && (
+    <p className="form-error">{errorMessage}</p>
+  )}
+  <div className="workout-session-actions">
   <nav className="exercise-navigation">
-    
-    <button onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0 || isSaving}>
-      ← Poprzednie
-    </button>
-    <button onClick={() => goToExercise(currentExerciseIndex + 1)} disabled={currentExerciseIndex === exercises.length - 1 || isSaving}>
-      Następne →
-    </button>
+            <button className="btn btn-secondary" onClick={() => goToExercise(currentExerciseIndex - 1)} disabled={currentExerciseIndex === 0 || isSaving}>
+          ← Poprzednie
+        </button>
+        <button className="btn btn-secondary" onClick={() => goToExercise(currentExerciseIndex + 1)} disabled={currentExerciseIndex === exercises.length - 1 || isSaving}>
+          Następne →
+        </button>
   </nav>
-  <div>
+
+  <div className="template-form-actions">
     <button disabled= {isSaving} className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
-        + Dodaj ćwiczenie
-    </button>
-  <button disabled={isSaving} className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
-    Zakończ trening
-    </button>
+            + Dodaj ćwiczenie
+        </button>
+      <button disabled={isSaving} className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
+        Zakończ trening
+        </button>
+  </div>
+</div>
+
+      
+      <div>
     <ExercisePickerModal
     isOpen={exerciseModalMode === "picker"}
     onClose={() => setExerciseModalMode("closed")}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import  ExercisePickerModal  from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
@@ -39,6 +39,9 @@ const [templateTitle, setTemplateTitle] = useState<string | null>(null);
 const [exercises, setExercises] = useState<DraftExercise[]>([]);
 const [loading, setLoading] = useState(false);
 const [exerciseModalMode, setExerciseModalMode] = useState<ExerciseModalMode>("closed");
+const [isSaving,setIsSaving] = useState<boolean>(false);
+const isSavingRef = useRef<boolean>(false);
+const [error, setError] = useState<string | null>(null);
 
 const title = templateId
   ? templateTitle ?? "Trening z planu"
@@ -116,7 +119,16 @@ function removeExercise(exerciseId: string) {
   );
 }
 
-  async function startSession() {
+async function handleSubmit(
+  event: React.FormEvent<HTMLFormElement>
+): Promise<void> {
+  event.preventDefault();
+  if(isSavingRef.current == true) return;
+  isSavingRef.current=true;
+  setIsSaving(true);
+  setError(null);
+  try
+  {
     const request = {
       workoutTemplateId: templateId ?? null,
       exercises: exercises.map((x) => ({
@@ -138,113 +150,143 @@ function removeExercise(exerciseId: string) {
     });
 
     if (!response.ok) {
-      console.error(await response.text());
+      setError(await response.text());
       return;
     }
 
     const data = await response.json();
-
     navigate(`/workout-sessions/${data.id}`);
   }
+  catch {
+    setError("Nie udało się rozpocząć treningu. Spróbuj ponownie.");
+  }
+  finally
+  {
+    setIsSaving(false);
+    isSavingRef.current=false;
+  }
+  
+    
+  }
+
+  function addExercise(exercise: Exercise): void {
+  const draftExercise = mapExercisesToDraft(exercise);
+
+  setExercises((current) => {
+    if (current.some((x) => x.exerciseId === exercise.id)) {
+      return current;
+    }
+
+    return [
+      ...current,
+      {
+        ...draftExercise,
+        order: current.length + 1,
+      },
+    ];
+  });
+
+  setExerciseModalMode("closed");
+}
 
   return (
-    <section className="page">
-      <button
-        className="btn btn-secondary"
-        onClick={() => navigate("/workout-sessions/start")}
-      >
-        ← Wróć
-      </button>
-
-      <h1>Przygotowanie treningu</h1>
-      {loading ? (
-        <p>Ładowanie planu...</p>
-      ) : (
-        <>
-          <h2>{title}</h2>
-          <button className="btn btn-primary" onClick={() => setExerciseModalMode("picker")}>
-            + Dodaj ćwiczenie
+     <section className="page stack templates-page">
+      <div className="page-header">
+          <button className="btn back-button" onClick={() => navigate("/")}>
+            ← Wróć
           </button>
-          {exercises.length === 0 ? (
-            <p>Brak ćwiczeń. Dodawanie ćwiczeń zrobisz później.</p>
-          ) : (
-            <div className="stack">
-              {[...exercises]
-                .sort((a, b) => a.order - b.order)
-                .map((exercise) => (
-                  <article key={exercise.exerciseId} className="card">
-  <h3>{exercise.exerciseName}</h3>
-
-  <div className="sets-row">
-    <button
-      type="button"
-      onClick={() => decreaseSets(exercise.exerciseId)}
-    >
-      -
-    </button>
-
-    <span> Serie: {exercise.sets} </span>
-
-    <button
-      type="button"
+          <header>
+            <h1 className="page-title">{title}</h1>
+          </header>
+       </div>
       
-      onClick={() => increaseSets(exercise.exerciseId)}
+{loading ? (
+  <p>Ładowanie planu...</p>
+) : (
+  <form className="template-form" onSubmit={handleSubmit}>
+     <div className="session-setup-toolbar">
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => setExerciseModalMode("picker")}
     >
-      +
+      + Dodaj ćwiczenie
     </button>
-  </div>
+    {error && <p className="error">{error}</p>}
+  </div>   
+    <div className="template-form-content">
 
-  <button
-    className="btn btn-secondary"
-    onClick={() => removeExercise(exercise.exerciseId)}
-  >
-    Usuń
-  </button>
-</article>
-                ))}
-            </div>
-          )}
+      {exercises.length === 0 ? (
+        <p>Dodaj przynajmniej jedno ćwiczenie, aby rozpocząć trening.</p>
+      ) : (
+        <div className="template-exercises">
+          {[...exercises]
+            .sort((a, b) => a.order - b.order)
+            .map((exercise) => (
+              <div className="card" key={exercise.exerciseId}>
+                <div className="card-row">
+                  <div className="exercise-name">
+                    {exercise.exerciseName}
+                  </div>
 
-          <button
-  className="btn btn-primary"
-  onClick={startSession}
-  disabled={exercises.length === 0}
->
-  Rozpocznij sesję
-</button>
-        </>
+                  <button
+                    type="button"
+                    className="btn-remove"
+                    aria-label={`Usuń ${exercise.exerciseName} z sesji`}
+                    onClick={() => removeExercise(exercise.exerciseId)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="card-row">
+                  <button
+                    type="button"
+                    className="btn-set-control"
+                    disabled={exercise.sets <= 1}
+                    onClick={() => decreaseSets(exercise.exerciseId)}
+                  >
+                    -
+                  </button>
+
+                  <span>Serie: {exercise.sets}</span>
+
+                  <button
+                    type="button"
+                    className="btn-set-control"
+                    onClick={() => increaseSets(exercise.exerciseId)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
       )}
+    </div>
+
+    <div className="template-form-actions">
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={isSaving || exercises.length === 0}
+      >
+        Rozpocznij sesję
+      </button>
+    </div>
+  </form>
+)}
 
       <ExercisePickerModal
         isOpen={exerciseModalMode === "picker"}
         onClose={() => setExerciseModalMode("closed")}
         onCreateNew={() => setExerciseModalMode("create")}
-        onSelect={(exercise : Exercise) => {
-          const draftExercise = mapExercisesToDraft(exercise);
-          setExercises((current) => [
-            ...current,
-            {
-              ...draftExercise,
-              order: current.length + 1,
-            },
-          ]);
-          setExerciseModalMode("closed");
-        }}
+        onSelect={addExercise}
       />
       <CreateExerciseModal
         isOpen={exerciseModalMode === "create"}
         onClose={() => setExerciseModalMode("picker")}
-        onCreated={(exercise : Exercise) => {
-          const draftExercise = mapExercisesToDraft(exercise);
-          setExercises((current) => [
-            ...current,
-            {
-              ...draftExercise,
-              order: current.length + 1,
-            },
-          ]);
-          setExerciseModalMode("closed");
-        }}
+        onCreated={addExercise}
       />
     </section>
   );

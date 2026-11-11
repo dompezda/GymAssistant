@@ -125,14 +125,21 @@ async function getActiveSession() : Promise<void> {
     );
   }
   return (
-    <section className="page main-menu">
-      <button className="btn btn-secondary" onClick={() => navigate("/")}>
-        ← Wróć
-      </button>
-      <h1>Sesja treningowa!</h1>
-      <p>W jakim trybie rozpocząć trening?</p>
-      <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/select-template")}>Wybierz plan treningowy</button>
-      <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/setup")}>Pusty trening</button>
+    <section className="page stack templates-page">
+       <div className="page-header">
+          <button className="btn back-button" onClick={() => navigate("/")}>
+            ← Wróć
+          </button>
+          <header>
+            <h1 className="page-title">Sesja treningowa</h1>
+          </header>
+       </div>
+       <div className="stack">
+        <p>W jakim trybie rozpocząć trening?</p>
+        <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/select-template")}>Wybierz plan treningowy</button>
+        <button className="btn btn-secondary" onClick={() => navigate("/workout-sessions/setup")}>Pusty trening</button>
+    
+       </div>
     </section>
   );
 }

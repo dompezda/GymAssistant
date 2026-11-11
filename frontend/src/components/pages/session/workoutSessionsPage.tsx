@@ -41,15 +41,15 @@ loadSessions();
 
 
     return(
-        <section className="page stack">
-
-        <button className="btn btn-secondary" onClick={() => navigate("/")}>
+       <section className="page stack templates-page">
+      <div className="page-header">
+          <button className="btn back-button" onClick={() => navigate("/")}>
             ← Wróć
-        </button>
-
-      <header>
-        <h1>Historia treningów</h1>
-      </header>
+          </button>
+          <header>
+            <h1 className="page-title">Historia treningów</h1>
+          </header>
+       </div>
 
        
         {workoutSessions.length === 0 && (

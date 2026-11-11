@@ -24,23 +24,30 @@ export default function ExercisePickerModal({
     onCreateNew
 }: ExercisePickerModalProps) {
     const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [searchTerm,setSearchTerm] = useState<string>("");
     useEffect(() => {
-        async function loadExercises() {
-            const response = await fetchApi("/api/exercises");
-            const data = await response.json();
-            setExercises(data);
-        }
-        loadExercises();
+      if (!isOpen) return;
+      async function loadExercises() {
+          setSearchTerm("");
+          const response = await fetchApi("/api/exercises");
+          const data = await response.json();
+          setExercises(data);
+      }
+      loadExercises();
     }, [isOpen]);
       if (!isOpen) {
         return null;
        }
 
 
+    const visibleExercises = exercises.filter((exercise) =>
+    exercise.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
+  
 return (
   <>
     <div className="modal-backdrop">
-      <div className="modal modal-scrollable">
+      <div className="modal exercise-picker-modal">
         <div className="modal-header">
           <h3>Wybierz ćwiczenie</h3>
 
@@ -52,9 +59,23 @@ return (
             + Dodaj nowe ćwiczenie
           </button>
         </div>
-
+        <div>
+        <input
+          className="exercise-picker-search"
+          type="text"
+          autoComplete="off"
+          placeholder="Szukaj ćwiczenia..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        </div>
         <div className="modal-body">
-          {exercises.map((exercise) => (
+
+
+        {visibleExercises.length === 0 && (
+          <p>Nie znaleziono ćwiczeń.</p>
+        )}
+          {visibleExercises.map((exercise) => (
             <button
               key={exercise.id}
               type="button"
