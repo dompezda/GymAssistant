@@ -3,8 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import WorkoutSessionExerciseDetails from "./workoutSessionExerciseDetailsPage";
+import "./workoutSessionPage.css";
 
 type WorkoutSession = {
   id: string;
@@ -335,22 +336,26 @@ if (!session) {
         setIsSaving(false);
     }
 }
-  return (
-    <section className="page workout-session-page">
-       <div className="page-header">  
-        <button className="btn back-button" onClick={() => {
-            if (selectedExercise) {
-                void handleCloseExercise();
-            } else {
-                navigate("/");
-            }
-        }}>
-            ← Wróć
-        </button>
-      </div>
+  
+return (
+  <section className="page workout-session-page">
+    <div className="page-header workout-session-topbar">
+  <button
+    type="button"
+    className="btn back-button"
+    disabled={isSaving}
+    onClick={() => {
+      if (selectedExercise) {
+        void handleCloseExercise();
+      } else {
+        navigate("/");
+      }
+    }}
+  >
+    ← Wróć
+  </button>
 
-  <div className="workout-session-header">
-  <div className="workout-session-toolbar">
+  {!selectedExercise && (
     <button
       type="button"
       className="btn-refresh"
@@ -361,96 +366,107 @@ if (!session) {
     >
       <RefreshCw size={18} />
     </button>
-  </div>
-  {selectedExercise ? (
-    <WorkoutSessionExerciseDetails 
-        //onClose={handleCloseExercise}
-        isOpen={selectedExercise !== null} 
+  )}
+</div>
+    {selectedExercise ? (
+      <WorkoutSessionExerciseDetails
+        isOpen={selectedExercise !== null}
         isSaving={isSaving}
-        exercise={selectedExercise} 
+        exercise={selectedExercise}
         setSession={setSession}
         onExerciseChanged={markExerciseDirty}
-        />
-) : (
-<div className="workout-session-content">
-      <button disabled= {isSaving} className="btn btn-secondary" onClick={() => setExerciseModalMode("picker")}>
-            + Dodaj ćwiczenie
-        </button>
-
-    {exercises.length=== 0 ? (
-      <p>Brak ćwiczeń w tej sesji.</p>
+      />
     ) : (
-      exercises.map((exercise)=>{
-      return(
-      <article className="exercise-card" onClick={()=>
-      {
-        setSelectedExerciseId(exercise.id);
-      }}>
-          <div className="card-row">
-            <div className="exercise-name">
-              {exercise.exerciseName}
-            </div>
-          </div>
-          <div className="card-row">
-            <div className="set-row">
-            <div className="set-field">
-            {exercise.sets.length}
-            </div>
-            <div className="set-field">
-              <button 
-                disabled={isSaving || exercises.length <= 1}
-                onClick={(e)=>
-                {
-                   e.stopPropagation();
-                   deleteExercise(exercise.id)
-                }}>
-                REMOVE
-              </button>
-            </div>
-            </div>
-          </div>
-      </article>
-      )
-    }))}
-</div>
-)}
-  </div>
-  {errorMessage && (
-    <p className="form-error">{errorMessage}</p>
-  )}
-  <div className="workout-session-actions">
+      <>
+        
+        <div className="workout-session-content">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={isSaving}
+            onClick={() => setExerciseModalMode("picker")}
+          >
+            + Dodaj ćwiczenie
+          </button>
 
+          {exercises.length === 0 ? (
+            <p>Brak ćwiczeń w tej sesji.</p>
+          ) : (
+            exercises.map((exercise) => (
+              <article
+                key={exercise.id}
+                className="exercise-card"
+                onClick={() => {
+                  if (!isSaving) {
+                    setSelectedExerciseId(exercise.id);
+                  }
+                }}
+              >
+                <div className="exercise-name">
+                  {exercise.exerciseName}
+                </div>
 
-  <div className="template-form-actions">
+                <div className="session-exercise-meta">
+                  <span>{exercise.sets.length} serie</span>
 
-      <button disabled={isSaving} className="btn btn-primary finish-workout-button" onClick={() => finishSession()}>
-        Zakończ trening
-        </button>
-  </div>
-</div>
-      
-      
-      <div>
+                  <button
+  type="button"
+  className="btn-remove-exercise"
+  aria-label={`Usuń ${exercise.exerciseName}`}
+  disabled={isSaving || exercises.length <= 1}
+  onClick={(e) => {
+    e.stopPropagation();
+    void deleteExercise(exercise.id);
+  }}
+>
+  <X size={18} />
+</button>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </>
+    )}
+
+    {errorMessage && (
+      <p className="form-error" role="alert">
+        {errorMessage}
+      </p>
+    )}
+
+    {!selectedExercise && (
+      <div className="workout-session-actions">
+        <div className="template-form-actions">
+          <button
+            type="button"
+            disabled={isSaving}
+            className="btn btn-primary finish-workout-button"
+            onClick={() => void finishSession()}
+          >
+            Zakończ trening
+          </button>
+        </div>
+      </div>
+    )}
+
     <ExercisePickerModal
-    isOpen={exerciseModalMode === "picker"}
-    onClose={() => setExerciseModalMode("closed")}
-    onCreateNew={() => setExerciseModalMode("create")}
-    onSelect={(exercise) => {
-      addExerciseToCurrentSession(exercise.id);
-     }}
+      isOpen={exerciseModalMode === "picker"}
+      onClose={() => setExerciseModalMode("closed")}
+      onCreateNew={() => setExerciseModalMode("create")}
+      onSelect={(exercise) => {
+        void addExerciseToCurrentSession(exercise.id);
+      }}
     />
-  </div>
-   
 
     <CreateExerciseModal
-    isOpen={exerciseModalMode === "create"}
-    onClose={() => setExerciseModalMode("closed")}
-    onCreated={(exercise) => {
-      addExerciseToCurrentSession(exercise.id);
-      setExerciseModalMode("closed");
-    }}
+      isOpen={exerciseModalMode === "create"}
+      onClose={() => setExerciseModalMode("closed")}
+      onCreated={(exercise) => {
+        void addExerciseToCurrentSession(exercise.id);
+        setExerciseModalMode("closed");
+      }}
     />
-
-</section>
-  );
+  </section>
+);
 }

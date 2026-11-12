@@ -139,76 +139,84 @@ onExerciseChanged(exercise.id);
     };
   });
   }
-        return(
-<div className="workout-session-details">
+       
+return (
+  <div className="workout-session-details">
     <h2 className="exercise-title">{exercise.exerciseName}</h2>
 
-                <article className="exercise-card">
+    <article className="exercise-card">
+      <div className="sets-list">
+        <div className="set-row sets-header">
+          <span>Seria</span>
+          <span>Ciężar</span>
+          <span>Powtórzenia</span>
+          <span />
+        </div>
 
-
-                    <div className="sets-list">
-                    <div className="set-row">
-                    <div className="set-field">
-                        Seria
-                    </div>
-                            <div className="set-field">
-                        Ciężar
-                    </div>
-                    <div className="set-field">
-                        Powtórzenia
-                    </div>
-                    <div></div>
-                    </div>
-                    {exercise.sets.map(set => (
-                        <div className="set-row" key={set.id}>
-                        
-                        <div className="set-field">
-                            {set.setNumber}
-                        </div>
-
-                        <div className="set-field">
-                            <input
-                            value={set.weight ?? ""}
-                            placeholder="kg"
-                            inputMode="decimal"
-                            disabled={isSaving}
-                            onChange={(e) => {
-                                const value = e.target.value === "" ? null : Number(e.target.value);
-                                updateSetValue(set.id, "weight", value);
-                            }}
-                            />
-                        </div>
-
-                        <div className="set-field">
-                            <input
-                            value={set.reps ?? ""}
-                            inputMode="numeric"
-                            disabled={isSaving}
-                            placeholder="reps"
-                            onChange={(e) => {
-                                const value = e.target.value === "" ? null : Number(e.target.value);
-                                updateSetValue(set.id, "reps", value);
-                            }}
-                            />
-                        </div>
-                        <div>
-                            <button aria-label={`Usuń serię ${set.setNumber}`} onClick={
-                            ()=>
-                                {
-                                deleteSet(set.id);
-                                }} 
-                            disabled={exercise.sets.length <= 1 || isSaving}>🗑️</button>
-                        </div>
-                        </div>
-                    ))}
-                    </div>
-                    <div>
-                    <button disabled={isSaving} className="btn btn-primary" onClick={() => 
-                        {
-                        addSet();
-                        }}> + Dodaj serie</button>
-                    </div>
-                </article>
+        {exercise.sets.map((set) => (
+          <div className="set-row" key={set.id}>
+            <div className="set-field set-number">
+              {set.setNumber}
             </div>
-        )
-    }
+
+            <div className="set-field">
+              <input
+                aria-label={`Ciężar serii ${set.setNumber}`}
+                value={set.weight ?? ""}
+                placeholder="kg"
+                inputMode="decimal"
+                disabled={isSaving}
+                onChange={(e) => {
+                  const value =
+                    e.target.value === ""
+                      ? null
+                      : Number(e.target.value);
+
+                  updateSetValue(set.id, "weight", value);
+                }}
+              />
+            </div>
+
+            <div className="set-field">
+              <input
+                aria-label={`Powtórzenia serii ${set.setNumber}`}
+                value={set.reps ?? ""}
+                placeholder="reps"
+                inputMode="numeric"
+                disabled={isSaving}
+                onChange={(e) => {
+                  const value =
+                    e.target.value === ""
+                      ? null
+                      : Number(e.target.value);
+
+                  updateSetValue(set.id, "reps", value);
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="btn-delete-set"
+              aria-label={`Usuń serię ${set.setNumber}`}
+              disabled={exercise.sets.length <= 1 || isSaving}
+              onClick={() => deleteSet(set.id)}
+            >
+              🗑️
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-primary add-set-button"
+        disabled={isSaving}
+        onClick={addSet}
+      >
+        + Dodaj serię
+      </button>
+    </article>
+  </div>
+);
+ }
