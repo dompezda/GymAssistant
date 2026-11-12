@@ -35,7 +35,7 @@ Authentication update (9 November 2026): implemented public `POST /api/auth/forg
 #### Error handling and data safety
 - [ ] Standardize user-visible API error presentation across the app and agree on a backend error response contract (active workout GET/PATCH/POST/DELETE/finish feedback is implemented).
 - [ ] Complete failure-path verification for PATCH/POST/DELETE/finish and session refresh, including network failures and HTTP errors; active-workout guards and retry behavior are implemented.
-- [ ] Protect unsaved workout edits when leaving the page or reloading it.
+- [ ] Add a minimal unsaved-changes warning when leaving or reloading an active workout if `dirtyIds.length > 0` (including browser reload/close and in-app navigation). Existing save-before-exercise-switch and save-before-finish behavior remains unchanged; no autosave or offline persistence is required for v1.0. This is the agreed scope compromise: warn about potential loss of locally edited sets rather than redesigning session persistence.
 - [ ] Review the PATCH edge case where a set ID belongs to another workout-session exercise.
 - [ ] Consider a SQL Server filtered unique index for one active workout per user to protect against concurrent creation requests.
 
