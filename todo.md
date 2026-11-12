@@ -28,6 +28,8 @@ Frontend UI update (7 November 2026): workout-template list/detail screens recei
 
 Authentication update (9 November 2026): implemented public `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` using ASP.NET Core Identity token providers, `IEmailSender` / MailKit SMTP, `SmtpOptions` and development Mailpit. React now includes `/forgot-password` and `/reset-password` pages, email links and password requirements. The happy path was manually verified end-to-end; integration tests now cover several negative cases, while production delivery and additional coverage remain open. Mailpit is local-only, not a production mail provider.
 
+Frontend update (12 November 2026, v1.1 in progress): the active workout UI has been split into an exercise list in `WorkoutSessionPage` and a separate `WorkoutSessionExerciseDetails` component for entering sets, weights and repetitions. Selection is tracked by `selectedExerciseId`, and the selected exercise is derived from the parent session state rather than duplicated. The parent still owns `session`, `dirtyIds`, the save-in-flight guard and API writes; the details component updates sets through `setSession` and reports edits through `onExerciseChanged`. Returning from details calls the parent's dirty-only PATCH flow, keeping the details view open on save failure. The exercise list exposes add/remove actions (last exercise cannot be deleted by backend rule), while session finish and refresh are shown on the list rather than in details. JSX/CSS for both views was adjusted using scoped workout selectors to avoid changing shared styles. **Not complete:** horizontal swipe navigation was removed during this refactor and must be restored or deliberately replaced; PATCH/error-path behavior, mobile scrolling and full regression checks still need verification. Existing descriptions of swipe and the earlier single-screen workout layout refer to the pre-refactor implementation. No backend endpoint or data-model change was required.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -44,8 +46,8 @@ Authentication update (9 November 2026): implemented public `POST /api/auth/forg
 - [ ] Bring template creation onto the shared exercise picker flow and improve selection visibility for large catalogs. The shared ExercisePickerModal now has client-side name search, empty results and a fixed-height scrollable list.
 - [ ] Add template-editor save-in-flight protection and user-visible request/network error handling; validate mobile scrolling and keyboard behavior.
 - [ ] Make loading, saving and disabled states consistent.
-- [ ] Ignore swipes starting on inputs, buttons and other interactive controls; handle touch cancellation and multitouch.
-- [ ] Verify swipe, set editing, exercise menu and responsive layout on a physical mobile device and narrow viewports.
+- [ ] After restoring swipe in the v1.1 exercise-list/details flow, ignore gestures starting on inputs/buttons and handle touch cancellation and multitouch.
+- [ ] Verify set editing, exercise-list add/remove, return-to-list PATCH/error handling and responsive layout on a physical mobile device; verify swipe again after its restoration.
 
 #### Authentication and release quality
 - [ ] Complete remaining authentication integration coverage: logout, refresh rotation, expired/revoked token rejection, unauthorized access, and outstanding reset-password negative cases (e.g. expired token, password policy and missing fields). `AuthEndpointsTests` already covers register/login, forgot-password and reset-password success, invalid/reused reset tokens, and refresh-token revocation, using `FakeEmailSender`.
@@ -63,8 +65,9 @@ Authentication update (9 November 2026): implemented public `POST /api/auth/forg
 - [ ] Add the public demo URL and deployment notes to README.
 
 ### Nice-to-have — after v1.0 (v1.1)
-- [ ] Separate active-session exercise management from set entry: introduce an active-session exercise list for selecting, adding and removing exercises, and keep the exercise-detail view focused on entering weights/reps. Design the navigation without sacrificing quick switching between exercises.
-- [ ] Refactor the large `WorkoutSessionPage` carefully, preserving `dirtyIds`, save-before-navigation, request guards, retries and unsaved-change handling; avoid duplicating session state across pages.
+- [x] Introduce separate active-session exercise list and set-entry details component, with add/remove actions on the list (12 November 2026; UI and regression verification ongoing).
+- [ ] Restore or consciously replace quick swipe navigation lost in the 12 November split; keep gestures away from editable inputs and actions.
+- [x] Move set-entry UI/handlers out of the large `WorkoutSessionPage`, keep parent-owned session state, `dirtyIds`, dirty-only PATCH on return and request guards (12 November 2026; manual failure-path regression checks pending).
 - [ ] Allow reordering exercises in a session (drag and drop); explicitly define order persistence and reconcile frontend display order with backend-assigned order.
 - [ ] Evaluate auto-appending an empty set when the last set is filled. Decide trigger rules, persistence semantics and how to avoid accidental extra sets before implementing; retain manual add until validated.
 - [ ] Organize CSS by responsibility (global tokens/base layout, shared components, auth and workout-specific styles), reduce duplicated selectors and remove cross-feature dependencies such as `.templates-page` outside templates. Do this as a separate regression-tested refactor.
@@ -83,6 +86,7 @@ Authentication update (9 November 2026): implemented public `POST /api/auth/forg
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Split active workout into selectable exercise list and separate set-entry details view, with scoped styling and parent-controlled save-on-return (12 November 2026; swipe restoration and regression QA remain open).
 - [x] Improve the start-workout and select-template mobile UI, use accessible `Link` cards to select a plan, and align session setup cards with workout-template edit cards (11 November 2026).
 - [x] Add ExercisePickerModal client-side search, empty-result messaging, open-only loading and a stable scrollable picker layout (11 November 2026).
 - [x] Update workout-session setup with shared add-exercise handling, duplicate checks, and guarded POST submission with error display (11 November 2026).
@@ -99,7 +103,7 @@ Authentication update (9 November 2026): implemented public `POST /api/auth/forg
 - [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
 - [x] Add exercise POST/DELETE integration tests for the core success, validation, ordering and access-control cases.
 - [x] Improve the active workout-session set layout and add a compact exercise-delete menu.
-- [x] Implement initial horizontal swipe navigation between workout-session exercises.
+- [x] Implement initial horizontal swipe navigation between workout-session exercises (historical milestone; removed by the 12 November 2026 refactor, restoration tracked under v1.1).
 - [x] Prevent overlapping active-workout write operations and rapid exercise-navigation requests using `isSavingRef`; disable relevant controls with `isSaving`.
 - [x] Keep `markExerciseDirty()` calls outside `setSession()` updater callbacks and avoid duplicate dirty marking.
 
