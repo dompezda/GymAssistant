@@ -21,8 +21,8 @@ import LoginPage from "./components/pages/loginPage";
 import AuthProvider from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/protectedRoute";
 import RegisterPage from "./components/pages/registerPage";
-import ForgotPasswordPage from "./components/pages/ForgotPasswordPage";
-import NewPasswordPage from "./components/pages/NewPasswordPage";
+import ForgotPasswordPage from "./components/pages/forgotPasswordPage";
+import NewPasswordPage from "./components/pages/newPasswordPage";
 
 function App() {
   return (

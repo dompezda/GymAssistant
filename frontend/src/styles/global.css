@@ -205,13 +205,15 @@ a.card {
   margin: 0 auto;
   display: grid;
   gap: 6px;
+  border-radius: 5px;
+  border-color: #477A59;
+  gap: 10px;
 }
 
 .stat-row {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 16px;
-  text-align: initial;
+  grid-template-columns: repeat(3, 1fr);
+  grid-column: span 3;
 }
 
 .stat-row span {
@@ -221,6 +223,7 @@ a.card {
 .stat-row strong {
   color: var(--color-text);
 }
+
 
 /* =========================
    Forms

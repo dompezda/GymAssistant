@@ -43,3 +43,17 @@
   font-size: 0.8rem;
 }
 
+.exercises-page .card .card-link {
+    grid-column: span 3;
+    text-align: end;
+}
+
+.exercises-page .card .card-link a{
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.exercises-page .card .date-row {
+  grid-column: span 3;
+  text-align: center;  
+}
