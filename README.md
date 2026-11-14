@@ -23,7 +23,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 - **Exercise library:** browse system exercises, search exercises in the catalog and picker, and create or edit personal exercises with muscle-group assignments.
 - **Workout templates:** create reusable training plans and adjust the included exercises and planned sets.
 - **Workout sessions:** start from a template or build a session from scratch; record sets, weights and repetitions; resume an unfinished workout or discard it before starting another; add or remove exercises while the session is active.
-- **Training history:** review completed workouts and exercise history; active and discarded sessions are excluded.
+- **Training history:** review completed workouts and exercise history (dates, sets, repetitions and weights); expand a workout from an exercise's history to see its exercise list and set counts. Details are fetched on demand and cached for the current page visit. Active and discarded sessions are excluded.
 - **User accounts:** register, log in, reset a forgotten password using an email link (currently tested via local Mailpit), and access only your own templates, sessions, and private exercises. System exercises are shared and read-only.
 
 ## Tech stack
