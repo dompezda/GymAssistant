@@ -30,6 +30,8 @@ Authentication update (9 November 2026): implemented public `POST /api/auth/forg
 
 Frontend update (12 November 2026, v1.1 in progress): the active workout UI has been split into an exercise list in `WorkoutSessionPage` and a separate `WorkoutSessionExerciseDetails` component for entering sets, weights and repetitions. Selection is tracked by `selectedExerciseId`, and the selected exercise is derived from the parent session state rather than duplicated. The parent still owns `session`, `dirtyIds`, the save-in-flight guard and API writes; the details component updates sets through `setSession` and reports edits through `onExerciseChanged`. Returning from details calls the parent's dirty-only PATCH flow, keeping the details view open on save failure. The exercise list exposes add/remove actions (last exercise cannot be deleted by backend rule), while session finish and refresh are shown on the list rather than in details. JSX/CSS for both views was adjusted using scoped workout selectors to avoid changing shared styles. **Not complete:** horizontal swipe navigation was removed during this refactor and must be restored or deliberately replaced; PATCH/error-path behavior, mobile scrolling and full regression checks still need verification. Existing descriptions of swipe and the earlier single-screen workout layout refer to the pre-refactor implementation. No backend endpoint or data-model change was required.
 
+Frontend update (14 November 2026): the exercise-history page now renders sets, repetitions and weights for completed workouts and lets users expand a workout to view its full exercise list and per-exercise set counts, highlighting the selected exercise. Details are loaded through the existing `GET /api/workout-sessions/{id}` endpoint on demand and cached in a component-local `Map`, avoiding repeated GETs when reopening a session. A `useRef` request guard and `isFetchingSession` disable details buttons while fetching; per-session error feedback handles HTTP errors and caught exceptions, with retry available through the same Show details action. No backend endpoint or data-model change was required. Remaining polish: improve set-value formatting (especially `null`), tidy the history layout, check loading/empty/error navigation states, and verify failure and narrow-screen behavior.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -71,7 +73,8 @@ Frontend update (12 November 2026, v1.1 in progress): the active workout UI has 
 - [ ] Allow reordering exercises in a session (drag and drop); explicitly define order persistence and reconcile frontend display order with backend-assigned order.
 - [ ] Evaluate auto-appending an empty set when the last set is filled. Decide trigger rules, persistence semantics and how to avoid accidental extra sets before implementing; retain manual add until validated.
 - [ ] Organize CSS by responsibility (global tokens/base layout, shared components, auth and workout-specific styles), reduce duplicated selectors and remove cross-feature dependencies such as `.templates-page` outside templates. Do this as a separate regression-tested refactor.
-- [ ] Improve exercise history: show previous sessions, dates, sets, weights and repetitions clearly (the exercise-history API and initial UI already exist).
+- [x] Implement expandable exercise history with per-workout sets, dates, weights/repetitions, on-demand session details, per-page cache and guarded loading/error states (14 November 2026).
+- [ ] Polish exercise-history presentation (clearer set columns, `null` values and spacing), preserve navigation on empty/error states, and verify error/retry plus mobile behavior.
 - [ ] Show the last recorded sets for the same exercise on the active workout card; optionally allow copying previous values.
 - [ ] Add GitHub Actions CI (build + tests) and later automated Azure deployment (CD).
 - [ ] Extend integration coverage for remaining exercise/template and ownership edge cases.
@@ -86,6 +89,7 @@ Frontend update (12 November 2026, v1.1 in progress): the active workout UI has 
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Add expandable exercise-history session details with local `Map` cache, guarded requests, per-session error feedback and scoped styling (14 November 2026).
 - [x] Split active workout into selectable exercise list and separate set-entry details view, with scoped styling and parent-controlled save-on-return (12 November 2026; swipe restoration and regression QA remain open).
 - [x] Improve the start-workout and select-template mobile UI, use accessible `Link` cards to select a plan, and align session setup cards with workout-template edit cards (11 November 2026).
 - [x] Add ExercisePickerModal client-side search, empty-result messaging, open-only loading and a stable scrollable picker layout (11 November 2026).
