@@ -57,3 +57,56 @@
   grid-column: span 3;
   text-align: center;  
 }
+
+
+.exercises-page .session-list
+{
+  width: 100%;
+  max-width: 300px;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  margin-top: 15px;
+}
+.exercises-page .session-exercises
+{
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+}
+
+.exercises-page .exercise-name {
+  margin: 0;
+  text-align: left;
+  font-size: 1rem;
+  max-width: 75%;
+  line-height: 1;
+}
+
+.exercises-page .current-exercise {
+  justify-content: start;
+  font-size: 1rem;
+  border-left: 3px solid #3B82F6;
+  padding-left: 8px;
+}
+.exercises-page .exercise-sets
+{
+  text-align: right;
+}
+.exercises-page .header
+{
+  text-align:center;
+}
+
+.exercises-page .details-button {
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  padding: 8px 0;
+  cursor: pointer;
+  justify-self: end;
+}
+.exercises-page .details-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

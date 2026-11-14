@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, useParams} from "react-router-dom";
 import { fetchApi } from "../../../api/fetchApi";
 
@@ -8,6 +8,11 @@ type Exercise =
     id: string,
     workouts:ExerciseHistoryWorkoutResponse[]
 }
+
+type SessionError = {
+  sessionId: string;
+  message: string;
+};
 
 type ExerciseHistoryWorkoutResponse =
 {
@@ -53,8 +58,15 @@ const [isLoading, setIsLoading] = useState(true);
 
 const [error, setError] = useState<string | null>(null);
 const navigate = useNavigate()
-const [cachedSessions,setCachedSessions] = useState<Map<string,WorkoutSession>|null>(null);
-const [currentOpenedSession,setCurrentOpenedSession] = useState<string | null>();
+const [cachedSessions,setCachedSessions] = useState<Map<string,WorkoutSession>>(new Map());
+const [currentOpenedSession,setCurrentOpenedSession] = useState<string | null>(null);
+const isFetchingRef = useRef(false);
+const [isFetchingSession, setIsFetchingSession] = useState(false);
+const [sessionError,setSessionError] = useState<SessionError |null>(null);
+const currentSession =
+    currentOpenedSession !== null
+      ? cachedSessions.get(currentOpenedSession) ?? null
+      : null;
 useEffect(() => {
   async function fetchExerciseById(): Promise<Exercise> {
     const response = await fetchApi(`/api/exercises/${id}/history`);
@@ -96,9 +108,15 @@ useEffect(() => {
 
 async function getSession(workoutSessionId:string) 
 {
+  if(isFetchingRef.current == true) return;
   if(!workoutSessionId)
     return;
-      const res = await fetchApi(`/api/workout-sessions/${workoutSessionId}`, {
+  setSessionError(null);
+  setIsFetchingSession(true);
+  isFetchingRef.current=true;
+  try
+  {
+    const res = await fetchApi(`/api/workout-sessions/${workoutSessionId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json"
@@ -106,7 +124,11 @@ async function getSession(workoutSessionId:string)
       })
       if(!res.ok)
       {
-        //setErrorMessage("Błąd przy odczycie sesji z serwera. Spróbuj ponownie.")
+        const err :SessionError = {
+          sessionId: workoutSessionId,
+          message:"Błąd przy odczycie sesji z serwera. Spróbuj ponownie."
+        }
+        setSessionError(err);
         return;
       }
       const data :WorkoutSession = await res.json();
@@ -119,7 +141,20 @@ async function getSession(workoutSessionId:string)
       }
       ));
       setCurrentOpenedSession(workoutSessionId);
-}
+    }
+    catch {
+      setSessionError({
+        sessionId: workoutSessionId,
+        message: "Nie udało się pobrać szczegółów treningu."
+      });
+    }
+    finally
+    {
+      setIsFetchingSession(false);
+      isFetchingRef.current=false;
+    }
+    
+      }
 
 function formatWorkoutDate(date: string) {
   const workoutDate = new Date(date);
@@ -156,6 +191,7 @@ if(isLoading)
         if (exercise.workouts.length === 0) {
         return <p>Brak zapisanych treningów dla tego ćwiczenia.</p>;
     }
+
     return(
     <section className="page stack exercises-page">
       <div className="page-header">
@@ -171,7 +207,10 @@ if(isLoading)
             <article
               key={workout.id}
               className="card" 
-            >            
+            >
+          {sessionError?.sessionId === workout.id && (
+            <p className="error">{sessionError.message}</p>
+          )}            
               <div className="stat-list">
               <div className="date-row">
                 {formatWorkoutDate(workout.workoutDate)}
@@ -183,24 +222,61 @@ if(isLoading)
                           <div> {set.weight !== null ? `${set.weight}kg` : "0"} </div> 
                    </div>
                 ))}
+                {currentOpenedSession !== workout.id &&
                 <div className="card-link">
                   <button 
+                  className="details-button"
+                  disabled={isFetchingSession}
                     onClick={()=>
                     {
-                      if(currentOpenedSession == workout.id)
-                        setCurrentOpenedSession(null);
+                      const cachedSession = cachedSessions?.get(workout.id);
+                      if(cachedSession !== undefined)
+                        setCurrentOpenedSession(cachedSession.id)
                       else
                         getSession(workout.id)
                     }}>
-                      Trening
+                      Pokaż szczegóły
                   </button>
                 </div>
+                }
               </div>
+
               {currentOpenedSession &&  
-              currentOpenedSession === workout.id  &&
-              <p>HELLO</p>}
+              currentOpenedSession === workout.id &&
+              <>
+              <div className="session-list">
+              <div className="session-exercises">  
+              <div className="header">
+                    Nazwa
+                </div>
+                <div className="header" >
+                  Serie
+                </div>
+              </div>
+              {currentSession?.exercises.map((exercise)=>
+              {
+                const isCurrent = exercise.exerciseId === id;
+                return (
+                  <div key={exercise.id} className="session-exercises">  
+                    <div className={isCurrent ? "current-exercise" : "exercise-name"}>
+                        {exercise.exerciseName}
+                    </div>
+                    <div className="exercise-sets">
+                      {exercise.sets.length}
+                    </div>
+                  </div>
+                )
                 
+              })}
+              <button disabled={isFetchingSession} className="details-button" onClick={()=>setCurrentOpenedSession(null)}>
+                Ukryj szczegóły
+              </button>
+              </div>
+              </>
+            }
+              
             </article>
+            
           ))}
         </section>
     )
