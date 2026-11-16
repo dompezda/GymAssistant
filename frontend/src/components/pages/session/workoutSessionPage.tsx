@@ -1,5 +1,5 @@
 import {  useEffect, useRef, useState } from "react";
-import {  useNavigate, useParams } from "react-router-dom";
+import {  useBlocker, useNavigate, useParams } from "react-router-dom";
 import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
@@ -55,9 +55,9 @@ loadSession();
 
 
 
+
 useEffect(() => {
   if (dirtyIds.length === 0) return;
-
   const onBeforeUnload = (event: BeforeUnloadEvent) => {
     event.preventDefault();
   };
@@ -121,7 +121,17 @@ async function refreshSession(): Promise<void> {
       isSavingRef.current=false;
   }
 }
+useBlocker(() => {
+  if (dirtyIds.length > 0) {
+    const confirmed = window.confirm(
+      "Czy na pewno chcesz porzucić aktualny trening?"
+    );
 
+    return !confirmed;
+  }
+
+  return false;
+});
 if (!session) {
   return (
     <section className="page">
@@ -367,14 +377,6 @@ return (
       if (selectedExercise) {
         void handleCloseExercise();
       } else {
-        if(dirtyIds.length>0)
-        {
-          const confirmed = window.confirm(
-          "Czy na pewno chcesz porzucić aktualny trening?"
-          );
-          if(!confirmed)
-            return;
-        }
         navigate("/");
       }
     }}

@@ -1,4 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  RouterProvider,
+  Route,
+  Navigate,
+  Outlet
+} from "react-router-dom";
 import MainMenu from "./components/mainMenu/mainMenu";
 import ExercisesPage from "./components/pages/exercise/exercisesPage";
 import SettingsPage from "./components/pages/settingsPage";
@@ -24,46 +31,56 @@ import RegisterPage from "./components/pages/registerPage";
 import ForgotPasswordPage from "./components/pages/forgotPasswordPage";
 import NewPasswordPage from "./components/pages/newPasswordPage";
 
-function App() {
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<AppLayout />}>
+
+      {/* Publiczne */}
+      <Route path="/" element={<Navigate to="/main-menu" replace />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<NewPasswordPage/>} />
+
+      {/* Chronione */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/main-menu" element={<MainMenu />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/exercises" element={<ExercisesPage />} />
+        <Route path="/exercises/:id/history" element={<ExerciseHistory/>}/>
+        {/* <Route path="/exercises/create" element={<CreateExercisePage />} /> */}
+
+        <Route path="/workout-templates" element={<WorkoutsTemplatesPage />} />
+        <Route path="/workout-templates/create" element={<WorkoutTemplateBasicsPage />} />
+        <Route path="/workout-templates/exercises" element={<WorkoutTemplateExercisesPage />} />
+        <Route path="/workout-templates/:id" element={<WorkoutTemplatePage />} />
+        <Route path="/workout-templates/:id/edit" element={<WorkoutTemplateEdit />} />
+
+        <Route path="/workout-sessions/start" element={<StartWorkoutPage />} />
+        <Route path="/workout-sessions/select-template" element={<SelectWorkoutTemplatePage />} />
+        <Route path="/workout-sessions/setup" element={<WorkoutSessionSetupPage />} />
+        <Route path="/workout-sessions/setup/from-template/:templateId" element={<WorkoutSessionSetupPage />} />
+        <Route path="/workout-sessions/:id" element={<WorkoutSessionPage />} />
+        <Route path="/workout-sessions/:id/summary" element={<WorkoutSessionSummaryPage/>} />
+        <Route path="/workout-sessions" element={<WorkoutSessionsPage/>}/>
+      </Route>
+      <Route path="*" element={<div>Nie znaleziono strony</div>} />
+    </Route>
+  )
+);
+
+function AppLayout() {
   return (
-    <BrowserRouter>
-      <AuthProvider>  
-        <main className="app">
-          <Routes>
-            <Route path="/" element={<Navigate to="/main-menu" replace />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<NewPasswordPage/>} />
-
-          <Route element={<ProtectedRoute />}>
-          
-            <Route path="/main-menu" element={<MainMenu />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/exercises" element={<ExercisesPage />} />
-            <Route path="/exercises/:id/history" element={<ExerciseHistory/>}/>
-            {/* <Route path="/exercises/create" element={<CreateExercisePage />} /> */}
-
-            <Route path="/workout-templates" element={<WorkoutsTemplatesPage />} />
-            <Route path="/workout-templates/create" element={<WorkoutTemplateBasicsPage />} />
-            <Route path="/workout-templates/exercises" element={<WorkoutTemplateExercisesPage />} />
-            <Route path="/workout-templates/:id" element={<WorkoutTemplatePage />} />
-            <Route path="/workout-templates/:id/edit" element={<WorkoutTemplateEdit />} />
-
-            <Route path="/workout-sessions/start" element={<StartWorkoutPage />} />
-            <Route path="/workout-sessions/select-template" element={<SelectWorkoutTemplatePage />} />
-            <Route path="/workout-sessions/setup" element={<WorkoutSessionSetupPage />} />
-            <Route path="/workout-sessions/setup/from-template/:templateId" element={<WorkoutSessionSetupPage />} />
-            <Route path="/workout-sessions/:id" element={<WorkoutSessionPage />} />
-            <Route path="/workout-sessions/:id/summary" element={<WorkoutSessionSummaryPage/>} />
-            <Route path="/workout-sessions" element={<WorkoutSessionsPage/>}/>
-          </Route>  
-            <Route path="*" element={<div>Nie znaleziono strony</div>} />
-          </Routes>
-        </main>
-      </AuthProvider>
-    </BrowserRouter>
+    <main className="app">
+      <Outlet />
+    </main>
   );
 }
-
+function App() {
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
+}
 export default App;
