@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {  useEffect, useRef, useState } from "react";
+import {  useNavigate, useParams } from "react-router-dom";
 import ExercisePickerModal from "../../exercises/ExercisePickerModal";
 import CreateExerciseModal from "../../exercises/CreateExerciseModal";
 import { fetchApi } from "../../../api/fetchApi";
@@ -44,13 +44,32 @@ export default function WorkoutSessionPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedExerciseId, setSelectedExerciseId] =
       useState<string | null>(null);
-
       const selectedExercise = session?.exercises.find(
       x => x.id === selectedExerciseId
   ) ?? null;
+
+
 useEffect(() => {
-  loadSession();
-}, [id]);
+loadSession();
+  }, [id]);
+
+
+
+useEffect(() => {
+  if (dirtyIds.length === 0) return;
+
+  const onBeforeUnload = (event: BeforeUnloadEvent) => {
+    event.preventDefault();
+  };
+
+
+
+  window.addEventListener("beforeunload", onBeforeUnload);
+
+  return () => {
+    window.removeEventListener("beforeunload", onBeforeUnload);
+  };
+}, [dirtyIds]);
 
 
 async function loadSession(): Promise<boolean> {
@@ -348,6 +367,14 @@ return (
       if (selectedExercise) {
         void handleCloseExercise();
       } else {
+        if(dirtyIds.length>0)
+        {
+          const confirmed = window.confirm(
+          "Czy na pewno chcesz porzucić aktualny trening?"
+          );
+          if(!confirmed)
+            return;
+        }
         navigate("/");
       }
     }}
