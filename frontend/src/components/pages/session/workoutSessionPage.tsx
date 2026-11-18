@@ -188,7 +188,7 @@ if (!session) {
       );
 
       const savedIds = dirtyExercises
-        .filter((exercise, index) => responses[index].status == "fulfilled" && responses[index].value.ok)
+        .filter((_, index) => responses[index].status === "fulfilled" && responses[index].value.ok)
         .map(exercise => exercise.id);
 
       setDirtyIds(prev =>
