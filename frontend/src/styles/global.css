@@ -350,7 +350,7 @@ input[type="checkbox"] {
 .modal {
   width: 100%;
   max-width: 400px;
-  max-height: 90dvh;
+  max-height: 100dvh;
   padding: 20px;
   border-radius: 20px;
   background: var(--color-surface);

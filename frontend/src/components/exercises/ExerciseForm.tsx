@@ -144,19 +144,20 @@ return(
             {buttonValue}
           </button>
         }
+        {onHistoryClick && (
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={onHistoryClick}
+            disabled={isSaving}
+          >
+            Historia ćwiczenia
+          </button>
+        )}
         <button className="btn btn-secondary" type="button" onClick={onClose} disabled={isSaving}>
           Zamknij
         </button>
-          {onHistoryClick && (
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={onHistoryClick}
-              disabled={isSaving}
-            >
-              Historia ćwiczenia
-            </button>
-          )}
+          
         </div>
       </form>
     </div>
