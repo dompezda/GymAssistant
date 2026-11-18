@@ -32,6 +32,8 @@ Frontend update (12 November 2026, v1.1 in progress): the active workout UI has 
 
 Frontend update (14 November 2026): the exercise-history page now renders sets, repetitions and weights for completed workouts and lets users expand a workout to view its full exercise list and per-exercise set counts, highlighting the selected exercise. Details are loaded through the existing `GET /api/workout-sessions/{id}` endpoint on demand and cached in a component-local `Map`, avoiding repeated GETs when reopening a session. A `useRef` request guard and `isFetchingSession` disable details buttons while fetching; per-session error feedback handles HTTP errors and caught exceptions, with retry available through the same Show details action. No backend endpoint or data-model change was required. Remaining polish: improve set-value formatting (especially `null`), tidy the history layout, check loading/empty/error navigation states, and verify failure and narrow-screen behavior.
 
+Frontend QA note (16 November 2026; locally tested, not yet confirmed committed): a `beforeunload` listener conditioned on `dirtyIds.length > 0` warns about unsaved edits on page reload or tab close. Manual checks confirmed a warning for F5 and tab close with dirty edits and no warning for F5 when there are no dirty edits. Modern browsers show their own localized/generic dialog; custom `window.confirm()` inside `beforeunload` is blocked. This is not complete route-leave protection: the app currently uses declarative `BrowserRouter`/`Routes`, and same-document navigation (including browser Back) is not guarded by `beforeunload`. A possible follow-up is migration to `createBrowserRouter`/`RouterProvider` and `useBlocker`, with auth/navigation regression tests. No router migration or SPA-blocker implementation was completed during this session. Verify the local implementation is committed before marking it as repository-implemented.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -39,7 +41,7 @@ Frontend update (14 November 2026): the exercise-history page now renders sets, 
 #### Error handling and data safety
 - [ ] Standardize user-visible API error presentation across the app and agree on a backend error response contract (active workout GET/PATCH/POST/DELETE/finish feedback is implemented).
 - [ ] Complete failure-path verification for PATCH/POST/DELETE/finish and session refresh, including network failures and HTTP errors; active-workout guards and retry behavior are implemented.
-- [ ] Add a minimal unsaved-changes warning when leaving or reloading an active workout if `dirtyIds.length > 0` (including browser reload/close and in-app navigation). Existing save-before-exercise-switch and save-before-finish behavior remains unchanged; no autosave or offline persistence is required for v1.0. This is the agreed scope compromise: warn about potential loss of locally edited sets rather than redesigning session persistence.
+- [ ] Complete unsaved-changes protection for the active workout when `dirtyIds.length > 0`: the `beforeunload` warning was implemented and manually validated locally on 16 November 2026 for F5/tab close (not yet confirmed committed); React Router in-app navigation and browser Back within the SPA remain unprotected. Keep the existing save-on-return/finish flow; no autosave or offline persistence for v1.0. Evaluate `createBrowserRouter`/`RouterProvider` + `useBlocker` as a small separate router migration, then regression-test protected routes, login, navigation and save flow.
 - [ ] Review the PATCH edge case where a set ID belongs to another workout-session exercise.
 - [ ] Consider a SQL Server filtered unique index for one active workout per user to protect against concurrent creation requests.
 
@@ -65,6 +67,14 @@ Frontend update (14 November 2026): the exercise-history page now renders sets, 
 - [ ] Configure production secrets, HTTPS, CORS, refresh-token cookies, migrations and environment variables.
 - [ ] Smoke-test the full register → login → workout → finish → history flow in the deployed environment.
 - [ ] Add the public demo URL and deployment notes to README.
+
+### Top priority immediately after v1.0 — workout summary redesign (v1.1)
+- [ ] Redesign the existing React workout summary screen as the **highest-priority post-v1.0 UX task**. Reuse the active workout's exercise-list/details interaction pattern rather than presenting all exercise metrics in tall summary cards.
+- [ ] Show a compact read-only list of exercises from the finished session; each list item should include a short, scannable summary (for example, completed sets, reps and volume, where meaningful).
+- [ ] Tapping an exercise opens that exercise **within the selected historical session**, showing its saved sets, reps and weights in a read-only details view; provide a clear return path to the session exercise list. No editing or writes for finished sessions.
+- [ ] Keep overall session metrics in a concise header/summary (e.g. duration, total sets, total reps), with consistent units, spacing and mobile layout. Reuse existing components carefully; prefer shared presentational pieces over coupling the read-only history view to editing/save state.
+- [ ] Reuse the existing authorized `GET /api/workout-sessions/{id}` response. The separate backend `/summary` endpoint was deliberately removed in October 2026; the React `/workout-sessions/:id/summary` route remains. Do **not** reintroduce a dedicated summary endpoint unless a concrete API requirement emerges.
+- [ ] Verify navigating from finished-workout history to the summary and per-exercise details, mobile scrolling, long exercise names, empty/null set values, and loading/error states.
 
 ### Nice-to-have — after v1.0 (v1.1)
 - [x] Introduce separate active-session exercise list and set-entry details component, with add/remove actions on the list (12 November 2026; UI and regression verification ongoing).
