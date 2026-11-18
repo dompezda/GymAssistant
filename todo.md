@@ -68,6 +68,14 @@ Frontend QA note (16 November 2026; locally tested, not yet confirmed committed)
 - [ ] Smoke-test the full register → login → workout → finish → history flow in the deployed environment.
 - [ ] Add the public demo URL and deployment notes to README.
 
+### Top priority immediately after v1.0 — workout summary redesign (v1.1)
+- [ ] Redesign the existing React workout summary screen as the **highest-priority post-v1.0 UX task**. Reuse the active workout's exercise-list/details interaction pattern rather than presenting all exercise metrics in tall summary cards.
+- [ ] Show a compact read-only list of exercises from the finished session; each list item should include a short, scannable summary (for example, completed sets, reps and volume, where meaningful).
+- [ ] Tapping an exercise opens that exercise **within the selected historical session**, showing its saved sets, reps and weights in a read-only details view; provide a clear return path to the session exercise list. No editing or writes for finished sessions.
+- [ ] Keep overall session metrics in a concise header/summary (e.g. duration, total sets, total reps), with consistent units, spacing and mobile layout. Reuse existing components carefully; prefer shared presentational pieces over coupling the read-only history view to editing/save state.
+- [ ] Reuse the existing authorized `GET /api/workout-sessions/{id}` response. The separate backend `/summary` endpoint was deliberately removed in October 2026; the React `/workout-sessions/:id/summary` route remains. Do **not** reintroduce a dedicated summary endpoint unless a concrete API requirement emerges.
+- [ ] Verify navigating from finished-workout history to the summary and per-exercise details, mobile scrolling, long exercise names, empty/null set values, and loading/error states.
+
 ### Nice-to-have — after v1.0 (v1.1)
 - [x] Introduce separate active-session exercise list and set-entry details component, with add/remove actions on the list (12 November 2026; UI and regression verification ongoing).
 - [ ] Restore or consciously replace quick swipe navigation lost in the 12 November split; keep gestures away from editable inputs and actions.
