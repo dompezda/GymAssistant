@@ -34,6 +34,10 @@ Frontend update (14 November 2026): the exercise-history page now renders sets, 
 
 Frontend QA note (16 November 2026; locally tested, not yet confirmed committed): a `beforeunload` listener conditioned on `dirtyIds.length > 0` warns about unsaved edits on page reload or tab close. Manual checks confirmed a warning for F5 and tab close with dirty edits and no warning for F5 when there are no dirty edits. Modern browsers show their own localized/generic dialog; custom `window.confirm()` inside `beforeunload` is blocked. This is not complete route-leave protection: the app currently uses declarative `BrowserRouter`/`Routes`, and same-document navigation (including browser Back) is not guarded by `beforeunload`. A possible follow-up is migration to `createBrowserRouter`/`RouterProvider` and `useBlocker`, with auth/navigation regression tests. No router migration or SPA-blocker implementation was completed during this session. Verify the local implementation is committed before marking it as repository-implemented.
 
+Deployment update (21 November 2026): .NET 10 backend manually deployed to Azure App Service Linux Free F1 (`gymassistant-api`) and Azure SQL Database (`GymAssistantDb`, Serverless Free Offer, Poland Central) created with overage billing disabled. System-assigned Managed Identity was enabled for App Service and granted `db_datareader`/`db_datawriter` inside the database. Eight EF Core migrations were run through an idempotent SQL script in SSMS; the existing `Data/Seed/system-exercises.sql` populated 100 system exercises. A new migration configures `WorkoutSessionSet.Weight` as `decimal(8,2)`. Production app settings include `ASPNETCORE_ENVIRONMENT`, JWT signing key, and an Azure SQL connection string without a SQL password. API smoke tests confirmed 401 for unauthenticated exercises, then successful registration (200 after a post-login SQL connection timeout), login and authenticated exercise GET. EF Core `EnableRetryOnFailure()` was added and a ZIP redeploy initiated; confirm the updated deployment completed and retest. No frontend hosting, production SMTP or full end-to-end workout smoke test yet. Temporary cafe-IP SQL firewall access needs removal/confirmation; a publish artifact mistakenly included `appsettings.Development.json`, so future deployments must exclude it and verify that it has no secrets.
+
+CI update (18 November 2026): GitHub Actions build/test workflow for backend and frontend was added and reported green; the frontend production build surfaced TypeScript issues that were corrected. Automated Azure CD is still pending.
+
 ## Roadmap
 
 ### Must-have — before first public release (v1.0)
@@ -59,14 +63,21 @@ Frontend QA note (16 November 2026; locally tested, not yet confirmed committed)
 - [ ] Standardize password-reset error responses; distinguish password-policy failures from invalid tokens and show actionable feedback in React. Duplicate password-reset submissions are already guarded in the frontend.
 - [ ] Verify the frontend production build (`npm run build`) and complete final end-to-end smoke tests (registration/login/reset/logout, exercise/template creation, workout start/resume/discard/finish and history). User reported `dotnet test` passing locally on 11 November 2026; no frontend build result has been confirmed.
 - [ ] Clean up temporary authentication/debug behavior and review access-token storage (`localStorage` is not a production decision).
-- [ ] Define a production-safe strategy to seed/manage system exercises.
+- [x] Seed initial 100 system exercises in Azure SQL using the existing versioned `Data/Seed/system-exercises.sql` (21 November 2026). Document an ongoing update/versioning strategy before later catalog changes.
 - [ ] Reset development/demo data before the public release.
 
 #### Azure deployment
-- [ ] Deploy .NET API, React frontend and production SQL database on Azure.
-- [ ] Configure production secrets, HTTPS, CORS, refresh-token cookies, migrations and environment variables.
+- [x] Create Azure Resource Group, deploy .NET 10 backend on App Service Free F1, and create Azure SQL Database Free Offer (21 November 2026).
+- [x] Configure App Service system-assigned Managed Identity and Azure SQL reader/writer roles; apply eight EF Core migrations and seed 100 system exercises (21 November 2026).
+- [x] Manually verify registration, login, authenticated exercise list and 401 for unauthenticated list on deployed API (21 November 2026); first registration attempt timed out during SQL post-login and succeeded after retry.
+- [ ] Confirm the ZIP redeploy containing EF Core `EnableRetryOnFailure()` succeeded and retest authenticated API; assess F1/Serverless cold-start reliability before upgrading to a paid plan.
+- [ ] Remove/verify removal of temporary SQL firewall allowlist entry for cafe public IP; review Azure SQL public-network access policy.
+- [ ] Exclude `appsettings.Development.json` from future published ZIPs and verify no development secrets were shipped.
+- [ ] Deploy React via Azure Static Web Apps; configure `VITE_API_URL`, `Frontend__Origin`, React Router fallback and production HTTPS/CORS.
+- [ ] Resolve refresh-token cookie `SameSite=Strict` and cross-origin/cross-site credential behavior before release, including CSRF considerations and browser testing.
+- [ ] Configure production SMTP, secure credentials and recovery-flow tests; verify budget/alerts and actual Azure service costs.
 - [ ] Smoke-test the full register → login → workout → finish → history flow in the deployed environment.
-- [ ] Add the public demo URL and deployment notes to README.
+- [ ] Add a public web demo URL and final deployment notes to README.
 
 ### Top priority immediately after v1.0 — workout summary redesign (v1.1)
 - [ ] Redesign the existing React workout summary screen as the **highest-priority post-v1.0 UX task**. Reuse the active workout's exercise-list/details interaction pattern rather than presenting all exercise metrics in tall summary cards.
@@ -87,7 +98,8 @@ Frontend QA note (16 November 2026; locally tested, not yet confirmed committed)
 - [x] Implement expandable exercise history with per-workout sets, dates, weights/repetitions, on-demand session details, per-page cache and guarded loading/error states (14 November 2026).
 - [ ] Polish exercise-history presentation (clearer set columns, `null` values and spacing), preserve navigation on empty/error states, and verify error/retry plus mobile behavior.
 - [ ] Show the last recorded sets for the same exercise on the active workout card; optionally allow copying previous values.
-- [ ] Add GitHub Actions CI (build + tests) and later automated Azure deployment (CD).
+- [x] Add GitHub Actions CI (build + tests), confirmed green on 18 November 2026.
+- [ ] Add automated Azure deployment (CD) after manual deployment and full production verification.
 - [ ] Extend integration coverage for remaining exercise/template and ownership edge cases.
 - [ ] Introduce explicit test-data isolation/reset for the growing integration suite.
 - [ ] Add frontend tests/E2E for the main workout flow.
@@ -100,6 +112,8 @@ Frontend QA note (16 November 2026; locally tested, not yet confirmed committed)
 - [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
 
 ### Completed milestones
+- [x] Deploy .NET 10 API and Azure SQL with Entra Managed Identity, eight EF migrations, seed 100 system exercises and verify registration/login/authenticated exercise GET (21 November 2026; frontend and remaining release checks pending).
+- [x] Add GitHub Actions CI and correct TypeScript production-build errors (18 November 2026).
 - [x] Add expandable exercise-history session details with local `Map` cache, guarded requests, per-session error feedback and scoped styling (14 November 2026).
 - [x] Split active workout into selectable exercise list and separate set-entry details view, with scoped styling and parent-controlled save-on-return (12 November 2026; swipe restoration and regression QA remain open).
 - [x] Improve the start-workout and select-template mobile UI, use accessible `Link` cards to select a plan, and align session setup cards with workout-template edit cards (11 November 2026).
