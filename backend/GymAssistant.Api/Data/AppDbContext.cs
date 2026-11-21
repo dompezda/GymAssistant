@@ -47,6 +47,9 @@ public class AppDbContext : IdentityUserContext<ApplicationUser, Guid>
                 "CK_Exercises_SystemOwnership",
                 "(IsSystem = 1 AND OwnerUserId IS NULL) OR (IsSystem = 0 AND OwnerUserId IS NOT NULL)"
             ));
+        modelBuilder.Entity<WorkoutSessionSet>()
+            .Property(x=>x.Weight)
+            .HasPrecision(8,2);
     }
 
     public DbSet<Exercise> Exercises => Set<Exercise>();
