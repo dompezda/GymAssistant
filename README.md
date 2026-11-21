@@ -1,10 +1,10 @@
 # GymAssistant
 
-**A full-stack workout tracking application built with .NET 9 and React.**
+**A full-stack workout tracking application built with .NET 10 and React.**
 
 GymAssistant helps users organize exercises, prepare workout templates, track sets during a training session, and review completed workouts. It is a personal portfolio project and is actively being developed.
 
-> **Project status:** Developer v1.0 final QA. Core workout and authentication flows are implemented, with a recent mobile UI pass and auth integration tests. Frontend production build, remaining smoke tests and production deployment/hardening are not yet confirmed. There is currently no public hosted demo.
+> **Project status (21 November 2026):** v1.0 release preparation. GitHub Actions CI was reported green. The .NET 10 backend is deployed to Azure App Service, and Azure SQL is populated with 100 system exercises; registration, login and an authorized exercise-list request were manually verified against Azure. React is not deployed yet, so there is no public end-to-end web demo. Production SMTP, cookie/origin configuration, full smoke tests and security hardening remain open.
 
 ## Screenshots
 
@@ -30,13 +30,15 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 
 | Layer | Technologies |
 | --- | --- |
-| Backend | C#, .NET 9, ASP.NET Core Minimal APIs, Entity Framework Core |
-| Database | SQL Server |
+| Backend | C#, .NET 10, ASP.NET Core Minimal APIs, Entity Framework Core 10 |
+| Database | SQL Server (local), Azure SQL Database (deployment) |
 | Frontend | React, TypeScript, Vite |
 | Authentication | ASP.NET Core Identity, JWT access tokens, refresh-token rotation, reset tokens |
 | Development email | MailKit SMTP + Mailpit (local testing only) |
 | Testing | xUnit, `WebApplicationFactory`, SQLite in-memory integration tests |
 | API reference | OpenAPI and Scalar in Development |
+| Hosting (work in progress) | Azure App Service Linux F1, Azure SQL Database Serverless Free Offer; React hosting pending |
+| CI | GitHub Actions: backend build/tests and frontend build (reported green, 18 November 2026) |
 
 ## Technical highlights
 
@@ -50,7 +52,7 @@ For implementation details, see [Authentication.md](Authentication.md) and [Api.
 
 ## Getting started (local development)
 
-**Prerequisites:** .NET 9 SDK, SQL Server, Node.js/npm, and the `dotnet-ef` tool (EF Core 9 compatible).
+**Prerequisites:** .NET 10 SDK, SQL Server, Node.js/npm, and the `dotnet-ef` tool (EF Core 10 compatible).
 
 1. Clone this repository and configure a local SQL Server instance. Adjust `ConnectionStrings:DefaultConnection` as needed using local configuration or user secrets.
 2. Configure a strong JWT signing key and a development-user password in ASP.NET Core user secrets (do not commit actual credentials):
@@ -98,6 +100,17 @@ The reset URL points to the frontend origin configured by `Frontend:Origin`. Pro
 ```powershell
 dotnet test backend/GymAssistant.sln
 ```
+
+## Azure deployment status (21 November 2026)
+
+- **App Service:** `gymassistant-api`, Linux / .NET 10, Free F1, manual ZIP deployment. Free F1 is being evaluated for reliability and may need an upgrade; no automated CD is configured.
+- **Azure SQL:** `GymAssistantDb` on logical server `gymassistant-sql-prod` (Poland Central), Serverless Free Offer, overage billing disabled. Eight EF Core migrations were applied through an idempotent SQL script using SSMS; the system exercise SQL seed inserted 100 exercises. These are new production data, not copied development users or workouts.
+- **Database auth:** system-assigned Managed Identity for the App Service, mapped to a contained Azure SQL user with `db_datareader` and `db_datawriter` roles. Schema migrations were executed separately with an Entra admin; the application identity does not have schema-owner permissions.
+- **Configuration:** `ASPNETCORE_ENVIRONMENT=Production`, `Jwt__SigningKey`, and Azure connection string are configured in App Service. Secrets must never be committed. The React origin and real SMTP delivery are not yet production-configured.
+- **Manual smoke tests:** unauthenticated exercise GET returned 401; registration initially timed out during SQL post-login but succeeded on retry; login and an authorized exercise GET subsequently succeeded, returning seeded exercise records. `EnableRetryOnFailure()` was added locally and a ZIP redeploy was initiated/reported, but its final verification remains open.
+- **Next steps:** verify latest API redeploy, remove the temporary SQL firewall rule for the cafe IP if still present, omit `appsettings.Development.json` from future publish artifacts, deploy React (Azure Static Web Apps), set `VITE_API_URL` and `Frontend__Origin`, resolve cross-site refresh-cookie/CORS behavior, configure production SMTP, and run full end-to-end smoke tests. Azure budget/alerts and cost verification should also be confirmed.
+
+See [release checklist](todo.md) for outstanding deployment and QA items.
 
 ## Documentation and roadmap
 
