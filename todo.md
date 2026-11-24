@@ -1,140 +1,159 @@
-# GymAssistant TODO
+# GymAssistant TODO — 1.X
 
-The core authentication flow is implemented: public registration, login, persisted refresh tokens, refresh-token rotation, centralized frontend `401 -> refresh -> retry once`, startup session recovery and server-side logout/revocation.
+Updated: 24 November 2026. Scope: 1.X only; no commitment to later major features or minor release dates. P0 blocks public release; P1 improves readiness and reliability; P2/P3 are flexible and not release prerequisites. Tests specific to a feature are part of its completion. Conditional/evaluation tasks do not imply a commitment to implement. Stable task IDs should be retained when closing or moving tasks.
 
-Registration is now end-to-end: ASP.NET Core Identity enforces unique email addresses and the configured password policy, the frontend has a `/register` page with password confirmation and validation-error display, successful registration reuses the existing `login()` flow for automatic sign-in, and login/register pages link to each other.
+| Priority | Open tasks |
+| --- | ---: |
+| P0 | 16 |
+| P1 | 28 |
+| P2 | 51 |
+| P3 | 28 |
+| Total | 123 |
 
-Configuration cleanup for the current auth/frontend flow is also complete: the frontend API base URL is centralized through `VITE_API_URL`, refresh-token lifetime is configured and validated through `RefreshTokenOptions`, the credential-enabled CORS origin is read from backend configuration, and OpenAPI plus Scalar are mapped in Development for manual API testing.
+## Near-term order
 
-System/private exercise ownership is now enforced: normal users create and edit only their own private exercises, `IsSystem` is not accepted from create/edit requests, and SQL Server enforces valid `IsSystem` / `OwnerUserId` combinations through a check constraint. The frontend marks system exercises with a `System` badge in both the exercise picker and the main exercise list, and system exercise details are presented in a read-only mode without an edit action.
+P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; then remaining P0 and closed beta (P1-28). Resolve dependencies and critical findings before exposing real user data.
 
-Backend integration testing is bootstrapped with xUnit and `WebApplicationFactory`. The test host replaces the normal SQL Server `AppDbContext` configuration with SQLite in-memory and creates the schema for the test host. Current exercise coverage verifies unauthenticated `401 Unauthorized`, two-user private-exercise isolation, visibility of the current user's private exercises together with system exercises, ownership and `IsSystem = false` when creating a private exercise, `400 Bad Request` for an empty exercise name, successful editing of the current user's private exercise including muscle-group changes, blocked edits of another user's or a system exercise with persisted data verified unchanged, muscle-group patch behavior without duplicate relations and with only missing relations added, system-exercise history filtered to the authenticated user's workout sessions, and `404 Not Found` when requesting history for another user's private exercise. Authenticated cases use real JWT bearer tokens generated for Identity users created by the test setup. Reusable `TestHelpers` now centralize common user creation, client authorization, private/system exercise setup (including muscle groups) and workout-template setup so individual tests stay focused on behavior. Workout-template integration tests now cover create validation and ownership, list/detail user isolation, order normalization and successful PATCH behavior. PATCH tests also cover empty title, empty exercises, another user's private exercise, duplicate exercises, non-positive planned sets, adding a system exercise, a missing template id, and blocked access to another user's template with persisted data verified unchanged.
+## P0 — Critical / release blockers
 
-Workout-session integration coverage now includes GET list/detail, owned and non-owned requests, session creation and validation, set PATCH (including finished-session blocking), finish success/idempotency, exercise POST (valid/invalid, duplicate and ownership cases) and DELETE (removal, cascade deletion, order renumbering, ownership and lifecycle rules). Details GET also returns `StartedAt` and `FinishedAt` and replaces the removed backend `/summary` endpoint; the React summary view still exists. The workout-session test file is organized by GET, POST, PATCH and DELETE. Final suite execution should be rerun locally after removal of stale summary tests.
+- [ ] **P0-01** [Auth] Configure production SMTP (preferred provider: OVHcloud); verify Azure connectivity, TLS and secret storage.
+- [ ] **P0-02** [Auth] Verify refresh cookies and rotation on production, including JWT expiry, reload and logout; same-site hosting is promising but not yet verified.
+- [ ] **P0-03** [Auth] Verify password reset end to end with real email delivery; distinguish invalid tokens and password-policy errors.
+- [ ] **P0-04** [Auth] Implement email confirmation: 24-hour token, resend, block login and refresh before confirmation, remove automatic login on registration, add creation timestamp and integration tests.
+- [ ] **P0-05** [Auth] Remove the two existing test accounts before enabling confirmation; verify dependent data and revoke sessions.
+- [ ] **P0-06** [Auth] Rate-limit authentication endpoints, including registration, login, password recovery and confirmation resend.
+- [ ] **P0-07** [Auth] Prevent account enumeration, including inconsistent responses or timing on SMTP failure.
+- [ ] **P0-08** [Auth] Persist Data Protection keys and verify Identity tokens survive API restarts and deployments.
+- [ ] **P0-09** [Security] Review resource ownership and isolation; verify PATCH rejects a set ID belonging to another exercise or user.
+- [ ] **P0-10** [Security] Review secrets, published artifacts (exclude appsettings.Development.json), CORS, HTTPS and production configuration.
+- [ ] **P0-11** [Azure] Review SQL firewall rules and remove temporary access if still present.
+- [ ] **P0-12** [Azure] Configure cost budgets and alerts.
+- [ ] **P0-13** [Azure] Verify database backup availability and retention.
+- [ ] **P0-14** [QA] Complete production smoke tests: register/login/logout, exercise/template creation, start/resume/discard/finish/history; test lost connectivity, partial writes, API failure and blocking UI defects.
+- [ ] **P0-15** [Privacy] Prepare privacy policy and terms, make them available at registration, assess GDPR obligations, lawful bases, processors, health-data implications and retention.
+- [ ] **P0-16** [Privacy/Product] Provide administrator contact, basic bug-report channel and a manual process for data-rights requests.
 
-Frontend update (13 October 2026): the active workout session uses a compact four-column set layout, numeric mobile keyboards, a contextual exercise-delete dropdown and horizontal swipe between exercises. Swipe is limited to the exercise header/card area and ignores predominantly vertical movement. Gesture-origin filtering, touch cancellation/multitouch handling and real-device verification are still outstanding.
+## P1 — High / production stability
 
-Frontend update (15 October 2026): active-workout write operations and exercise navigation now share a component-local `isSavingRef` guard with `isSaving` used to disable interactive controls. `saveCurrentExerciseIfDirty()` saves an edited exercise before switching to another exercise or adding a new one. Finishing uses `Promise.allSettled()` to remove successful exercise IDs from `dirtyIds`, retain failed ones for retry, and avoid calling `/finish` until the exercise writes succeed. After a successful finish, React navigates to `/workout-sessions/:id/summary`, which uses the existing session-details GET. Manual DevTools throttling (200 kb/s, 5000 ms latency) confirmed disabled UI during PATCH/DELETE and no duplicate PATCH on repeated navigation clicks; explicit failure-path tests and the full build/test suite are still pending.
+- [ ] **P1-01** [Auth] Implement self-service account deletion.
+- [ ] **P1-02** [Auth] Implement password change for authenticated users.
+- [ ] **P1-03** [Auth] Extend integration tests for refresh, logout, expired/revoked tokens and outstanding password-reset cases.
+- [ ] **P1-04** [Auth] Review access-token storage in localStorage and XSS/CSRF tradeoffs.
+- [ ] **P1-05** [Auth] Verify and improve logout behavior when the backend is unreachable.
+- [ ] **P1-06** [Auth] Verify session revocation after password change/reset, including remaining JWT lifetime.
+- [ ] **P1-07** [Security] Enforce one active workout per user against concurrent requests (consider a filtered unique SQL Server index).
+- [ ] **P1-08** [Security] Review input validation: weights, reps, text lengths and collection limits.
+- [ ] **P1-09** [Security] Verify deletion and cascade behavior across related entities.
+- [ ] **P1-10** [Security] Verify production logs do not expose credentials, tokens or sensitive data.
+- [ ] **P1-11** [Azure] Evaluate B1 + Always On if F1 reliability warrants it.
+- [ ] **P1-12** [Azure] Verify SQL cold-start handling and EF Core retry behavior on the deployed API.
+- [ ] **P1-13** [Azure] Configure API monitoring and alerts for errors and downtime.
+- [ ] **P1-14** [Azure] Add a health-check endpoint.
+- [ ] **P1-15** [Azure] Define and test production EF Core migration strategy.
+- [ ] **P1-16** [Azure] Test database restoration.
+- [ ] **P1-17** [Workout] Complete unsaved-change protection for SPA navigation and browser Back; existing beforeunload is not sufficient. Evaluate router migration only as needed.
+- [ ] **P1-18** [Workout] Test authorization expiry during an active workout.
+- [ ] **P1-19** [UI/UX] Verify main screens on physical Android/iOS devices, including keyboard, scrolling and active workout interactions.
+- [ ] **P1-20** [API] Standardize API error responses (e.g. ProblemDetails).
+- [ ] **P1-21** [Frontend] Distinguish network, validation and server errors; handle timeouts, safe manual retries and reconnection.
+- [ ] **P1-22** [Frontend] Prevent duplicate submissions across forms, including template editing.
+- [ ] **P1-23** [Tests] Extend backend integration tests for remaining ownership, validation and concurrency cases.
+- [ ] **P1-24** [Tests] Isolate/reset test data between integration tests.
+- [ ] **P1-25** [Tests] Test selected SQL Server-specific behavior using a real SQL Server instance (e.g. Testcontainers).
+- [ ] **P1-26** [Privacy] Provide user-data export; ensure applicable rights can be fulfilled manually before automation.
+- [ ] **P1-27** [Privacy] Define incident and personal-data breach response procedure.
+- [ ] **P1-28** [Product] Recruit 3–5 testers, run closed beta, collect feedback after real workouts and fix critical issues.
 
-Frontend update (16 October 2026): the active workout screen now displays errors for failed exercise PATCH/POST/DELETE, finish operations and session GET requests instead of reporting failures only in the console. Failed writes do not advance exercise navigation or finish the workout, and unsuccessful exercise saves remain marked dirty for retry. A manual session refresh action reloads backend state, asks for confirmation before discarding locally edited sets, and clears dirty IDs only after a successful GET. Initial loading failures offer retry, and empty-session fallback UI offers refresh/navigation. This is a manual recovery path, not offline caching or automatic conflict resolution; failure and production-build verification remain part of release QA.
+## P2 — Normal / product improvements
 
-Frontend update (28 October 2026): exercise create/edit/read-only modals received UI spacing and alignment improvements, consistent action-button layout, and optional history navigation from the shared `ExerciseForm`. Create/edit modals lock background vertical scrolling while open, restoring the previous value in effect cleanup. The shared form now uses `isSavingRef` to prevent rapid duplicate submits and `isSaving` to disable save, close and history buttons during submission. Manual mobile checks covered the modal and scroll behavior; automated frontend tests and robust network-error handling remain outstanding. The modal CSS has since been updated to use `max-width: 400px` and `max-height: 90dvh`; scroll access was manually checked at narrow viewport heights on 6 November 2026.
+- [ ] **P2-01** [Auth] Allow email-address change with verification.
+- [ ] **P2-02** [Auth] Allow users to manage and revoke sessions on other devices.
+- [ ] **P2-03** [Auth] Send security notifications for account changes.
+- [ ] **P2-04** [Auth] Unify authentication and account settings UI.
+- [ ] **P2-05** [Auth] Add show/hide password controls.
+- [ ] **P2-06** [Security] Review security headers including CSP.
+- [ ] **P2-07** [Security] Automate dependency vulnerability checks (e.g. Dependabot).
+- [ ] **P2-08** [Azure] Evaluate a separate staging environment.
+- [ ] **P2-09** [Azure] Define deployment rollback strategy.
+- [ ] **P2-10** [Azure] Establish versioning, Git tags and GitHub Releases.
+- [ ] **P2-11** [Exercises] Define ongoing system exercise catalog update/versioning strategy.
+- [ ] **P2-12** [Exercises] Add GET /api/exercises/{exerciseId}/last-workout: latest completed, non-discarded session for the current user, including date, sets, weights and reps; define no-history response.
+- [ ] **P2-13** [Exercises] Allow private exercise deletion while preserving historical records.
+- [ ] **P2-14** [Exercises] Evaluate favorites and system catalog visibility (design decision pending).
+- [ ] **P2-15** [Exercises] Filter exercises by muscle groups.
+- [ ] **P2-16** [Exercises] Design and implement tracking types for weight/reps, bodyweight, additional load, assistance, duration and distance; adapt data model, validation, DTOs, dynamic set UI, history, previous-value copying and existing catalog migration; preserve historical semantics.
+- [ ] **P2-17** [Templates] Unify create/edit flows using shared exercise picker.
+- [ ] **P2-18** [Templates] Reorder exercises in templates.
+- [ ] **P2-19** [Templates] Delete templates without losing workout history.
+- [ ] **P2-20** [Templates] Duplicate templates.
+- [ ] **P2-21** [Workout] Show completion indicator derived from filled sets; avoid color-only indication.
+- [ ] **P2-22** [Workout] Show previous workout sets in active exercise view (depends on P2-12).
+- [ ] **P2-23** [Workout] Copy previous weights and reps into current session (depends on P2-12).
+- [ ] **P2-24** [Workout] Add rest timer between sets.
+- [ ] **P2-25** [Workout] Reorder exercises in an active session and persist order.
+- [ ] **P2-26** [Workout] Restore or intentionally replace swipe navigation; handle input/button gesture origins, cancellation and multitouch.
+- [ ] **P2-27** [History] Delete completed workout sessions.
+- [ ] **P2-28** [History] Redesign workout summary: compact read-only exercise list, drill-down into historical sets and concise session metrics; reuse GET /api/workout-sessions/{id}, not a new summary endpoint.
+- [ ] **P2-29** [History] Filter workout history by date range.
+- [ ] **P2-30** [History] Improve exercise history formatting, null values, spacing and empty/error navigation.
+- [ ] **P2-31** [UI/UX] Unify buttons, forms, modals, cards, headers, spacing and typography.
+- [ ] **P2-32** [UI/UX] Standardize loading, saving, disabled and empty states.
+- [ ] **P2-33** [UI/UX] Confirm destructive operations.
+- [ ] **P2-34** [UI/UX] Improve layout on larger screens.
+- [ ] **P2-35** [UI/UX] Add installable PWA support (not offline synchronization).
+- [ ] **P2-36** [Frontend] Add shared user notification mechanism.
+- [ ] **P2-37** [Frontend] Inform users when connectivity is unavailable.
+- [ ] **P2-38** [Frontend] Add React Error Boundary.
+- [ ] **P2-39** [Frontend] Add a useful 404 page.
+- [ ] **P2-40** [Tests] Introduce frontend unit/component tests for sets, dirtyIds and fetchApi.
+- [ ] **P2-41** [Tests] Add automated end-to-end tests for main flows.
+- [ ] **P2-42** [Tests] Report code coverage in CI.
+- [ ] **P2-43** [Tech debt] Organize CSS by responsibility and remove cross-feature selectors and duplication.
+- [ ] **P2-44** [Tech debt] Extract shared TypeScript API response types.
+- [ ] **P2-45** [Tech debt] Separate API request logic from components where justified.
+- [ ] **P2-46** [Privacy] Version legal documents and notify users of material changes.
+- [ ] **P2-47** [Product] Create landing page with features, screenshots and register/login actions.
+- [ ] **P2-48** [Product] Add in-app bug and suggestion reporting.
+- [ ] **P2-49** [Product] Add privacy-conscious usage analytics.
+- [ ] **P2-50** [Product] Promote on LinkedIn, Reddit and relevant training communities.
+- [ ] **P2-51** [Product] Prepare public release (after P0 and beta readiness; other P2/P3 items are not prerequisites).
 
-Frontend/backend update (3 November 2026): workout sessions now have nullable `DiscardedAt`, with a database migration and mutually exclusive active/finished/discarded lifecycle checks in the API. The start-workout page checks `GET /api/workout-sessions/active`, allows resuming the existing workout, and confirms discard through `POST /api/workout-sessions/{sessionId}/discard`; the backend rejects creating another active session (`409`) and blocks editing/finishing discarded sessions. Completed workout lists and exercise history exclude discarded and active sessions. Integration tests cover active lookup, discard ownership/idempotency, blocked writes and creating after discard. The exercise-history assertion was subsequently corrected (100 backend tests passed locally on 3 November 2026). Backend `dotnet test` passed locally again on 11 November 2026 (user reported); frontend production build and final manual end-to-end verification remain pending. A filtered unique SQL Server index may later be needed to enforce one active session against concurrent POST requests.
+## P3 — Low / optional and technical improvements
 
-Frontend UI update (6 November 2026): login and registration now use a shared `.auth-page` layout; the main menu prioritizes the start-workout action; the exercise library uses shared `.page-header`, `.page-title` and `.back-button` styles. Exercise create/edit/read-only dialogs now share `.modal-header`, `.modal-title`, `.modal-body` and `.modal-component` styling; the muscle-group checkbox grid and action spacing were refined. Manual responsive checks verified modal scrolling at 375 × 400 and 375 × 600 viewports. This completes a UI pass for the exercise section, not the app-wide consistency task; other views still require review.
+- [ ] **P3-01** [Auth] Automatically delete unconfirmed accounts after seven days; avoid deleting accounts with existing training data, handle confirmation races and schedule reliably.
+- [ ] **P3-02** [Auth] Clean up expired and revoked refresh tokens.
+- [ ] **P3-03** [Auth] Consider security-event history.
+- [ ] **P3-04** [Azure] Evaluate Infrastructure as Code (Bicep or Terraform).
+- [ ] **P3-05** [Azure] Automate environment configuration.
+- [ ] **P3-06** [Azure] Optimize infrastructure costs and performance as needed.
+- [ ] **P3-07** [Exercises] Expand system exercise library.
+- [ ] **P3-08** [Exercises] Optimize search when catalog growth warrants it.
+- [ ] **P3-09** [Templates] Protect unsaved template-editor changes.
+- [ ] **P3-10** [Workout] Evaluate automatic creation of an empty set after filling the last one.
+- [ ] **P3-11** [Workout] Evaluate allowing the same exercise multiple times per session.
+- [ ] **P3-12** [History] Add pagination when record volume warrants it.
+- [ ] **P3-13** [UI/UX] Improve accessibility (critical accessibility defects take higher priority).
+- [ ] **P3-14** [UI/UX] Evaluate light/dark themes.
+- [ ] **P3-15** [UI/UX] Consider subtle animations and transitions.
+- [ ] **P3-16** [Frontend] Consider automatic retries only for safe/idempotent operations.
+- [ ] **P3-17** [Frontend] Centralize duplicated error-handling logic.
+- [ ] **P3-18** [Tests] Standardize test names and helpers as needed.
+- [ ] **P3-19** [Tests] Improve ESLint and code formatting configuration.
+- [ ] **P3-20** [Tech debt] Decompose large React components and extract custom hooks where justified.
+- [ ] **P3-21** [Tech debt] Review large backend endpoints and extract business logic where justified.
+- [ ] **P3-22** [Tech debt] Remove unused code, styles and comments.
+- [ ] **P3-23** [Tech debt] Standardize file, component and function naming.
+- [ ] **P3-24** [Tech debt] Review EF Core query performance.
+- [ ] **P3-25** [Tech debt] Maintain dependencies.
+- [ ] **P3-26** [Privacy] Automate data-rights request handling if warranted.
+- [ ] **P3-27** [Product] Add FAQ and short usage instructions.
+- [ ] **P3-28** [Product] Consider public changelog and planned-feature list.
 
-Frontend UI update (7 November 2026): workout-template list/detail screens received responsive layout adjustments, and the template detail description is clamped to four lines until expanded. The workout-template edit screen now uses a height-constrained flex layout with independently scrollable form content and an always-visible Save action. It renders only exercises selected for the template, uses the existing `ExercisePickerModal` to select library exercises and `CreateExerciseModal` to create and immediately add a new one, and coordinates modal visibility through a single `ActiveModal` union state. Each selected exercise has explicit remove and planned-set controls (minimum one set); picker selection checks for duplicate exercise IDs. No new backend endpoint or integration test was added for this UI refactor. Remaining work: bring template creation to the same selection flow; consider large-library favorites, picker loading/error feedback, template PATCH submission guards and narrow-screen/mobile keyboard verification. Search/filtering and open-only picker fetch have since been implemented.
+## Completed foundations (not included in open count)
 
-Authentication update (9 November 2026): implemented public `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` using ASP.NET Core Identity token providers, `IEmailSender` / MailKit SMTP, `SmtpOptions` and development Mailpit. React now includes `/forgot-password` and `/reset-password` pages, email links and password requirements. The happy path was manually verified end-to-end; integration tests now cover several negative cases, while production delivery and additional coverage remain open. Mailpit is local-only, not a production mail provider.
+- Backend (.NET 10), Azure SQL, Managed Identity, 100 seeded system exercises.
+- React frontend, custom domain https://gymassistant.pl/, HTTPS and redirects (reported working 23 November).
+- GitHub Actions CI and automated frontend/backend deployment (backend CD confirmed by owner on 24 November).
+- Registration/login, JWT and refresh rotation, local password-reset implementation, workout lifecycle and exercise history; production verification remains open above.
 
-Frontend update (12 November 2026, v1.1 in progress): the active workout UI has been split into an exercise list in `WorkoutSessionPage` and a separate `WorkoutSessionExerciseDetails` component for entering sets, weights and repetitions. Selection is tracked by `selectedExerciseId`, and the selected exercise is derived from the parent session state rather than duplicated. The parent still owns `session`, `dirtyIds`, the save-in-flight guard and API writes; the details component updates sets through `setSession` and reports edits through `onExerciseChanged`. Returning from details calls the parent's dirty-only PATCH flow, keeping the details view open on save failure. The exercise list exposes add/remove actions (last exercise cannot be deleted by backend rule), while session finish and refresh are shown on the list rather than in details. JSX/CSS for both views was adjusted using scoped workout selectors to avoid changing shared styles. **Not complete:** horizontal swipe navigation was removed during this refactor and must be restored or deliberately replaced; PATCH/error-path behavior, mobile scrolling and full regression checks still need verification. Existing descriptions of swipe and the earlier single-screen workout layout refer to the pre-refactor implementation. No backend endpoint or data-model change was required.
-
-Frontend update (14 November 2026): the exercise-history page now renders sets, repetitions and weights for completed workouts and lets users expand a workout to view its full exercise list and per-exercise set counts, highlighting the selected exercise. Details are loaded through the existing `GET /api/workout-sessions/{id}` endpoint on demand and cached in a component-local `Map`, avoiding repeated GETs when reopening a session. A `useRef` request guard and `isFetchingSession` disable details buttons while fetching; per-session error feedback handles HTTP errors and caught exceptions, with retry available through the same Show details action. No backend endpoint or data-model change was required. Remaining polish: improve set-value formatting (especially `null`), tidy the history layout, check loading/empty/error navigation states, and verify failure and narrow-screen behavior.
-
-Frontend QA note (16 November 2026; locally tested, not yet confirmed committed): a `beforeunload` listener conditioned on `dirtyIds.length > 0` warns about unsaved edits on page reload or tab close. Manual checks confirmed a warning for F5 and tab close with dirty edits and no warning for F5 when there are no dirty edits. Modern browsers show their own localized/generic dialog; custom `window.confirm()` inside `beforeunload` is blocked. This is not complete route-leave protection: the app currently uses declarative `BrowserRouter`/`Routes`, and same-document navigation (including browser Back) is not guarded by `beforeunload`. A possible follow-up is migration to `createBrowserRouter`/`RouterProvider` and `useBlocker`, with auth/navigation regression tests. No router migration or SPA-blocker implementation was completed during this session. Verify the local implementation is committed before marking it as repository-implemented.
-
-Deployment update (21 November 2026): .NET 10 backend manually deployed to Azure App Service Linux Free F1 (`gymassistant-api`) and Azure SQL Database (`GymAssistantDb`, Serverless Free Offer, Poland Central) created with overage billing disabled. System-assigned Managed Identity was enabled for App Service and granted `db_datareader`/`db_datawriter` inside the database. Eight EF Core migrations were run through an idempotent SQL script in SSMS; the existing `Data/Seed/system-exercises.sql` populated 100 system exercises. A new migration configures `WorkoutSessionSet.Weight` as `decimal(8,2)`. Production app settings include `ASPNETCORE_ENVIRONMENT`, JWT signing key, and an Azure SQL connection string without a SQL password. API smoke tests confirmed 401 for unauthenticated exercises, then successful registration (200 after a post-login SQL connection timeout), login and authenticated exercise GET. EF Core `EnableRetryOnFailure()` was added and a ZIP redeploy initiated; confirm the updated deployment completed and retest. No frontend hosting, production SMTP or full end-to-end workout smoke test yet. Temporary cafe-IP SQL firewall access needs removal/confirmation; a publish artifact mistakenly included `appsettings.Development.json`, so future deployments must exclude it and verify that it has no secrets.
-
-CI update (18 November 2026): GitHub Actions build/test workflow for backend and frontend was added and reported green; the frontend production build surfaced TypeScript issues that were corrected. Automated Azure CD is still pending.
-
-## Roadmap
-
-### Must-have — before first public release (v1.0)
-
-#### Error handling and data safety
-- [ ] Standardize user-visible API error presentation across the app and agree on a backend error response contract (active workout GET/PATCH/POST/DELETE/finish feedback is implemented).
-- [ ] Complete failure-path verification for PATCH/POST/DELETE/finish and session refresh, including network failures and HTTP errors; active-workout guards and retry behavior are implemented.
-- [ ] Complete unsaved-changes protection for the active workout when `dirtyIds.length > 0`: the `beforeunload` warning was implemented and manually validated locally on 16 November 2026 for F5/tab close (not yet confirmed committed); React Router in-app navigation and browser Back within the SPA remain unprotected. Keep the existing save-on-return/finish flow; no autosave or offline persistence for v1.0. Evaluate `createBrowserRouter`/`RouterProvider` + `useBlocker` as a small separate router migration, then regression-test protected routes, login, navigation and save flow.
-- [ ] Review the PATCH edge case where a set ID belongs to another workout-session exercise.
-- [ ] Consider a SQL Server filtered unique index for one active workout per user to protect against concurrent creation requests.
-
-#### UI/UX consistency
-- [ ] Unify buttons, forms, modals, spacing and feedback patterns across screens.
-- [ ] Bring template creation onto the shared exercise picker flow and improve selection visibility for large catalogs. The shared ExercisePickerModal now has client-side name search, empty results and a fixed-height scrollable list.
-- [ ] Add template-editor save-in-flight protection and user-visible request/network error handling; validate mobile scrolling and keyboard behavior.
-- [ ] Make loading, saving and disabled states consistent.
-- [ ] After restoring swipe in the v1.1 exercise-list/details flow, ignore gestures starting on inputs/buttons and handle touch cancellation and multitouch.
-- [ ] Verify set editing, exercise-list add/remove, return-to-list PATCH/error handling and responsive layout on a physical mobile device; verify swipe again after its restoration.
-
-#### Authentication and release quality
-- [ ] Complete remaining authentication integration coverage: logout, refresh rotation, expired/revoked token rejection, unauthorized access, and outstanding reset-password negative cases (e.g. expired token, password policy and missing fields). `AuthEndpointsTests` already covers register/login, forgot-password and reset-password success, invalid/reused reset tokens, and refresh-token revocation, using `FakeEmailSender`.
-- [ ] Prepare production email delivery: real SMTP provider, credentials stored outside source control, TLS/STARTTLS, delivery-failure behavior, rate limits and logging that does not expose tokens.
-- [ ] Standardize password-reset error responses; distinguish password-policy failures from invalid tokens and show actionable feedback in React. Duplicate password-reset submissions are already guarded in the frontend.
-- [ ] Verify the frontend production build (`npm run build`) and complete final end-to-end smoke tests (registration/login/reset/logout, exercise/template creation, workout start/resume/discard/finish and history). User reported `dotnet test` passing locally on 11 November 2026; no frontend build result has been confirmed.
-- [ ] Clean up temporary authentication/debug behavior and review access-token storage (`localStorage` is not a production decision).
-- [x] Seed initial 100 system exercises in Azure SQL using the existing versioned `Data/Seed/system-exercises.sql` (21 November 2026). Document an ongoing update/versioning strategy before later catalog changes.
-- [ ] Reset development/demo data before the public release.
-
-#### Azure deployment
-- [x] Create Azure Resource Group, deploy .NET 10 backend on App Service Free F1, and create Azure SQL Database Free Offer (21 November 2026).
-- [x] Configure App Service system-assigned Managed Identity and Azure SQL reader/writer roles; apply eight EF Core migrations and seed 100 system exercises (21 November 2026).
-- [x] Manually verify registration, login, authenticated exercise list and 401 for unauthenticated list on deployed API (21 November 2026); first registration attempt timed out during SQL post-login and succeeded after retry.
-- [ ] Confirm the ZIP redeploy containing EF Core `EnableRetryOnFailure()` succeeded and retest authenticated API; assess F1/Serverless cold-start reliability before upgrading to a paid plan.
-- [ ] Remove/verify removal of temporary SQL firewall allowlist entry for cafe public IP; review Azure SQL public-network access policy.
-- [ ] Exclude `appsettings.Development.json` from future published ZIPs and verify no development secrets were shipped.
-- [ ] Deploy React via Azure Static Web Apps; configure `VITE_API_URL`, `Frontend__Origin`, React Router fallback and production HTTPS/CORS.
-- [ ] Resolve refresh-token cookie `SameSite=Strict` and cross-origin/cross-site credential behavior before release, including CSRF considerations and browser testing.
-- [ ] Configure production SMTP, secure credentials and recovery-flow tests; verify budget/alerts and actual Azure service costs.
-- [ ] Smoke-test the full register → login → workout → finish → history flow in the deployed environment.
-- [ ] Add a public web demo URL and final deployment notes to README.
-
-### Top priority immediately after v1.0 — workout summary redesign (v1.1)
-- [ ] Redesign the existing React workout summary screen as the **highest-priority post-v1.0 UX task**. Reuse the active workout's exercise-list/details interaction pattern rather than presenting all exercise metrics in tall summary cards.
-- [ ] Show a compact read-only list of exercises from the finished session; each list item should include a short, scannable summary (for example, completed sets, reps and volume, where meaningful).
-- [ ] Tapping an exercise opens that exercise **within the selected historical session**, showing its saved sets, reps and weights in a read-only details view; provide a clear return path to the session exercise list. No editing or writes for finished sessions.
-- [ ] Keep overall session metrics in a concise header/summary (e.g. duration, total sets, total reps), with consistent units, spacing and mobile layout. Reuse existing components carefully; prefer shared presentational pieces over coupling the read-only history view to editing/save state.
-- [ ] Reuse the existing authorized `GET /api/workout-sessions/{id}` response. The separate backend `/summary` endpoint was deliberately removed in October 2026; the React `/workout-sessions/:id/summary` route remains. Do **not** reintroduce a dedicated summary endpoint unless a concrete API requirement emerges.
-- [ ] Verify navigating from finished-workout history to the summary and per-exercise details, mobile scrolling, long exercise names, empty/null set values, and loading/error states.
-
-### Nice-to-have — after v1.0 (v1.1)
-- [ ] Add email confirmation for registration (v1.1): generate/send Identity email-confirmation tokens, add confirmation and resend endpoints plus frontend verification UX, require a confirmed email in login and refresh flows, and test invalid/expired tokens. Plan rollout for existing accounts (`EmailConfirmed = false`): require verification via resend flow rather than silently treating unverified addresses as confirmed. Depends on production email delivery.
-- [x] Introduce separate active-session exercise list and set-entry details component, with add/remove actions on the list (12 November 2026; UI and regression verification ongoing).
-- [ ] Restore or consciously replace quick swipe navigation lost in the 12 November split; keep gestures away from editable inputs and actions.
-- [x] Move set-entry UI/handlers out of the large `WorkoutSessionPage`, keep parent-owned session state, `dirtyIds`, dirty-only PATCH on return and request guards (12 November 2026; manual failure-path regression checks pending).
-- [ ] Allow reordering exercises in a session (drag and drop); explicitly define order persistence and reconcile frontend display order with backend-assigned order.
-- [ ] Evaluate auto-appending an empty set when the last set is filled. Decide trigger rules, persistence semantics and how to avoid accidental extra sets before implementing; retain manual add until validated.
-- [ ] Add a clear completion indicator to the active-session exercise list when all sets for an exercise are filled (for example a checkmark plus a subtle completed-state accent). Derive the state from the current frontend session data; do not rely on color alone and avoid adding backend state unless a concrete need appears.
-- [ ] Organize CSS by responsibility (global tokens/base layout, shared components, auth and workout-specific styles), reduce duplicated selectors and remove cross-feature dependencies such as `.templates-page` outside templates. Do this as a separate regression-tested refactor.
-- [x] Implement expandable exercise history with per-workout sets, dates, weights/repetitions, on-demand session details, per-page cache and guarded loading/error states (14 November 2026).
-- [ ] Polish exercise-history presentation (clearer set columns, `null` values and spacing), preserve navigation on empty/error states, and verify error/retry plus mobile behavior.
-- [ ] Show the last recorded sets for the same exercise on the active workout card; optionally allow copying previous values.
-- [x] Add GitHub Actions CI (build + tests), confirmed green on 18 November 2026.
-- [ ] Add automated Azure deployment (CD) after manual deployment and full production verification.
-- [ ] Extend integration coverage for remaining exercise/template and ownership edge cases.
-- [ ] Introduce explicit test-data isolation/reset for the growing integration suite.
-- [ ] Add frontend tests/E2E for the main workout flow.
-- [ ] Optionally improve logout behavior when the backend cannot be reached.
-- [ ] Decide whether duplicate exercises should remain forbidden within a single workout session (currently rejected).
-
-### Future — larger product features (v2.0+)
-- [ ] Trainer mode: trainer/trainee roles, assigning workout plans and reviewing trainee sessions.
-- [ ] Workout plan sharing: private/public sharing and importing/copying plans.
-- [ ] Progress charts: weight and volume trends, personal records and weekly/monthly statistics.
-
-### Completed milestones
-- [x] Deploy .NET 10 API and Azure SQL with Entra Managed Identity, eight EF migrations, seed 100 system exercises and verify registration/login/authenticated exercise GET (21 November 2026; frontend and remaining release checks pending).
-- [x] Add GitHub Actions CI and correct TypeScript production-build errors (18 November 2026).
-- [x] Add expandable exercise-history session details with local `Map` cache, guarded requests, per-session error feedback and scoped styling (14 November 2026).
-- [x] Split active workout into selectable exercise list and separate set-entry details view, with scoped styling and parent-controlled save-on-return (12 November 2026; swipe restoration and regression QA remain open).
-- [x] Improve the start-workout and select-template mobile UI, use accessible `Link` cards to select a plan, and align session setup cards with workout-template edit cards (11 November 2026).
-- [x] Add ExercisePickerModal client-side search, empty-result messaging, open-only loading and a stable scrollable picker layout (11 November 2026).
-- [x] Update workout-session setup with shared add-exercise handling, duplicate checks, and guarded POST submission with error display (11 November 2026).
-- [x] Reorganize active workout mobile layout into a persistent header, scrollable set-entry area, and visible navigation/add/finish actions; further polish and regression smoke tests remain (11 November 2026).
-- [x] Add authentication integration coverage for register/login, forgot/reset password and successful reset-token invalidation/revocation using FakeEmailSender (10 November 2026); other auth coverage remains outstanding.
-- [x] Implement local password-reset flow with MailKit, Identity token generation/verification, Mailpit and two React pages; manually verify successful reset (9 November 2026). Production email and additional automated edge-case tests remain open.
-- [x] Refactor workout-template editing to show selected exercises only, add the exercise picker/create flow, and keep the save action visible with a scrollable form (7 November 2026).
-- [x] Add active workout resume/discard flow, nullable `DiscardedAt` migration, active-session creation guard and lifecycle restrictions.
-- [x] Filter completed-workout lists and exercise history to finished, non-discarded sessions, add lifecycle integration scenarios, and correct the exercise-history assertion.
-- [x] Improve exercise create/edit modal layout, action consistency, background scroll locking and duplicate-submit prevention.
-- [x] Unify login/registration page spacing, main-menu action priority, exercise page headers and exercise dialog layout (6 November 2026).
-- [x] Add active-workout request error messages, manual backend session refresh with unsaved-change confirmation, and GET retry/empty-session fallback UI.
-- [x] Consolidate workout-session details and summary data into `GET /api/workout-sessions/{id}`; remove the unused backend summary endpoint and tests.
-- [x] Enforce finished-session immutability in exercise PATCH/POST/DELETE, and cover finish idempotency.
-- [x] Add exercise POST/DELETE integration tests for the core success, validation, ordering and access-control cases.
-- [x] Improve the active workout-session set layout and add a compact exercise-delete menu.
-- [x] Implement initial horizontal swipe navigation between workout-session exercises (historical milestone; removed by the 12 November 2026 refactor, restoration tracked under v1.1).
-- [x] Prevent overlapping active-workout write operations and rapid exercise-navigation requests using `isSavingRef`; disable relevant controls with `isSaving`.
-- [x] Keep `markExerciseDirty()` calls outside `setSession()` updater callbacks and avoid duplicate dirty marking.
-
-See [Authentication.md](Authentication.md) for the authentication and authorization design, [README.md](README.md) for project status and [Api.md](Api.md) for the HTTP API.
+See [CHANGELOG.md](CHANGELOG.md) for historical development notes and [Authentication.md](Authentication.md), [Api.md](Api.md) for implementation details.
