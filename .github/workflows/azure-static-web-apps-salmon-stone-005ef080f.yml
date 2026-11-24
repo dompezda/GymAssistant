@@ -23,7 +23,7 @@ jobs:
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         env:
-          VITE_API_URL: https://gymassistant-api-hdcqexa5eze8e7au.polandcentral-01.azurewebsites.net
+          VITE_API_URL: https://api.gymassistant.pl
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_STONE_005EF080F }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
