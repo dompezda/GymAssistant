@@ -75,7 +75,7 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 - [ ] **P2-07** [Security] Automate dependency vulnerability checks (e.g. Dependabot).
 - [ ] **P2-08** [Azure] Evaluate a separate staging environment.
 - [ ] **P2-09** [Azure] Define deployment rollback strategy.
-- [ ] **P2-10** [Azure] Establish versioning, Git tags and GitHub Releases.
+- [ ] **P2-10** [Azure] Establish versioning, Git tags and GitHub Releases; expose the application version and short build commit SHA (injected by CI at build time) on the login screen and main menu. Distinguish frontend and backend build identifiers if they can be deployed independently.
 - [ ] **P2-11** [Exercises] Define ongoing system exercise catalog update/versioning strategy.
 - [ ] **P2-12** [Exercises] Add GET /api/exercises/{exerciseId}/last-workout: latest completed, non-discarded session for the current user, including date, sets, weights and reps; define no-history response.
 - [ ] **P2-13** [Exercises] Allow private exercise deletion while preserving historical records.
@@ -147,7 +147,7 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 - [ ] **P3-25** [Tech debt] Maintain dependencies.
 - [ ] **P3-26** [Privacy] Automate data-rights request handling if warranted.
 - [ ] **P3-27** [Product] Add FAQ and short usage instructions.
-- [ ] **P3-28** [Product] Consider public changelog and planned-feature list.
+- [ ] **P3-28** [Product] Consider an About page with application version/build identifier, user-facing release notes, curated planned improvements (not internal security tasks or promised dates), and contact/feedback links. Reuse P2-10 version metadata and the contact channel from P0-16.
 
 ## Completed foundations (not included in open count)
 
