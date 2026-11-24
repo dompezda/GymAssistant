@@ -135,7 +135,11 @@ SameSite = Strict
 Expires = refresh-token expiration
 ```
 
-`HttpOnly` keeps the cookie out of frontend JavaScript. `Secure` requires secure transport behavior. `SameSite=Strict` is the current policy and can be revisited if deployment topology requires it.
+`HttpOnly` keeps the cookie out of frontend JavaScript. `Secure` requires secure transport behavior. `SameSite=Strict` remains the production policy. The frontend (`https://www.gymassistant.pl`) and API (`https://api.gymassistant.pl`) are cross-origin but same-site (HTTPS and the same registrable domain). Keep the refresh cookie scoped to the API host, with `HttpOnly`, `Secure` and `credentials: "include"` on credentialed requests. Credential-enabled CORS must allow the actual frontend origin; same-site is not a substitute for CORS or CSRF review.
+
+### Production verification (24 November 2026)
+
+Previously the frontend called the default Azure App Service hostname. DevTools showed `Sec-Fetch-Site: cross-site`, and removing the access token followed by reload produced `/me` 401 and `/refresh` 401. After configuring the custom API subdomain, managed TLS and updating the Vite CI build URL, `/refresh` returned 200 and DevTools showed `Sec-Fetch-Site: same-site`. Repeated recovery after removing the access token succeeded; logout followed by reload did not restore the session. No backend authentication code changes were required. Natural JWT expiry and explicit comparison of rotated refresh-cookie values remain open (P0-02). Never share raw token values. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Refresh flow
 

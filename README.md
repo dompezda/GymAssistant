@@ -4,7 +4,7 @@
 
 GymAssistant helps users organize exercises, prepare workout templates, track sets during a training session, and review completed workouts. It is a personal portfolio project and is actively being developed.
 
-> **Project status (21 November 2026):** v1.0 release preparation. GitHub Actions CI was reported green. The .NET 10 backend is deployed to Azure App Service, and Azure SQL is populated with 100 system exercises; registration, login and an authorized exercise-list request were manually verified against Azure. React is not deployed yet, so there is no public end-to-end web demo. Production SMTP, cookie/origin configuration, full smoke tests and security hardening remain open.
+> **Project status (24 November 2026):** v1.X release preparation. The [live application](https://www.gymassistant.pl/) and [API](https://api.gymassistant.pl/) are deployed via GitHub Actions. The backend runs on Azure App Service Linux B1 with Always On; Azure SQL contains 100 seeded system exercises. Production session recovery and logout/reload were manually verified after fixing the cross-site cookie issue. Natural JWT expiry, explicit refresh rotation verification, production SMTP, full smoke tests and security hardening remain open.
 
 ## Screenshots
 
@@ -37,8 +37,8 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 | Development email | MailKit SMTP + Mailpit (local testing only) |
 | Testing | xUnit, `WebApplicationFactory`, SQLite in-memory integration tests |
 | API reference | OpenAPI and Scalar in Development |
-| Hosting (work in progress) | Azure App Service Linux F1, Azure SQL Database Serverless Free Offer; React hosting pending |
-| CI | GitHub Actions: backend build/tests and frontend build (reported green, 18 November 2026) |
+| Hosting | Azure App Service Linux B1, Azure Static Web Apps, Azure SQL Database Serverless Free Offer |
+| CI/CD | GitHub Actions: backend build/tests, frontend build and automated deployments |
 
 ## Technical highlights
 
@@ -101,21 +101,24 @@ The reset URL points to the frontend origin configured by `Frontend:Origin`. Pro
 dotnet test backend/GymAssistant.sln
 ```
 
-## Azure deployment status (21 November 2026)
+## Azure deployment status (24 November 2026)
 
-- **App Service:** `gymassistant-api`, Linux / .NET 10, Free F1, manual ZIP deployment. Free F1 is being evaluated for reliability and may need an upgrade; no automated CD is configured.
-- **Azure SQL:** `GymAssistantDb` on logical server `gymassistant-sql-prod` (Poland Central), Serverless Free Offer, overage billing disabled. Eight EF Core migrations were applied through an idempotent SQL script using SSMS; the system exercise SQL seed inserted 100 exercises. These are new production data, not copied development users or workouts.
-- **Database auth:** system-assigned Managed Identity for the App Service, mapped to a contained Azure SQL user with `db_datareader` and `db_datawriter` roles. Schema migrations were executed separately with an Entra admin; the application identity does not have schema-owner permissions.
-- **Configuration:** `ASPNETCORE_ENVIRONMENT=Production`, `Jwt__SigningKey`, and Azure connection string are configured in App Service. Secrets must never be committed. The React origin and real SMTP delivery are not yet production-configured.
-- **Manual smoke tests:** unauthenticated exercise GET returned 401; registration initially timed out during SQL post-login but succeeded on retry; login and an authorized exercise GET subsequently succeeded, returning seeded exercise records. `EnableRetryOnFailure()` was added locally and a ZIP redeploy was initiated/reported, but its final verification remains open.
-- **Next steps:** verify latest API redeploy, remove the temporary SQL firewall rule for the cafe IP if still present, omit `appsettings.Development.json` from future publish artifacts, deploy React (Azure Static Web Apps), set `VITE_API_URL` and `Frontend__Origin`, resolve cross-site refresh-cookie/CORS behavior, configure production SMTP, and run full end-to-end smoke tests. Azure budget/alerts and cost verification should also be confirmed.
+- **Frontend:** [www.gymassistant.pl](https://www.gymassistant.pl/), Azure Static Web Apps.
+- **Backend:** `gymassistant-api`, Linux / .NET 10, Basic B1, one instance, Always On, Poland Central; [api.gymassistant.pl](https://api.gymassistant.pl/) with Azure-managed TLS (SNI).
+- **Database:** Azure SQL Serverless Free Offer, Managed Identity, 100 seeded system exercises, paid overage disabled.
+- **CI/CD:** automated frontend and backend deployments via GitHub Actions. Production frontend build uses `VITE_API_URL=https://api.gymassistant.pl`.
+- **Cost control:** monthly EUR 20 subscription budget with actual and forecast email alerts; not a hard spending cap.
+- **Verification:** unauthenticated exercise GET on custom API domain returned 401; repeated session recovery and logout/reload succeeded. Natural JWT expiry and explicit refresh-cookie rotation checks remain pending.
+- **Next steps:** see [todo.md](todo.md) for open P0–P3 tasks, including production SMTP, Data Protection, firewall and full smoke tests.
 
-See [release checklist](todo.md) for outstanding deployment and QA items.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for infrastructure, DNS, deployment and cost details.
 
 ## Documentation and roadmap
 
 - [API reference](Api.md) — endpoints, request/response examples, and authorization rules.
 - [Authentication design](Authentication.md) — login, refresh, logout, token storage, and authorization flow.
-- [Development notes and outstanding tasks](todo.md) — current implementation checklist and known issues.
+- [TODO](todo.md) — current 1.X backlog and priorities.
+- [Deployment](DEPLOYMENT.md) — production infrastructure and cost controls.
+- [Changelog](CHANGELOG.md) — development history.
 
 **Known work in progress:** the active-workout list/details UI refactor requires regression verification and restoration or replacement of the previous horizontal swipe gesture; consistent API error presentation across screens and a backend error contract, guarding against unsaved changes when leaving the workout screen, mobile gesture edge cases, thorough failure-path testing and additional integration tests, and final review of production authentication configuration. This repository demonstrates the current implementation rather than a production-ready service.

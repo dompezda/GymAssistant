@@ -4,11 +4,13 @@ Updated: 24 November 2026. Scope: 1.X only; no commitment to later major feature
 
 | Priority | Open tasks |
 | --- | ---: |
-| P0 | 16 |
-| P1 | 28 |
+| P0 | 15 |
+| P1 | 27 |
 | P2 | 51 |
 | P3 | 28 |
-| Total | 123 |
+| Total | 121 |
+
+Completed: 2 of 123 tracked tasks (P0-12, P1-11). The table counts open tasks only.
 
 ## Near-term order
 
@@ -17,7 +19,7 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 ## P0 — Critical / release blockers
 
 - [ ] **P0-01** [Auth] Configure production SMTP (preferred provider: OVHcloud); verify Azure connectivity, TLS and secret storage.
-- [ ] **P0-02** [Auth] Verify refresh cookies and rotation on production, including JWT expiry, reload and logout; same-site hosting is promising but not yet verified.
+- [ ] **P0-02** [Auth] Production cross-site cookie failure fixed using https://api.gymassistant.pl; same-site request and refresh 200 confirmed, repeated recovery after removing access token and logout/reload passed on 24 November. Remaining: test natural JWT expiry and explicitly verify refresh-cookie rotation (compare locally without exposing token values).
 - [ ] **P0-03** [Auth] Verify password reset end to end with real email delivery; distinguish invalid tokens and password-policy errors.
 - [ ] **P0-04** [Auth] Implement email confirmation: 24-hour token, resend, block login and refresh before confirmation, remove automatic login on registration, add creation timestamp and integration tests.
 - [ ] **P0-05** [Auth] Remove the two existing test accounts before enabling confirmation; verify dependent data and revoke sessions.
@@ -27,7 +29,7 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 - [ ] **P0-09** [Security] Review resource ownership and isolation; verify PATCH rejects a set ID belonging to another exercise or user.
 - [ ] **P0-10** [Security] Review secrets, published artifacts (exclude appsettings.Development.json), CORS, HTTPS and production configuration.
 - [ ] **P0-11** [Azure] Review SQL firewall rules and remove temporary access if still present.
-- [ ] **P0-12** [Azure] Configure cost budgets and alerts.
+- [x] **P0-12** [Azure] Configure cost budgets and alerts (24 November): subscription-wide EUR 20 monthly budget; actual 50/80/100%, forecast 100%, email recipient confirmed; SQL overage disabled and default payment method present. Alerts are not a spending cap.
 - [ ] **P0-13** [Azure] Verify database backup availability and retention.
 - [ ] **P0-14** [QA] Complete production smoke tests: register/login/logout, exercise/template creation, start/resume/discard/finish/history; test lost connectivity, partial writes, API failure and blocking UI defects.
 - [ ] **P0-15** [Privacy] Prepare privacy policy and terms, make them available at registration, assess GDPR obligations, lawful bases, processors, health-data implications and retention.
@@ -45,7 +47,7 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 - [ ] **P1-08** [Security] Review input validation: weights, reps, text lengths and collection limits.
 - [ ] **P1-09** [Security] Verify deletion and cascade behavior across related entities.
 - [ ] **P1-10** [Security] Verify production logs do not expose credentials, tokens or sensitive data.
-- [ ] **P1-11** [Azure] Evaluate B1 + Always On if F1 reliability warrants it.
+- [x] **P1-11** [Azure] Upgrade F1 to B1 (one Linux instance, Poland Central), enable Always On, bind custom API domain with managed TLS (24 November).
 - [ ] **P1-12** [Azure] Verify SQL cold-start handling and EF Core retry behavior on the deployed API.
 - [ ] **P1-13** [Azure] Configure API monitoring and alerts for errors and downtime.
 - [ ] **P1-14** [Azure] Add a health-check endpoint.
@@ -151,9 +153,9 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 
 ## Completed foundations (not included in open count)
 
-- Backend (.NET 10), Azure SQL, Managed Identity, 100 seeded system exercises.
+- Backend (.NET 10) on Azure B1 with Always On, Azure SQL, Managed Identity, 100 seeded system exercises.
 - React frontend, custom domain https://gymassistant.pl/, HTTPS and redirects (reported working 23 November).
 - GitHub Actions CI and automated frontend/backend deployment (backend CD confirmed by owner on 24 November).
 - Registration/login, JWT and refresh rotation, local password-reset implementation, workout lifecycle and exercise history; production verification remains open above.
 
-See [CHANGELOG.md](CHANGELOG.md) for historical development notes and [Authentication.md](Authentication.md), [Api.md](Api.md) for implementation details.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for current infrastructure and cost controls, [CHANGELOG.md](CHANGELOG.md) for historical development notes and [Authentication.md](Authentication.md), [Api.md](Api.md) for implementation details.

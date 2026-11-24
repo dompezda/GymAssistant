@@ -2,9 +2,18 @@
 
 ## 24 November 2026
 
+### Production deployment and cost controls
+
+- Reproduced refresh failure with cross-site Azure API hostname; migrated App Service from F1 to B1 (one Linux instance), enabled Always On and configured `api.gymassistant.pl` using OVHcloud CNAME/TXT and Azure-managed SNI TLS.
+- Updated frontend CI build URL to the custom API domain; unauthenticated exercise GET returned 401 over HTTPS. Production refresh returned 200 with `Sec-Fetch-Site: same-site`; repeated recovery and logout/reload passed. Kept `SameSite.Strict`. Natural JWT expiry and explicit rotation verification remain open (P0-02).
+- Configured and verified subscription-wide EUR 20 monthly budget with actual 50/80/100% and forecast 100% email alerts; verified SQL free-offer auto-pause and disabled paid overage, and default payment method presence. No payment details recorded. Completed P0-12 and P1-11; 121 of 123 tasks remain open.
+- Extended backlog P2-10 with version/build SHA display and P3-28 with an About page; no new task IDs.
+
+### Earlier planning session
+
 - Reorganized active backlog into 123 tasks across P0–P3, scoped to 1.X. See [todo.md](todo.md) for current priorities.
-- Owner confirmed backend remains on Azure F1 and GitHub Actions backend deployment is configured.
-- Frontend and custom domain https://gymassistant.pl/ reported working on 23 November. Production refresh and email delivery remain unverified.
+- At the start of the session, owner confirmed backend was on Azure F1 and GitHub Actions backend deployment was configured.
+- Frontend and custom domain https://gymassistant.pl/ reported working on 23 November. At that point production refresh and email delivery remained unverified.
 
 ## Historical snapshot (through 21 November 2026)
 
