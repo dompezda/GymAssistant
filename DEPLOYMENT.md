@@ -35,6 +35,12 @@ Production frontend workflow `.github/workflows/azure-static-web-apps-salmon-sto
 - Azure SQL Free Offer applied; 100,000 vCore-seconds/month and 32 GB data limit shown. Overage billing disabled; auto-pause until next month selected. Min 0.5 and max 2 vCores. If quota is exhausted the database becomes unavailable until renewal rather than incurring paid overage. Other Azure services can still incur costs.
 - Review actual cost and free SQL quota regularly; avoid adding DB-dependent periodic probes that unintentionally keep serverless SQL active. Renew the budget before expiry.
 
+## SQL connection timeout investigation (24 November 2026)
+
+After an idle period, two production POST /api/auth/login attempts returned HTTP 500; the third succeeded with approximately 5.76 seconds waiting for server response. App Service logs at 18:24:51 UTC show Microsoft.Data.SqlClient.SqlException, error -2, Connection Timeout Expired during the SQL post-login phase (pre-login initialization 81 ms, handshake 744 ms, post-login 14,004 ms). This is a connection-open failure, not a query execution timeout. Program.cs already configures EnableRetryOnFailure; effective deployed retry behavior has not been verified. SQL serverless auto-resume is the leading hypothesis, not established root cause.
+
+Next: confirm database state around reproduction, inspect effective connection timeout and retry logs, then test Connect Timeout=60 in a controlled configuration change and compare cold/warm login behavior. This is a diagnostic, not a latency fix; assess reliable mitigation and error UX before public release. Do not change SQL tier, paid overage or add periodic database wake-up probes without assessing cost and quota impact. P1-12 is now a P0 release blocker (stable ID retained). No configuration change was made during this investigation.
+
 ## Open operational work
 
 Production SMTP, Data Protection persistence, firewall review, backup retention and restoration verification, cold-start handling, health checks and monitoring, migration and rollback strategy, and full QA remain tracked in [todo.md](todo.md). Earlier deployment history is in [CHANGELOG.md](CHANGELOG.md).

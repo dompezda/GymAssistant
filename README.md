@@ -4,7 +4,7 @@
 
 GymAssistant helps users organize exercises, prepare workout templates, track sets during a training session, and review completed workouts. It is a personal portfolio project and is actively being developed.
 
-> **Project status (24 November 2026):** v1.X release preparation. The [live application](https://www.gymassistant.pl/) and [API](https://api.gymassistant.pl/) are deployed via GitHub Actions. The backend runs on Azure App Service Linux B1 with Always On; Azure SQL contains 100 seeded system exercises. Production session recovery and logout/reload were manually verified after fixing the cross-site cookie issue. Natural JWT expiry, explicit refresh rotation verification, production SMTP, full smoke tests and security hardening remain open.
+> **Project status (24 November 2026):** v1.X release preparation. The [live application](https://www.gymassistant.pl/) and [API](https://api.gymassistant.pl/) are deployed via GitHub Actions. The backend runs on Azure App Service Linux B1 with Always On; Azure SQL contains 100 seeded system exercises. Production session recovery and logout/reload were manually verified after fixing the cross-site cookie issue. Production SQL connection timeouts after idle periods are a release blocker; serverless auto-resume is suspected but not confirmed. Natural JWT expiry, explicit refresh rotation verification, production SMTP, full smoke tests and security hardening remain open.
 
 ## Screenshots
 
@@ -109,6 +109,7 @@ dotnet test backend/GymAssistant.sln
 - **CI/CD:** automated frontend and backend deployments via GitHub Actions. Production frontend build uses `VITE_API_URL=https://api.gymassistant.pl`.
 - **Cost control:** monthly EUR 20 subscription budget with actual and forecast email alerts; not a hard spending cap.
 - **Verification:** unauthenticated exercise GET on custom API domain returned 401; repeated session recovery and logout/reload succeeded. Natural JWT expiry and explicit refresh-cookie rotation checks remain pending.
+- **Known production issue:** intermittent login HTTP 500 caused by SQL connection timeout during post-login; diagnosis and mitigation tracked as P1-12, promoted to P0. See [DEPLOYMENT.md](DEPLOYMENT.md).
 - **Next steps:** see [todo.md](todo.md) for open P0–P3 tasks, including production SMTP, Data Protection, firewall and full smoke tests.
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for infrastructure, DNS, deployment and cost details.

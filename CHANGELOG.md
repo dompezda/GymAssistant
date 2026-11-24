@@ -2,6 +2,12 @@
 
 ## 24 November 2026
 
+### Evening SQL connection investigation
+
+- Reproduced production login failures after idle time: two HTTP 500 responses, then successful login with 5.76 s server wait. App Service logs confirmed SqlClient connection timeout (-2) during SQL post-login (14,004 ms); SQL auto-resume remains an unconfirmed hypothesis.
+- Confirmed EnableRetryOnFailure exists in Program.cs. Promoted P1-12 to P0 without changing its stable ID. Planned controlled Connect Timeout=60 test and cold/warm comparison, with database-state and retry verification. No code, Azure tier or billing configuration changed.
+- Backlog remains 123 tracked tasks, 2 completed and 121 open; open P0 count is now 16, P1 count 26.
+
 ### Production deployment and cost controls
 
 - Reproduced refresh failure with cross-site Azure API hostname; migrated App Service from F1 to B1 (one Linux instance), enabled Always On and configured `api.gymassistant.pl` using OVHcloud CNAME/TXT and Azure-managed SNI TLS.

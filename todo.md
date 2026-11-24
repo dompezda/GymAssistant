@@ -4,8 +4,8 @@ Updated: 24 November 2026. Scope: 1.X only; no commitment to later major feature
 
 | Priority | Open tasks |
 | --- | ---: |
-| P0 | 15 |
-| P1 | 27 |
+| P0 | 16 |
+| P1 | 26 |
 | P2 | 51 |
 | P3 | 28 |
 | Total | 121 |
@@ -14,7 +14,7 @@ Completed: 2 of 123 tracked tasks (P0-12, P1-11). The table counts open tasks on
 
 ## Near-term order
 
-P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; then remaining P0 and closed beta (P1-28). Resolve dependencies and critical findings before exposing real user data.
+P1-12 (promoted to P0; stable ID retained) → P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; then remaining P0 and closed beta (P1-28). Resolve dependencies and critical findings before exposing real user data.
 
 ## P0 — Critical / release blockers
 
@@ -35,6 +35,8 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 - [ ] **P0-15** [Privacy] Prepare privacy policy and terms, make them available at registration, assess GDPR obligations, lawful bases, processors, health-data implications and retention.
 - [ ] **P0-16** [Privacy/Product] Provide administrator contact, basic bug-report channel and a manual process for data-rights requests.
 
+- [ ] **P1-12** [Azure; promoted to P0 on 24 November] Resolve production SQL connection timeouts after idle periods. Two login requests returned HTTP 500 before a successful third attempt; EF Core logs confirm SqlClient error -2 during SQL post-login (14,004 ms). Serverless auto-resume is suspected, not yet proven. Verify database state before reproduction, deployed retry behavior (EnableRetryOnFailure is present in source), and effective connection timeout; test Connect Timeout=60 as a controlled diagnostic, compare cold/warm timings, and assess reliable, affordable mitigation and user-facing failure handling before public release. Keep paid overage disabled until a deliberate cost decision.
+
 ## P1 — High / production stability
 
 - [ ] **P1-01** [Auth] Implement self-service account deletion.
@@ -48,7 +50,6 @@ P0-02 → P0-01 → P0-08 → P0-03 → P0-05 → P0-04 → P0-06 → P0-07; the
 - [ ] **P1-09** [Security] Verify deletion and cascade behavior across related entities.
 - [ ] **P1-10** [Security] Verify production logs do not expose credentials, tokens or sensitive data.
 - [x] **P1-11** [Azure] Upgrade F1 to B1 (one Linux instance, Poland Central), enable Always On, bind custom API domain with managed TLS (24 November).
-- [ ] **P1-12** [Azure] Verify SQL cold-start handling and EF Core retry behavior on the deployed API.
 - [ ] **P1-13** [Azure] Configure API monitoring and alerts for errors and downtime.
 - [ ] **P1-14** [Azure] Add a health-check endpoint.
 - [ ] **P1-15** [Azure] Define and test production EF Core migration strategy.
