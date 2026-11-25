@@ -4,7 +4,7 @@
 
 GymAssistant helps users organize exercises, prepare workout templates, track sets during a training session, and review completed workouts. It is a personal portfolio project and is actively being developed.
 
-> **Project status (24 November 2026):** v1.X release preparation. The [live application](https://www.gymassistant.pl/) and [API](https://api.gymassistant.pl/) are deployed via GitHub Actions. The backend runs on Azure App Service Linux B1 with Always On; Azure SQL contains 100 seeded system exercises. Production session recovery and logout/reload were manually verified after fixing the cross-site cookie issue. Production SQL connection timeouts after idle periods are a release blocker; serverless auto-resume is suspected but not confirmed. Natural JWT expiry, explicit refresh rotation verification, production SMTP, full smoke tests and security hardening remain open.
+> **Project status (25 November 2026):** v1.X release preparation. The [live application](https://www.gymassistant.pl/) and [API](https://api.gymassistant.pl/) are deployed via GitHub Actions. The backend runs on Azure App Service Linux B1 with Always On; Azure SQL contains 100 seeded system exercises. Production session recovery and logout/reload were manually verified after fixing the cross-site cookie issue. SQL was moved from Serverless Free Offer to Basic after recurring pause/resume events and connection timeouts; first login took 776 ms. Post-idle verification remains a release blocker. Global exception handling and trace logging are committed; deployment verification is pending. Natural JWT expiry, explicit refresh rotation verification, production SMTP, full smoke tests and security hardening remain open.
 
 ## Screenshots
 
@@ -37,7 +37,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 | Development email | MailKit SMTP + Mailpit (local testing only) |
 | Testing | xUnit, `WebApplicationFactory`, SQLite in-memory integration tests |
 | API reference | OpenAPI and Scalar in Development |
-| Hosting | Azure App Service Linux B1, Azure Static Web Apps, Azure SQL Database Serverless Free Offer |
+| Hosting | Azure App Service Linux B1, Azure Static Web Apps, Azure SQL Database Basic (5 DTU) |
 | CI/CD | GitHub Actions: backend build/tests, frontend build and automated deployments |
 
 ## Technical highlights
@@ -46,6 +46,7 @@ The screenshots show the current mobile layout (UI labels are in Polish).
 - **Authorization:** user ownership enforced server-side for workout templates, sessions, and private exercises; system exercises remain accessible to all authenticated users.
 - **Session lifecycle:** `FinishedAt` and `DiscardedAt` distinguish completed, abandoned and active workouts. The API exposes active-session lookup and idempotent discard, prevents a second active session, and blocks modifications to completed or discarded workouts.
 - **Active workout save coordination and recovery:** a parent-owned in-flight guard prevents overlapping writes and temporarily disables controls. The current v1.1-in-progress interface separates the exercise list from set-entry details; locally edited sets are PATCHed on return to the list, and failed saves keep the details view open for retry. Finishing retains failed exercise writes for retry. Manual refresh reloads server data with confirmation before discarding unsaved local edits.
+- **Error diagnostics:** global exception middleware returns sanitized ProblemDetails for unhandled exceptions; console logging includes trace scopes. Integration coverage verifies HTTP 500 and absence of exception details.
 - **Integration testing:** real authenticated HTTP requests against a test host built with `WebApplicationFactory` and SQLite in-memory, including ownership and validation scenarios.
 
 For implementation details, see [Authentication.md](Authentication.md) and [Api.md](Api.md).
@@ -101,15 +102,15 @@ The reset URL points to the frontend origin configured by `Frontend:Origin`. Pro
 dotnet test backend/GymAssistant.sln
 ```
 
-## Azure deployment status (24 November 2026)
+## Azure deployment status (25 November 2026)
 
 - **Frontend:** [www.gymassistant.pl](https://www.gymassistant.pl/), Azure Static Web Apps.
 - **Backend:** `gymassistant-api`, Linux / .NET 10, Basic B1, one instance, Always On, Poland Central; [api.gymassistant.pl](https://api.gymassistant.pl/) with Azure-managed TLS (SNI).
-- **Database:** Azure SQL Serverless Free Offer, Managed Identity, 100 seeded system exercises, paid overage disabled.
+- **Database:** Azure SQL Basic (5 DTU, 2 GB), Managed Identity, 100 seeded system exercises. Portal estimate USD 4.90/month.
 - **CI/CD:** automated frontend and backend deployments via GitHub Actions. Production frontend build uses `VITE_API_URL=https://api.gymassistant.pl`.
 - **Cost control:** monthly EUR 20 subscription budget with actual and forecast email alerts; not a hard spending cap.
 - **Verification:** unauthenticated exercise GET on custom API domain returned 401; repeated session recovery and logout/reload succeeded. Natural JWT expiry and explicit refresh-cookie rotation checks remain pending.
-- **Known production issue:** intermittent login HTTP 500 caused by SQL connection timeout during post-login; diagnosis and mitigation tracked as P1-12, promoted to P0. See [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Known production issue:** SQL connection timeouts mitigated by switching to Basic; first login succeeded, but post-idle confirmation remains pending (P1-12, promoted to P0). See [DEPLOYMENT.md](DEPLOYMENT.md).
 - **Next steps:** see [todo.md](todo.md) for open P0–P3 tasks, including production SMTP, Data Protection, firewall and full smoke tests.
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for infrastructure, DNS, deployment and cost details.
