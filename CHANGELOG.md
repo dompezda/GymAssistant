@@ -2,9 +2,24 @@
 
 ## 24 November 2026
 
+### Evening SQL connection investigation
+
+- Reproduced production login failures after idle time: two HTTP 500 responses, then successful login with 5.76 s server wait. App Service logs confirmed SqlClient connection timeout (-2) during SQL post-login (14,004 ms); SQL auto-resume remains an unconfirmed hypothesis.
+- Confirmed EnableRetryOnFailure exists in Program.cs. Promoted P1-12 to P0 without changing its stable ID. Planned controlled Connect Timeout=60 test and cold/warm comparison, with database-state and retry verification. No code, Azure tier or billing configuration changed.
+- Backlog remains 123 tracked tasks, 2 completed and 121 open; open P0 count is now 16, P1 count 26.
+
+### Production deployment and cost controls
+
+- Reproduced refresh failure with cross-site Azure API hostname; migrated App Service from F1 to B1 (one Linux instance), enabled Always On and configured `api.gymassistant.pl` using OVHcloud CNAME/TXT and Azure-managed SNI TLS.
+- Updated frontend CI build URL to the custom API domain; unauthenticated exercise GET returned 401 over HTTPS. Production refresh returned 200 with `Sec-Fetch-Site: same-site`; repeated recovery and logout/reload passed. Kept `SameSite.Strict`. Natural JWT expiry and explicit rotation verification remain open (P0-02).
+- Configured and verified subscription-wide EUR 20 monthly budget with actual 50/80/100% and forecast 100% email alerts; verified SQL free-offer auto-pause and disabled paid overage, and default payment method presence. No payment details recorded. Completed P0-12 and P1-11; 121 of 123 tasks remain open.
+- Extended backlog P2-10 with version/build SHA display and P3-28 with an About page; no new task IDs.
+
+### Earlier planning session
+
 - Reorganized active backlog into 123 tasks across P0–P3, scoped to 1.X. See [todo.md](todo.md) for current priorities.
-- Owner confirmed backend remains on Azure F1 and GitHub Actions backend deployment is configured.
-- Frontend and custom domain https://gymassistant.pl/ reported working on 23 November. Production refresh and email delivery remain unverified.
+- At the start of the session, owner confirmed backend was on Azure F1 and GitHub Actions backend deployment was configured.
+- Frontend and custom domain https://gymassistant.pl/ reported working on 23 November. At that point production refresh and email delivery remained unverified.
 
 ## Historical snapshot (through 21 November 2026)
 
