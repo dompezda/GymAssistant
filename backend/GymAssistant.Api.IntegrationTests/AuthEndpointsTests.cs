@@ -5,9 +5,12 @@ using GymAssistant.Api.Data;
 using GymAssistant.Api.Endpoints;
 using GymAssistant.Api.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.OpenApi;
 
 public class AuthEndpointsTests : IClassFixture<GymAssistantWebApplicationFactory>
 {
@@ -644,6 +647,4 @@ public async Task ResetPassword_ShouldRejectAlreadyUsedToken()
     Assert.False(
         await userManager.CheckPasswordAsync(updatedUser, "Password123!"));
 }
-
-
 }

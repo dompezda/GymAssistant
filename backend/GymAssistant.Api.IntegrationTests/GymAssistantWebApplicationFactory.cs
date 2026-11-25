@@ -28,9 +28,7 @@ public class GymAssistantWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IEmailSender, FakeEmailSender>();
         });
         builder.ConfigureServices((services) =>
-        {
-
-            
+        {            
            var dbContextDescriptor = services.SingleOrDefault(
                 x => x.ServiceType ==
                     typeof(IDbContextOptionsConfiguration<AppDbContext>));

@@ -11,7 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.IncludeScopes = true;
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
@@ -20,6 +23,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
 
 
 var frontendOrigin = builder.Configuration["Frontend:Origin"]
@@ -133,6 +137,7 @@ builder.Services.AddSingleton<
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.UseCors("Frontend");
 
 
@@ -150,6 +155,11 @@ if (app.Environment.IsDevelopment())
 
     app.MapScalarApiReference();
     app.MapOpenApi();
+
+    app.MapGet("/api/test-error", () =>
+    {
+        throw new InvalidOperationException("Test exception");
+    });
 }
 app.UseHttpsRedirection();
 
