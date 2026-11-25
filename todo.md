@@ -1,6 +1,6 @@
 # GymAssistant TODO — 1.X
 
-Updated: 24 November 2026. Scope: 1.X only; no commitment to later major features or minor release dates. P0 blocks public release; P1 improves readiness and reliability; P2/P3 are flexible and not release prerequisites. Tests specific to a feature are part of its completion. Conditional/evaluation tasks do not imply a commitment to implement. Stable task IDs should be retained when closing or moving tasks.
+Updated: 25 November 2026. Scope: 1.X only; no commitment to later major features or minor release dates. P0 blocks public release; P1 improves readiness and reliability; P2/P3 are flexible and not release prerequisites. Tests specific to a feature are part of its completion. Conditional/evaluation tasks do not imply a commitment to implement. Stable task IDs should be retained when closing or moving tasks.
 
 | Priority | Open tasks |
 | --- | ---: |
@@ -35,7 +35,7 @@ P1-12 (promoted to P0; stable ID retained) → P0-02 → P0-01 → P0-08 → P0-
 - [ ] **P0-15** [Privacy] Prepare privacy policy and terms, make them available at registration, assess GDPR obligations, lawful bases, processors, health-data implications and retention.
 - [ ] **P0-16** [Privacy/Product] Provide administrator contact, basic bug-report channel and a manual process for data-rights requests.
 
-- [ ] **P1-12** [Azure; promoted to P0 on 24 November] Resolve production SQL connection timeouts after idle periods. Two login requests returned HTTP 500 before a successful third attempt; EF Core logs confirm SqlClient error -2 during SQL post-login (14,004 ms). Serverless auto-resume is suspected, not yet proven. Verify database state before reproduction, deployed retry behavior (EnableRetryOnFailure is present in source), and effective connection timeout; test Connect Timeout=60 as a controlled diagnostic, compare cold/warm timings, and assess reliable, affordable mitigation and user-facing failure handling before public release. Keep paid overage disabled until a deliberate cost decision.
+- [ ] **P1-12** [Azure; promoted to P0 on 24 November] Resolve production SQL connection timeouts after idle periods. On 25 November reproduced error -2 (12,010 ms post-login); Activity Log confirmed recurring pause/resume. Switched to Azure SQL Basic (5 DTU, 2 GB, USD 4.90/month); first login succeeded in 776 ms. Existing EnableRetryOnFailure retained; no timeout change. Remaining: verify login after prolonged inactivity and next morning, monitor errors and DTU; close only after verification.
 
 ## P1 — High / production stability
 
@@ -50,14 +50,14 @@ P1-12 (promoted to P0; stable ID retained) → P0-02 → P0-01 → P0-08 → P0-
 - [ ] **P1-09** [Security] Verify deletion and cascade behavior across related entities.
 - [ ] **P1-10** [Security] Verify production logs do not expose credentials, tokens or sensitive data.
 - [x] **P1-11** [Azure] Upgrade F1 to B1 (one Linux instance, Poland Central), enable Always On, bind custom API domain with managed TLS (24 November).
-- [ ] **P1-13** [Azure] Configure API monitoring and alerts for errors and downtime.
+- [ ] **P1-13** [Azure] Configure API monitoring and alerts for errors and downtime. Trace scopes enabled locally; verify production log retention and trace lookup.
 - [ ] **P1-14** [Azure] Add a health-check endpoint.
 - [ ] **P1-15** [Azure] Define and test production EF Core migration strategy.
 - [ ] **P1-16** [Azure] Test database restoration.
 - [ ] **P1-17** [Workout] Complete unsaved-change protection for SPA navigation and browser Back; existing beforeunload is not sufficient. Evaluate router migration only as needed.
 - [ ] **P1-18** [Workout] Test authorization expiry during an active workout.
 - [ ] **P1-19** [UI/UX] Verify main screens on physical Android/iOS devices, including keyboard, scrolling and active workout interactions.
-- [ ] **P1-20** [API] Standardize API error responses (e.g. ProblemDetails).
+- [ ] **P1-20** [API] Standardize API error responses (e.g. ProblemDetails). Partial: global unhandled exception response and trace logging implemented in `927a1a7`; integration test passed locally (owner report). Remaining: remove temporary Development-only test endpoint, verify deployment and align expected error responses across endpoints.
 - [ ] **P1-21** [Frontend] Distinguish network, validation and server errors; handle timeouts, safe manual retries and reconnection.
 - [ ] **P1-22** [Frontend] Prevent duplicate submissions across forms, including template editing.
 - [ ] **P1-23** [Tests] Extend backend integration tests for remaining ownership, validation and concurrency cases.
