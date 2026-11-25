@@ -1,5 +1,12 @@
 # GymAssistant — historical development notes
 
+## 25 November 2026
+
+- Reproduced production SQL connection timeout (-2, 12,010 ms post-login) and observed recurring pause/resume operations. Changed Azure SQL to Basic (5 DTU, 2 GB, USD 4.90/month estimated); first login succeeded in 776 ms. Post-idle verification remains pending (P1-12).
+- Retained existing EF Core retry configuration; no global timeout retry or connection timeout change.
+- Added global exception handling, sanitized ProblemDetails and console trace scopes. Local browser and log checks passed; added ExceptionHandlingTests using WithWebHostBuilder and ThrowingAccessTokenService; owner reported test passed. Commit `927a1a7`. Production deployment verification and removal of temporary Development-only test endpoint remain pending.
+- Existing EUR 20 budget remains configured. No backlog tasks closed today pending outstanding verification.
+
 ## 24 November 2026
 
 ### Evening SQL connection investigation
