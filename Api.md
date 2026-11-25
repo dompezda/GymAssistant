@@ -12,6 +12,10 @@ http://localhost:5235
 
 In the Development environment, the backend also maps the OpenAPI document and a Scalar API reference for manual endpoint testing. Scalar is backed by the existing ASP.NET Core OpenAPI definition and is not mapped outside Development.
 
+## Unexpected errors
+
+Unhandled exceptions in the HTTP pipeline are handled by ASP.NET Core exception middleware and return HTTP 500 with `application/problem+json` when the request accepts that representation and the response has not started. The response includes a generic title, status, type and traceId; exception details remain in backend logs. Console logging includes TraceId and SpanId scopes for correlation. Existing explicit business/validation responses are unchanged; this is not yet a uniform contract for all errors. Production verification remains pending.
+
 ## Authorization model
 
 `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` do not require a valid access JWT. Refresh and logout use the `refreshToken` HttpOnly cookie when available. `GET /api/auth/me` and the current domain API require a valid JWT bearer token.
